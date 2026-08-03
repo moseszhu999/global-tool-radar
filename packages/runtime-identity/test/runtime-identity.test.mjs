@@ -1,138 +1,140 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  extractSupabaseProjectRef,
-  initializeSupabaseRuntime,
+  initializeNeonRuntime,
+  validateNeonDatabaseUrl,
   validateRuntimeIdentity,
-  verifySupabaseRuntime,
+  verifyNeonRuntime,
 } from "../src/index.mjs";
 
-const projectRef = "abcdefghijklmnopqrst";
+const projectId = "spring-bread-82251500";
+const branchId = "br-sweet-paper-a63dx82m";
+const databaseName = "neondb";
 const installationId = "0198a52f-854d-7d93-a0c8-bc1952f4ef43";
-const supabaseUrl = `https://${projectRef}.supabase.co`;
+const databaseUrl =
+  "postgresql://neondb_owner:npg_secret@ep-example-pooler.us-west-2.aws.neon.tech/neondb?sslmode=require";
 
-function response(payload, { ok = true, status = 200 } = {}) {
-  return {
-    ok,
-    status,
-    async json() {
-      return payload;
-    },
-  };
-}
-
-function identity() {
+function identity(overrides = {}) {
   return {
     product_code: "global-tool-radar",
-    project_ref: projectRef,
+    provider: "neon",
+    project_id: projectId,
+    branch_id: branchId,
+    database_name: databaseName,
     installation_id: installationId,
     schema_version: 1,
     initialized_at: "2026-08-03T01:00:00Z",
+    ...overrides,
   };
 }
 
-test("canonical Supabase URL yields the project ref", () => {
-  assert.equal(extractSupabaseProjectRef(supabaseUrl), projectRef);
+test("canonical Neon connection string validates the database", () => {
+  const result = validateNeonDatabaseUrl(databaseUrl, databaseName);
+  assert.equal(result.databaseName, databaseName);
+  assert.match(result.hostname, /\.neon\.tech$/);
   assert.throws(
-    () => extractSupabaseProjectRef("https://database.example.com"),
-    /canonical/,
-  );
-});
-
-test("URL mismatch fails before any network request", async () => {
-  let called = false;
-  await assert.rejects(
     () =>
-      verifySupabaseRuntime({
-        supabaseUrl,
-        serviceRoleKey: "secret",
-        expectedProjectRef: "differentprojectref1",
-        expectedInstallationId: installationId,
-        fetchImpl: async () => {
-          called = true;
-          return response([]);
-        },
-      }),
-    /URL project ref mismatch/,
+      validateNeonDatabaseUrl(
+        "postgresql://user:secret@database.example.com/neondb",
+        databaseName,
+      ),
+    /canonical Neon hostname/,
   );
-  assert.equal(called, false);
+  assert.throws(
+    () => validateNeonDatabaseUrl(databaseUrl, "otherdb"),
+    /database name mismatch/,
+  );
 });
 
-test("runtime identity validates product, project, installation and schema", () => {
+test("runtime identity validates provider and every deployment binding", () => {
   const result = validateRuntimeIdentity(identity(), {
-    expectedProjectRef: projectRef,
+    expectedProjectId: projectId,
+    expectedBranchId: branchId,
+    expectedDatabaseName: databaseName,
     expectedInstallationId: installationId,
   });
-  assert.equal(result.productCode, "global-tool-radar");
+  assert.equal(result.provider, "neon");
   assert.equal(result.schemaVersion, 1);
+  assert.throws(
+    () =>
+      validateRuntimeIdentity(identity({ branch_id: "br-different-branch" }), {
+        expectedProjectId: projectId,
+        expectedBranchId: branchId,
+        expectedDatabaseName: databaseName,
+        expectedInstallationId: installationId,
+      }),
+    /branch id mismatch/,
+  );
 });
 
 test("missing identity fails closed", async () => {
   await assert.rejects(
     () =>
-      verifySupabaseRuntime({
-        supabaseUrl,
-        serviceRoleKey: "secret",
-        expectedProjectRef: projectRef,
+      verifyNeonRuntime({
+        query: async () => [],
+        expectedProjectId: projectId,
+        expectedBranchId: branchId,
+        expectedDatabaseName: databaseName,
         expectedInstallationId: installationId,
-        fetchImpl: async () => response([]),
       }),
     /not initialized/,
   );
 });
 
-test("service role key is not exposed by API failures", async () => {
+test("database credentials are redacted from query failures", async () => {
   await assert.rejects(
     () =>
-      verifySupabaseRuntime({
-        supabaseUrl,
-        serviceRoleKey: "super-secret-key",
-        expectedProjectRef: projectRef,
+      verifyNeonRuntime({
+        query: async () => {
+          throw new Error(
+            "failed at postgresql://owner:npg_supersecret@host.neon.tech/neondb",
+          );
+        },
+        expectedProjectId: projectId,
+        expectedBranchId: branchId,
+        expectedDatabaseName: databaseName,
         expectedInstallationId: installationId,
-        fetchImpl: async () =>
-          response(
-            { code: "PGRST202", message: "function unavailable" },
-            { ok: false, status: 404 },
-          ),
       }),
     (error) =>
-      error.message.includes("PGRST202") &&
-      !error.message.includes("super-secret-key"),
+      error.message.includes("[REDACTED_DATABASE_URL]") &&
+      !error.message.includes("npg_supersecret"),
   );
 });
 
-test("initialization requires explicit confirmation", async () => {
+test("initialization requires the dedicated Neon confirmation", async () => {
   await assert.rejects(
     () =>
-      initializeSupabaseRuntime({
-        supabaseUrl,
-        serviceRoleKey: "secret",
-        expectedProjectRef: projectRef,
+      initializeNeonRuntime({
+        query: async () => [identity()],
+        expectedProjectId: projectId,
+        expectedBranchId: branchId,
+        expectedDatabaseName: databaseName,
         expectedInstallationId: installationId,
         confirmation: "YES",
-        fetchImpl: async () => response([identity()]),
       }),
-    /explicit dedicated-project confirmation/,
+    /explicit dedicated-Neon confirmation/,
   );
 });
 
-test("initialization sends the bound project and installation identifiers", async () => {
+test("initialization sends project, branch, database, and installation bindings", async () => {
   let request;
-  const result = await initializeSupabaseRuntime({
-    supabaseUrl,
-    serviceRoleKey: "secret",
-    expectedProjectRef: projectRef,
-    expectedInstallationId: installationId,
-    confirmation: "INITIALIZE_DEDICATED_TOOLRADAR_PROJECT",
-    fetchImpl: async (url, options) => {
-      request = { url, options };
-      return response([identity()]);
+  const result = await initializeNeonRuntime({
+    query: async (text, params) => {
+      request = { text, params };
+      return [identity()];
     },
+    expectedProjectId: projectId,
+    expectedBranchId: branchId,
+    expectedDatabaseName: databaseName,
+    expectedInstallationId: installationId,
+    confirmation: "INITIALIZE_DEDICATED_TOOLRADAR_NEON_DATABASE",
   });
-  assert.match(request.url, /initialize_toolradar_runtime_identity_v1/);
-  assert.deepEqual(JSON.parse(request.options.body), {
-    p_project_ref: projectRef,
-    p_installation_id: installationId,
-  });
+  assert.match(request.text, /initialize_toolradar_runtime_identity_v1/);
+  assert.deepEqual(request.params, [
+    projectId,
+    branchId,
+    databaseName,
+    installationId,
+  ]);
   assert.equal(result.installationId, installationId);
 });
