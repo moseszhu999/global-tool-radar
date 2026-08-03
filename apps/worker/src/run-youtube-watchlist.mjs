@@ -1,8 +1,9 @@
 import { createYouTubeClient } from "../../../packages/connectors/youtube/src/index.mjs";
-import { createSupabaseWorkerRepository } from "../../../packages/persistence/supabase-rest/src/index.mjs";
-import { verifySupabaseRuntime } from "../../../packages/runtime-identity/src/index.mjs";
+import { createNeonQuery } from "../../../packages/persistence/neon-http/src/client.mjs";
+import { createNeonWorkerRepository } from "../../../packages/persistence/neon-http/src/index.mjs";
+import { verifyNeonRuntime } from "../../../packages/runtime-identity/src/index.mjs";
 import { runYouTubeWatchlistBatch } from "../../../packages/youtube-ingestion/src/index.mjs";
-import { readSupabaseRuntimeEnv } from "./runtime-env.mjs";
+import { readNeonRuntimeEnv } from "./runtime-env.mjs";
 
 function requiredEnv(name) {
   const value = process.env[name];
@@ -10,13 +11,11 @@ function requiredEnv(name) {
   return value;
 }
 
-const runtimeEnv = readSupabaseRuntimeEnv();
-await verifySupabaseRuntime(runtimeEnv);
+const runtimeEnv = readNeonRuntimeEnv();
+const query = createNeonQuery(runtimeEnv.databaseUrl);
+await verifyNeonRuntime({ query, ...runtimeEnv });
 
-const repository = createSupabaseWorkerRepository({
-  supabaseUrl: runtimeEnv.supabaseUrl,
-  serviceRoleKey: runtimeEnv.serviceRoleKey,
-});
+const repository = createNeonWorkerRepository({ query });
 const youtubeClient = createYouTubeClient({
   apiKey: requiredEnv("YOUTUBE_API_KEY"),
 });
