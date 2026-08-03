@@ -33,6 +33,8 @@ jobs:
           node-version: 22
       - run: npm install --ignore-scripts
       - name: Capture public YouTube RSS evidence
+        id: capture
+        continue-on-error: ${{ github.event_name == 'pull_request' }}
         run: npm run pilot:youtube-rss
         env:
           TOOLRADAR_PILOT_OUTPUT: out/youtube-rss-pilot.json
@@ -40,6 +42,7 @@ jobs:
           TOOLRADAR_CAPTURE_RUN_ID: ${{ github.run_id }}
           TOOLRADAR_RSS_MINIMUM_SUCCESS_RATIO: "0.8"
       - name: Upload pilot evidence
+        if: steps.capture.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: toolradar-youtube-rss-pilot-${{ github.sha }}
