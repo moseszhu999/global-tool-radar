@@ -14,6 +14,11 @@ const capturedAt =
   process.env.TOOLRADAR_PILOT_CAPTURED_AT ?? new Date().toISOString();
 const outputPath =
   process.env.TOOLRADAR_PILOT_OUTPUT ?? "out/youtube-rss-pilot.json";
+const sourceCommitSha = process.env.TOOLRADAR_SOURCE_COMMIT_SHA ?? null;
+const captureRunId = process.env.TOOLRADAR_CAPTURE_RUN_ID ?? null;
+if (sourceCommitSha !== null && !/^[0-9a-f]{40}$/.test(sourceCommitSha)) {
+  throw new Error("TOOLRADAR_SOURCE_COMMIT_SHA must be a canonical commit SHA");
+}
 
 let artifact;
 try {
@@ -59,6 +64,8 @@ const metadataCandidates = buildYouTubeMetadataCandidates(candidateRows, {
 });
 const bundle = Object.freeze({
   ...artifact,
+  sourceCommitSha,
+  captureRunId,
   metadataCandidateVersion: "youtube-metadata-v1",
   metadataCandidateCount: metadataCandidates.length,
   metadataCandidates,
@@ -74,6 +81,8 @@ console.log(
   JSON.stringify(
     {
       artifactVersion: bundle.artifactVersion,
+      sourceCommitSha: bundle.sourceCommitSha,
+      captureRunId: bundle.captureRunId,
       capturedAt: bundle.capturedAt,
       outputPath,
       requestedChannels: bundle.requestedChannels,
