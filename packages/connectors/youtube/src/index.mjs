@@ -141,7 +141,12 @@ export function normalizeYouTubeVideo(video, capturedAt) {
     body: video.snippet?.description ?? "",
     publishedAt: video.snippet?.publishedAt ?? null,
     capturedAt,
-    rawPayload: video,
+    rawPayload: {
+      id: video.id,
+      snippet: video.snippet ?? null,
+      contentDetails: video.contentDetails ?? null,
+      status: video.status ?? null,
+    },
   });
   const observableMetrics = {
     viewCount: toSafeCount(video.statistics?.viewCount),
