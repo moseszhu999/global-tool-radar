@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ToolRadar · Video Operations Workspace</title>
+  <meta name="description" content="海外 AI 工具与视频信号的证据化运营工作台。">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="ToolRadar 主导航">
+      <a class="brand" href="./"><span>TR</span><strong>ToolRadar</strong><small>Original content operations</small></a>
+      <nav>
+        <a class="is-active" href="#today"><i>⌂</i><span>Today</span></a>
+        <a href="#radar"><i>◎</i><span>Radar inbox</span></a>
+        <a href="#sources"><i>◉</i><span>Sources</span></a>
+        <a href="#candidates"><i>▦</i><span>Candidates</span></a>
+        <a href="#tools"><i>◇</i><span>Tools</span></a>
+        <a href="#evidence"><i>✓</i><span>Evidence & tests</span></a>
+        <a href="#studio"><i>✎</i><span>Content studio</span></a>
+        <a href="#production"><i>▶</i><span>Production queue</span></a>
+        <a href="#learning"><i>↗</i><span>Performance</span></a>
+        <a href="#runs"><i>⌘</i><span>Agent runs</span></a>
+      </nav>
+      <footer><strong>Rights-first</strong><span>No source-video download · no unattended publishing</span></footer>
+    </aside>
+
+    <section class="workspace">
+      <header class="topbar">
+        <div class="page-context">
+          <button class="menu-button" type="button" data-menu aria-label="打开导航">☰</button>
+          <div><strong>Radar inbox</strong><small>发现 → 证据 → 权利/安全 → 原创生产</small></div>
+        </div>
+        <div class="top-actions">
+          <span class="runtime" data-runtime>读取工作台快照…</span>
+          <button class="command-button" type="button" data-agent-open><span>Ask ToolRadar</span><kbd>⌘K</kbd></button>
+          <label class="import-button">导入 JSON<input type="file" accept="application/json" data-import></label>
+        </div>
+      </header>
+
+      <main class="content">
+        <section class="summary-bar" aria-label="工作台摘要">
+          <article><small>候选</small><strong data-count>UNKNOWN</strong><span>已导入候选</span></article>
+          <article><small>数据覆盖</small><strong data-coverage>UNKNOWN</strong><span>平均可观测权重</span></article>
+          <article><small>版权待审</small><strong data-rights>UNKNOWN</strong><span>与机会分数独立</span></article>
+          <article><small>安全待审</small><strong data-security>UNKNOWN</strong><span>硬 Gate</span></article>
+        </section>
+
+        <section class="radar-workspace" aria-label="Radar candidate workspace">
+          <aside class="candidate-pane">
+            <header>
+              <div><strong>Candidate inbox</strong><small>按 rankingScore 展示，不等于发布优先级</small></div>
+              <input type="search" placeholder="搜索标题或频道…" data-search>
+            </header>
+            <div class="candidate-list" data-candidate-list></div>
+          </aside>
+
+          <section class="detail-pane" data-detail>
+            <div class="empty-state">
+              <strong>暂无已验证候选</strong>
+              <span>运行导出命令或导入 `toolradar.operator-workspace.v1` JSON。缺失不会显示为 0。</span>
+            </div>
+          </section>
+        </section>
+      </main>
+    </section>
+  </div>
+
+  <div class="sidebar-mask" data-sidebar-mask></div>
+  <div class="drawer-mask" data-drawer-mask></div>
+  <aside class="agent-drawer" data-agent-drawer aria-hidden="true">
+    <header><div><strong>Ask ToolRadar</strong><small>证据上下文 → proposal → 人工审核</small></div><button type="button" data-agent-close aria-label="关闭">×</button></header>
+    <div class="drawer-body">
+      <div class="prompt-chips">
+        <button type="button" data-prompt="解释这个候选为什么进入 Radar。">为什么入选</button>
+        <button type="button" data-prompt="列出仍缺失的数据和不能下的结论。">缺失数据</button>
+        <button type="button" data-prompt="准备原创工具实测和录屏计划。">实测计划</button>
+        <button type="button" data-prompt="准备一份原创短视频脚本提纲。">脚本提纲</button>
+      </div>
+      <form class="agent-command" data-agent-form>
+        <label for="agent-query"><strong>你想完成什么？</strong></label>
+        <textarea id="agent-query" data-agent-query placeholder="例如：基于当前候选准备原创实测计划，并标出版权和安全风险。"></textarea>
+        <footer><small>只生成 draft，不下载、复制或发布源视频。</small><button type="submit">生成提议</button></footer>
+      </form>
+      <div data-agent-output></div>
+    </div>
+  </aside>
+
+  <script type="module" src="./app.mjs"></script>
+</body>
+</html>
