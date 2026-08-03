@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "toolradar.operator-workspace.v1",
+  "generatedAt": null,
+  "policy": {
+    "missingValue": "UNKNOWN",
+    "missingNumericValueIsZero": false,
+    "opportunityScoreIsDecision": false,
+    "rightsGateIndependent": true,
+    "securityGateIndependent": true,
+    "automaticPublishingAllowed": false,
+    "sourceVideoDownloadAllowed": false
+  },
+  "candidates": []
+}
