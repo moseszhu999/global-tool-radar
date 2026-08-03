@@ -11,6 +11,7 @@ test('Replit Design card remains a human-login gated real test', () => {
   assert.equal(card.schemaVersion, 'toolradar.test-card.v1');
   assert.equal(card.status, 'READY_FOR_HUMAN_LOGIN');
   assert.equal(card.candidate.id, 'replit-design');
+  assert.match(card.candidate.url, /^https:\/\/replit\.com\/\?stack=Design&prompt=[A-Za-z0-9+_-]+&referrer=global-tool-radar$/);
   assert.equal(card.evidence.platform, 'YouTube');
   assert.equal(card.evidence.intervalHours, 6.455);
   assert.match(card.evidence.boundary, /不证明某个国家火爆/);
@@ -31,6 +32,7 @@ test('test card forbids payments, credentials, databases and publishing', () => 
 
 test('page stores only local progress and exports a typed human receipt', () => {
   assert.match(html, /真实实测/);
+  assert.match(html, /一键打开并带入提示词/);
   assert.match(html, /导出Receipt JSON/);
   assert.match(html, /toolradar\.test-receipt\.v1/);
   assert.match(html, /localStorage/);
