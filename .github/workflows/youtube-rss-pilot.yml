@@ -1,0 +1,37 @@
+name: youtube-rss-pilot
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/youtube-rss-pilot.yml"
+      - "apps/worker/src/capture-youtube-rss-pilot.mjs"
+      - "packages/youtube-rss-pilot/**"
+      - "packages/connectors/youtube-rss/**"
+      - "config/youtube-watchlist.v1.json"
+      - "package.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --ignore-scripts
+      - name: Capture public YouTube RSS evidence
+        run: npm run pilot:youtube-rss
+        env:
+          TOOLRADAR_PILOT_OUTPUT: out/youtube-rss-pilot.json
+      - name: Upload pilot evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: toolradar-youtube-rss-pilot-${{ github.sha }}
+          path: out/youtube-rss-pilot.json
+          if-no-files-found: error
+          retention-days: 7
