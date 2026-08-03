@@ -50,6 +50,12 @@ function safeFailure(error) {
     .slice(0, 500);
 }
 
+function createPilotFailure(message, channelResults) {
+  const error = new Error(message);
+  error.channelResults = Object.freeze([...channelResults]);
+  return error;
+}
+
 function validateVideo(video, channelId) {
   if (!video || typeof video !== "object") {
     throw new TypeError(`Channel ${channelId} returned an invalid video`);
@@ -144,10 +150,16 @@ export async function captureYouTubeRssPilot({
   }
 
   if (succeededChannels === 0) {
-    throw new Error("YouTube RSS pilot captured no successful channels");
+    throw createPilotFailure(
+      "YouTube RSS pilot captured no successful channels",
+      channelResults,
+    );
   }
   if (videos.size === 0) {
-    throw new Error("YouTube RSS pilot captured no videos");
+    throw createPilotFailure(
+      "YouTube RSS pilot captured no videos",
+      channelResults,
+    );
   }
 
   return Object.freeze({
