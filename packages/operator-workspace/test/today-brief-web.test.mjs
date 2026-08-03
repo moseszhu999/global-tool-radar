@@ -9,24 +9,25 @@ const client = readFileSync(new URL("apps/web/today.mjs", root), "utf8");
 const brief = JSON.parse(readFileSync(new URL("apps/web/data/today-brief.json", root), "utf8"));
 
 test("default web entry explains the result before exposing the operator workspace", () => {
-  assert.match(index, /今天海外 AI 工具发生了什么/);
-  assert.match(index, /抓了多少、哪些在涨、为什么值得看/);
+  assert.match(index, /今天海外 AI 工具/);
+  assert.match(index, /先给结论，再给证据/);
+  assert.match(index, /整条流程走到哪里/);
   assert.match(index, /href="\.\/workspace\.html"/);
   assert.match(workspace, /Radar inbox/);
   assert.match(workspace, /src="\.\/app\.mjs"/);
 });
 
-test("today brief binds the real capture counts and remains metric-gated", () => {
+test("today brief binds the confirmed third capture", () => {
   assert.equal(brief.schemaVersion, "toolradar.today-brief.v1");
   assert.equal(brief.capture.channels, 11);
   assert.equal(brief.capture.videos, 165);
-  assert.equal(brief.capture.measurementPoints, 330);
-  assert.equal(brief.capture.videosWithPositiveGrowth, 140);
-  assert.equal(brief.capture.videosWithNoGrowth, 25);
-  assert.equal(brief.capture.videosWithNegativeGrowth, 0);
-  assert.equal(brief.capture.promotionGate, "METRIC_CONFIRMATION_REQUIRED");
-  assert.ok(brief.capture.intervalHours < brief.capture.minimumConfirmationHours);
-  assert.equal(brief.sourceEvidence.captureRunId, "30796846375");
+  assert.equal(brief.capture.measurementPoints, 495);
+  assert.equal(brief.capture.videosWithConfirmedPositiveGrowth, 145);
+  assert.equal(brief.capture.videosWithCompletedNoPositiveGrowth, 5);
+  assert.equal(brief.capture.videosPendingChannelBaseline, 15);
+  assert.equal(brief.capture.promotionGate, "MOMENTUM_CONFIRMED");
+  assert.ok(brief.capture.intervalHours >= brief.capture.minimumConfirmationHours);
+  assert.equal(brief.sourceEvidence.captureRunId, "30824192519");
   assert.match(brief.sourceEvidence.artifactZipSha256, /^[0-9a-f]{64}$/);
 });
 

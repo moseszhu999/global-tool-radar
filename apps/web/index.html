@@ -3,99 +3,104 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Global Tool Radar · 今日发现</title>
-  <meta name="description" content="用简单页面看懂海外 AI 工具正在发生什么。">
+  <title>Global Tool Radar · 今日信号</title>
+  <meta name="description" content="从海外公开信号到产品实测与原创内容的可核验工作台。">
   <link rel="stylesheet" href="./today.css">
 </head>
 <body>
   <header class="site-header">
     <a class="brand" href="./" aria-label="Global Tool Radar 首页">
-      <span class="brand-mark">TR</span>
-      <span><strong>Global Tool Radar</strong><small>海外 AI 工具今日发现</small></span>
+      <span class="brand-mark">◉</span>
+      <span><strong>Global Tool Radar</strong><small>海外 AI 工具信号雷达</small></span>
     </a>
     <nav>
-      <a class="active" href="#discoveries">今日发现</a>
-      <a href="#scope">数据范围</a>
-      <a href="#meaning">怎么看</a>
-      <a href="./replit-test.html">实测任务</a>
+      <a class="active" href="#discoveries">今日信号</a>
+      <a href="#pipeline">流程进度</a>
+      <a href="#boundary">证据边界</a>
       <a class="workspace-link" href="./workspace.html">运营工作台</a>
     </nav>
   </header>
 
   <main>
     <section class="hero">
-      <div class="hero-copy">
-        <p class="eyebrow">今天海外 AI 工具发生了什么？</p>
-        <h1>先给结论，再给证据。</h1>
-        <p class="lead">我们持续读取官方频道公开信息，并比较同一内容在不同时间的播放量变化。这里不展示技术日志，只告诉你抓了多少、哪些在涨、为什么值得看。</p>
-        <div class="hero-actions">
-          <a class="primary" href="#discoveries">看今日发现</a>
-          <a class="workspace-link" href="./replit-test.html">进入Replit真实实测</a>
-          <span data-generated>正在读取数据…</span>
-        </div>
-      </div>
-      <aside class="gate-card">
-        <span class="gate-dot"></span>
+      <div class="report-kicker"><span></span> DAILY SIGNAL REPORT / <b data-report-date>读取中</b></div>
+      <div class="hero-grid">
         <div>
-          <strong data-gate-title>正在判断趋势状态</strong>
-          <p data-gate-copy>读取采集间隔与确认条件。</p>
+          <h1>今天海外 AI 工具<br><em>哪些正在变热？</em></h1>
+          <p class="hero-thesis"><i></i>先给结论，再给证据。</p>
+          <p class="lead">我们连续读取海外官方 YouTube 频道的公开播放量，识别哪些视频正在获得新增关注，再进入产品核实、真实使用和原创内容判断。</p>
         </div>
-      </aside>
+        <aside class="gate-card">
+          <span class="gate-dot"></span>
+          <div>
+            <small>当前证据状态</small>
+            <strong data-gate-title>正在读取</strong>
+            <p data-gate-copy>读取最近两轮采集与确认门。</p>
+          </div>
+        </aside>
+      </div>
+      <div class="refresh-row"><span>本页只显示已核验数据</span><b data-generated>正在读取数据…</b></div>
     </section>
 
-    <section class="stats" aria-label="本次数据范围">
-      <article><strong data-stat="channels">—</strong><span>官方频道</span><small>OpenAI、Claude、GitHub 等</small></article>
-      <article><strong data-stat="videos">—</strong><span>视频样本</span><small>每个频道最近 15 条</small></article>
-      <article><strong data-stat="measurements">—</strong><span>播放量测量点</span><small>同一视频重复测量</small></article>
-      <article><strong data-stat="interval">—</strong><span>测量间隔</span><small>用于判断增长速度</small></article>
+    <section class="section scan-overview" aria-label="今日扫描概览">
+      <div class="section-line"><h2>今日扫描概览</h2><span data-capture-window>正在读取采集窗口</span></div>
+      <div class="stats">
+        <article><span class="stat-icon">▦</span><strong data-stat="channels">—</strong><small>已接入官方频道</small></article>
+        <article><span class="stat-icon">◎</span><strong data-stat="videos">—</strong><small>持续跟踪视频</small></article>
+        <article><span class="stat-icon">〽</span><strong data-stat="measurements">—</strong><small>播放量测量点</small></article>
+        <article><span class="stat-icon">↗</span><strong data-stat="confirmed">—</strong><small>正向增长确认</small></article>
+      </div>
     </section>
 
     <section class="section" id="discoveries">
       <div class="section-head">
-        <div><p class="eyebrow">TODAY'S SIGNALS</p><h2>今天最值得看的信号</h2><p>不是最终商业结论，而是“下一步最值得研究什么”。</p></div>
+        <div><p class="eyebrow">CONFIRMED SIGNALS</p><h2>今天最值得继续调查的信号</h2><p>这里确认的是“具体 YouTube 视频的增长”，不是某个产品在全球或某国火爆。</p></div>
         <div class="filters" role="group" aria-label="信号筛选">
           <button class="active" type="button" data-filter="all">全部</button>
-          <button type="button" data-filter="research_now">值得研究</button>
+          <button type="button" data-filter="research_now">进入调查</button>
           <button type="button" data-filter="watch">继续观察</button>
         </div>
       </div>
-      <div class="signal-grid" data-signals>
-        <div class="loading">正在读取今日发现…</div>
+      <div class="signal-grid" data-signals><div class="loading">正在读取今日信号…</div></div>
+    </section>
+
+    <section class="section" id="pipeline">
+      <div class="section-head">
+        <div><p class="eyebrow">PRODUCTION PIPELINE</p><h2>整条流程走到哪里</h2><p>不是发现一个视频就开始抄脚本；每一步都必须产生自己的证据。</p></div>
+      </div>
+      <div class="pipeline">
+        <article class="done"><b>01</b><strong>信号发现</strong><span>11个官方频道</span></article>
+        <article class="done"><b>02</b><strong>重复测量</strong><span>495个测量点</span></article>
+        <article class="done"><b>03</b><strong>趋势确认</strong><span>145条正向确认</span></article>
+        <article class="active"><b>04</b><strong>产品调查</strong><span>核实官网、归属与风险</span></article>
+        <article class="active"><b>05</b><strong>真实实测</strong><span>Replit第一轮已完成</span></article>
+        <article><b>06</b><strong>原创脚本</strong><span>等待实测Receipt</span></article>
+        <article><b>07</b><strong>录制剪辑</strong><span>未开始</span></article>
+        <article><b>08</b><strong>人工发布</strong><span>未开始</span></article>
       </div>
     </section>
 
-    <section class="section two-column" id="meaning">
+    <section class="section two-column" id="boundary">
       <article class="explain-card">
-        <p class="eyebrow">现在已经能看出什么</p>
-        <h2>它能发现“正在变热”的方向</h2>
-        <div class="plain-list">
-          <div><span>1</span><p><strong>近期发布了什么</strong><small>先从官方频道找到新产品、新功能和新叙事。</small></p></div>
-          <div><span>2</span><p><strong>哪些播放量在增长</strong><small>不是只看总播放量，而是比较同一内容前后变化。</small></p></div>
-          <div><span>3</span><p><strong>下一步先研究谁</strong><small>把候选缩小到适合实测、写中文内容或继续追踪的对象。</small></p></div>
-        </div>
+        <p class="eyebrow">REPLIT REAL TEST</p>
+        <h2>为什么不依赖 Replit 做本站</h2>
+        <p>Replit Design 在约3分钟内生成了桌面和390px手机设计稿，但切到 Build 后仍显示“Nothing to preview yet”。因此它被记录为一个候选工具的真实测试结果，而不是本站的生产依赖。</p>
+        <div class="result-row"><span>设计草图</span><b>通过</b></div>
+        <div class="result-row"><span>生产代码交付</span><b class="pending">未证明</b></div>
+        <div class="result-row"><span>本站实现</span><b>仓库原生代码</b></div>
       </article>
       <article class="explain-card boundary-card">
-        <p class="eyebrow">现在还不能下什么结论</p>
-        <h2>增长信号不等于最终机会</h2>
-        <p>频道可能只是讨论某个工具，并不代表产品归属；播放量增长也不能替代产品实测、版权、安全和中国市场判断。</p>
-        <div class="boundary-tags"><span>不自动发布</span><span>不下载源视频</span><span>不把缺失当作 0</span><span>不把热度当决定</span></div>
+        <p class="eyebrow">CLAIM BOUNDARY</p>
+        <h2>数字究竟是什么意思</h2>
+        <p>“6.455小时新增播放”只表示一条视频在对应官方频道中的公开播放量变化。它不能回答观众来自哪个国家，也不能直接证明产品注册量、付费量或真实采用。</p>
+        <div class="boundary-tags"><span>不虚构地区热度</span><span>不把播放量当用户数</span><span>不下载源视频</span><span>不自动发布</span></div>
       </article>
-    </section>
-
-    <section class="section scope" id="scope">
-      <div><p class="eyebrow">DATA SCOPE</p><h2>这次究竟抓了什么</h2></div>
-      <div class="scope-grid">
-        <article><strong>来源</strong><p>11 个经过核对的海外 AI 官方 YouTube 频道。</p></article>
-        <article><strong>内容</strong><p>频道最近视频的标题、发布时间、链接和公开播放量。</p></article>
-        <article><strong>没有抓</strong><p>没有下载视频、字幕、评论、用户资料，也没有绕过登录。</p></article>
-        <article><strong>更新时间</strong><p data-capture-window>正在读取本次采集时间。</p></article>
-      </div>
     </section>
   </main>
 
   <footer>
-    <div><strong>Global Tool Radar</strong><span>发现 → 证据 → 实测 → 原创内容</span></div>
-    <div><a href="./replit-test.html">进入真实实测 →</a><a href="./workspace.html">进入专业运营工作台 →</a></div>
+    <div><strong>Global Tool Radar</strong><span>发现 → 证据 → 调查 → 实测 → 原创内容</span></div>
+    <a href="./workspace.html">进入专业运营工作台 →</a>
   </footer>
 
   <script type="module" src="./today.mjs"></script>
