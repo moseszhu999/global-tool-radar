@@ -2,18 +2,26 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-for (const path of [
-  "../../../apps/worker/src/run-youtube-watchlist.mjs",
-  "../../../apps/worker/src/build-daily-candidates.mjs",
+for (const contract of [
+  {
+    path: "../../../apps/worker/src/run-youtube-watchlist.mjs",
+    access: "const repository = createNeonWorkerRepository",
+  },
+  {
+    path: "../../../apps/worker/src/build-daily-candidates.mjs",
+    access: "const repository = createNeonWorkerRepository",
+  },
+  {
+    path: "../../../apps/worker/src/seed-youtube-watchlist.mjs",
+    access: "const result = await seedYouTubeWatchlist",
+  },
 ]) {
-  test(`${path} verifies Neon runtime before repository access`, () => {
-    const source = readFileSync(new URL(path, import.meta.url), "utf8");
+  test(`${contract.path} verifies Neon runtime before database access`, () => {
+    const source = readFileSync(new URL(contract.path, import.meta.url), "utf8");
     const verifyIndex = source.indexOf("await verifyNeonRuntime");
-    const repositoryIndex = source.indexOf(
-      "const repository = createNeonWorkerRepository",
-    );
+    const accessIndex = source.indexOf(contract.access);
     assert.ok(verifyIndex >= 0);
-    assert.ok(repositoryIndex > verifyIndex);
+    assert.ok(accessIndex > verifyIndex);
     assert.doesNotMatch(source, /Supabase|serviceRoleKey|SUPABASE_/);
   });
 }

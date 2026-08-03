@@ -1,0 +1,105 @@
+{
+  "version": "v1",
+  "verifiedAt": "2026-08-03",
+  "channels": [
+    {
+      "channelId": "UCXZCJLdBC09xxGZ6gcdrc6A",
+      "title": "OpenAI",
+      "officialHandle": "@OpenAI",
+      "category": "foundation_model",
+      "status": "active",
+      "scanIntervalMinutes": 120,
+      "evidenceUrl": "https://www.wikidata.org/wiki/Q24241796"
+    },
+    {
+      "channelId": "UCP7jMXSY2xbc3KCAE0MHQ-A",
+      "title": "Google DeepMind",
+      "officialHandle": "@GoogleDeepMind",
+      "category": "foundation_model",
+      "status": "active",
+      "scanIntervalMinutes": 120,
+      "evidenceUrl": "https://www.wikidata.org/wiki/Q131548842"
+    },
+    {
+      "channelId": "UC6YYHJzM6PhZ2Yey9BQiUaw",
+      "title": "Cursor",
+      "officialHandle": "@cursor_ai",
+      "category": "coding_agent",
+      "status": "active",
+      "scanIntervalMinutes": 120,
+      "evidenceUrl": "https://socialcounts.org/youtube-channel-analytics/UC6YYHJzM6PhZ2Yey9BQiUaw"
+    },
+    {
+      "channelId": "UCgoJjdR6-7AMu9fDitb6nVw",
+      "title": "Replit",
+      "officialHandle": "@replit",
+      "category": "coding_agent",
+      "status": "active",
+      "scanIntervalMinutes": 120,
+      "evidenceUrl": "https://socialcounts.org/youtube-channel-analytics/UCgoJjdR6-7AMu9fDitb6nVw"
+    },
+    {
+      "channelId": "UCV03SRZXJEz-hchIAogeJOg",
+      "title": "Claude",
+      "officialHandle": "@claude",
+      "category": "foundation_model",
+      "status": "active",
+      "scanIntervalMinutes": 120,
+      "evidenceUrl": "https://socialcounts.org/youtube-channel-analytics/UCV03SRZXJEz-hchIAogeJOg"
+    },
+    {
+      "channelId": "UC-ew9TfeD887qUSiWWAAj1w",
+      "title": "ElevenLabs",
+      "officialHandle": "@elevenlabsio",
+      "category": "voice",
+      "status": "active",
+      "scanIntervalMinutes": 120,
+      "evidenceUrl": "https://socialblade.com/youtube/channel/UC-ew9TfeD887qUSiWWAAj1w"
+    },
+    {
+      "channelId": "UCYqxnCFtaC4-iC_bwt2bRLg",
+      "title": "Perplexity",
+      "officialHandle": "@perplexity-ai",
+      "category": "search",
+      "status": "active",
+      "scanIntervalMinutes": 120,
+      "evidenceUrl": "https://www.wikidata.org/wiki/Q124333951"
+    },
+    {
+      "channelId": "UCg_u9QlUisVk89RizEpEvFA",
+      "title": "Descript",
+      "officialHandle": "@descript",
+      "category": "video",
+      "status": "active",
+      "scanIntervalMinutes": 120,
+      "evidenceUrl": "https://vling.net/en/channel/UCg_u9QlUisVk89RizEpEvFA/channel-info"
+    },
+    {
+      "channelId": "UCV0FmNF3iM-022BF1KbVtxA",
+      "title": "HeyGen",
+      "officialHandle": "@heygen_official",
+      "category": "video",
+      "status": "active",
+      "scanIntervalMinutes": 120,
+      "evidenceUrl": "https://www.wikidata.org/wiki/Q123258741"
+    },
+    {
+      "channelId": "UC7c3Kb6jYCRj4JOHHZTxKsQ",
+      "title": "GitHub",
+      "officialHandle": "@GitHub",
+      "category": "developer_platform",
+      "status": "active",
+      "scanIntervalMinutes": 120,
+      "evidenceUrl": "https://www.wikidata.org/wiki/Q115203615"
+    },
+    {
+      "channelId": "UCEDLeLo3HNQZiJOTR2svg2A",
+      "title": "Canva",
+      "officialHandle": "@canva",
+      "category": "design",
+      "status": "active",
+      "scanIntervalMinutes": 120,
+      "evidenceUrl": "https://www.wikidata.org/wiki/Q23498528"
+    }
+  ]
+}
