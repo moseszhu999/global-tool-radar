@@ -5,10 +5,12 @@ on:
     paths:
       - ".github/workflows/youtube-rss-pilot.yml"
       - "apps/worker/src/capture-youtube-rss-pilot.mjs"
+      - "apps/worker/src/build-youtube-momentum-report.mjs"
       - "packages/youtube-api-pilot/**"
       - "packages/youtube-public-capture/**"
       - "packages/youtube-rss-pilot/**"
       - "packages/youtube-rss-resilience/**"
+      - "packages/youtube-momentum/**"
       - "packages/connectors/youtube/**"
       - "packages/connectors/youtube-rss/**"
       - "packages/metadata-candidates/**"
@@ -23,6 +25,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: youtube-public-capture-${{ github.ref }}
@@ -38,6 +41,40 @@ jobs:
         with:
           node-version: 22
       - run: npm install --ignore-scripts
+      - name: Download previous successful production capture
+        if: github.event_name != 'pull_request'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p out/history
+          runs_url="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/youtube-rss-pilot.yml/runs?status=success&per_page=20"
+          previous_run_id="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "${runs_url}" | jq -r '[.workflow_runs[] | select(.event == "schedule" or .event == "workflow_dispatch")] | first | .id // empty')"
+          if [[ -z "${previous_run_id}" ]]; then
+            echo "No prior successful production capture is available."
+            exit 0
+          fi
+          artifacts_url="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${previous_run_id}/artifacts"
+          artifact_id="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "${artifacts_url}" | jq -r '[.artifacts[] | select(.expired == false and (.name | startswith("toolradar-youtube-public-capture-")))] | first | .id // empty')"
+          if [[ -z "${artifact_id}" ]]; then
+            echo "Prior production run ${previous_run_id} has no usable capture artifact."
+            exit 0
+          fi
+          curl --fail --location --silent --show-error \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" \
+            --output /tmp/toolradar-previous-capture.zip
+          unzip -p /tmp/toolradar-previous-capture.zip youtube-public-capture.json > out/history/latest.json
+          jq -e '.artifactVersion == "youtube-public-capture-v1"' out/history/latest.json >/dev/null
+          echo "Previous production capture restored from run ${previous_run_id}."
       - name: Diagnose public YouTube capture without secrets
         if: github.event_name == 'pull_request'
         id: capture_pr
@@ -58,11 +95,29 @@ jobs:
           TOOLRADAR_CAPTURE_RUN_ID: ${{ github.run_id }}
           TOOLRADAR_RSS_MINIMUM_SUCCESS_RATIO: "0.8"
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+      - name: Build plain-language momentum report
+        if: steps.capture_production.outcome == 'success'
+        run: node apps/worker/src/build-youtube-momentum-report.mjs
+        env:
+          TOOLRADAR_CURRENT_ARTIFACT_PATH: out/youtube-public-capture.json
+          TOOLRADAR_PREVIOUS_ARTIFACT_PATH: out/history/latest.json
+          TOOLRADAR_MOMENTUM_REPORT_JSON: out/youtube-momentum-report.json
+          TOOLRADAR_MOMENTUM_REPORT_HTML: out/youtube-momentum-report.html
       - name: Upload public capture evidence
         if: ${{ steps.capture_pr.outcome == 'success' || steps.capture_production.outcome == 'success' }}
         uses: actions/upload-artifact@v4
         with:
           name: toolradar-youtube-public-capture-${{ github.sha }}
           path: out/youtube-public-capture.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload plain-language momentum report
+        if: steps.capture_production.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: toolradar-youtube-momentum-report-${{ github.sha }}
+          path: |
+            out/youtube-momentum-report.json
+            out/youtube-momentum-report.html
           if-no-files-found: error
           retention-days: 14
