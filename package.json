@@ -1,0 +1,11 @@
+{
+  "name": "global-tool-radar",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node --check packages/contracts/src/index.mjs && node --check packages/scoring/src/index.mjs && node --check apps/worker/src/demo.mjs",
+    "test": "node --test packages/scoring/test/*.test.mjs",
+    "demo": "node apps/worker/src/demo.mjs"
+  }
+}
