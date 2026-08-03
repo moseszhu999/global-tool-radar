@@ -14,11 +14,32 @@ const capturedAt =
 const outputPath =
   process.env.TOOLRADAR_PILOT_OUTPUT ?? "out/youtube-rss-pilot.json";
 
-const artifact = await captureYouTubeRssPilot({
-  rssClient: createYouTubeRssClient(),
-  channels: manifest.channels,
-  capturedAt,
-});
+let artifact;
+try {
+  artifact = await captureYouTubeRssPilot({
+    rssClient: createYouTubeRssClient(),
+    channels: manifest.channels,
+    capturedAt,
+  });
+} catch (error) {
+  console.error(
+    JSON.stringify(
+      {
+        status: "failed",
+        error: error?.message ?? "YouTube RSS pilot failed",
+        channels: (error?.channelResults ?? []).map((result) => ({
+          channelId: result.channel.channelId,
+          title: result.channel.title,
+          status: result.status,
+          error: result.error,
+        })),
+      },
+      null,
+      2,
+    ),
+  );
+  throw error;
+}
 
 await mkdir(dirname(outputPath), { recursive: true });
 await writeFile(outputPath, `${JSON.stringify(artifact, null, 2)}\n`, {
