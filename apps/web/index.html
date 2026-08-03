@@ -3,90 +3,99 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ToolRadar · Video Operations Workspace</title>
-  <meta name="description" content="海外 AI 工具与视频信号的证据化运营工作台。">
-  <link rel="stylesheet" href="./styles.css">
+  <title>Global Tool Radar · 今日发现</title>
+  <meta name="description" content="用简单页面看懂海外 AI 工具正在发生什么。">
+  <link rel="stylesheet" href="./today.css">
 </head>
 <body>
-  <div class="app-shell">
-    <aside class="sidebar" aria-label="ToolRadar 主导航">
-      <a class="brand" href="./"><span>TR</span><strong>ToolRadar</strong><small>Original content operations</small></a>
-      <nav>
-        <a class="is-active" href="#today"><i>⌂</i><span>Today</span></a>
-        <a href="#radar"><i>◎</i><span>Radar inbox</span></a>
-        <a href="#sources"><i>◉</i><span>Sources</span></a>
-        <a href="#candidates"><i>▦</i><span>Candidates</span></a>
-        <a href="#tools"><i>◇</i><span>Tools</span></a>
-        <a href="#evidence"><i>✓</i><span>Evidence & tests</span></a>
-        <a href="#studio"><i>✎</i><span>Content studio</span></a>
-        <a href="#production"><i>▶</i><span>Production queue</span></a>
-        <a href="#learning"><i>↗</i><span>Performance</span></a>
-        <a href="#runs"><i>⌘</i><span>Agent runs</span></a>
-      </nav>
-      <footer><strong>Rights-first</strong><span>No source-video download · no unattended publishing</span></footer>
-    </aside>
+  <header class="site-header">
+    <a class="brand" href="./" aria-label="Global Tool Radar 首页">
+      <span class="brand-mark">TR</span>
+      <span><strong>Global Tool Radar</strong><small>海外 AI 工具今日发现</small></span>
+    </a>
+    <nav>
+      <a class="active" href="#discoveries">今日发现</a>
+      <a href="#scope">数据范围</a>
+      <a href="#meaning">怎么看</a>
+      <a class="workspace-link" href="./workspace.html">运营工作台</a>
+    </nav>
+  </header>
 
-    <section class="workspace">
-      <header class="topbar">
-        <div class="page-context">
-          <button class="menu-button" type="button" data-menu aria-label="打开导航">☰</button>
-          <div><strong>Radar inbox</strong><small>发现 → 证据 → 权利/安全 → 原创生产</small></div>
+  <main>
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">今天海外 AI 工具发生了什么？</p>
+        <h1>先给结论，再给证据。</h1>
+        <p class="lead">我们持续读取官方频道公开信息，并比较同一内容在不同时间的播放量变化。这里不展示技术日志，只告诉你抓了多少、哪些在涨、为什么值得看。</p>
+        <div class="hero-actions">
+          <a class="primary" href="#discoveries">看今日发现</a>
+          <span data-generated>正在读取数据…</span>
         </div>
-        <div class="top-actions">
-          <span class="runtime" data-runtime>读取工作台快照…</span>
-          <button class="command-button" type="button" data-agent-open><span>Ask ToolRadar</span><kbd>⌘K</kbd></button>
-          <label class="import-button">导入 JSON<input type="file" accept="application/json" data-import></label>
-        </div>
-      </header>
-
-      <main class="content">
-        <section class="summary-bar" aria-label="工作台摘要">
-          <article><small>候选</small><strong data-count>UNKNOWN</strong><span>已导入候选</span></article>
-          <article><small>数据覆盖</small><strong data-coverage>UNKNOWN</strong><span>平均可观测权重</span></article>
-          <article><small>版权待审</small><strong data-rights>UNKNOWN</strong><span>与机会分数独立</span></article>
-          <article><small>安全待审</small><strong data-security>UNKNOWN</strong><span>硬 Gate</span></article>
-        </section>
-
-        <section class="radar-workspace" aria-label="Radar candidate workspace">
-          <aside class="candidate-pane">
-            <header>
-              <div><strong>Candidate inbox</strong><small>按 rankingScore 展示，不等于发布优先级</small></div>
-              <input type="search" placeholder="搜索标题或频道…" data-search>
-            </header>
-            <div class="candidate-list" data-candidate-list></div>
-          </aside>
-
-          <section class="detail-pane" data-detail>
-            <div class="empty-state">
-              <strong>暂无已验证候选</strong>
-              <span>运行导出命令或导入 `toolradar.operator-workspace.v1` JSON。缺失不会显示为 0。</span>
-            </div>
-          </section>
-        </section>
-      </main>
-    </section>
-  </div>
-
-  <div class="sidebar-mask" data-sidebar-mask></div>
-  <div class="drawer-mask" data-drawer-mask></div>
-  <aside class="agent-drawer" data-agent-drawer aria-hidden="true">
-    <header><div><strong>Ask ToolRadar</strong><small>证据上下文 → proposal → 人工审核</small></div><button type="button" data-agent-close aria-label="关闭">×</button></header>
-    <div class="drawer-body">
-      <div class="prompt-chips">
-        <button type="button" data-prompt="解释这个候选为什么进入 Radar。">为什么入选</button>
-        <button type="button" data-prompt="列出仍缺失的数据和不能下的结论。">缺失数据</button>
-        <button type="button" data-prompt="准备原创工具实测和录屏计划。">实测计划</button>
-        <button type="button" data-prompt="准备一份原创短视频脚本提纲。">脚本提纲</button>
       </div>
-      <form class="agent-command" data-agent-form>
-        <label for="agent-query"><strong>你想完成什么？</strong></label>
-        <textarea id="agent-query" data-agent-query placeholder="例如：基于当前候选准备原创实测计划，并标出版权和安全风险。"></textarea>
-        <footer><small>只生成 draft，不下载、复制或发布源视频。</small><button type="submit">生成提议</button></footer>
-      </form>
-      <div data-agent-output></div>
-    </div>
-  </aside>
+      <aside class="gate-card">
+        <span class="gate-dot"></span>
+        <div>
+          <strong data-gate-title>正在判断趋势状态</strong>
+          <p data-gate-copy>读取采集间隔与确认条件。</p>
+        </div>
+      </aside>
+    </section>
 
-  <script type="module" src="./app.mjs"></script>
+    <section class="stats" aria-label="本次数据范围">
+      <article><strong data-stat="channels">—</strong><span>官方频道</span><small>OpenAI、Claude、GitHub 等</small></article>
+      <article><strong data-stat="videos">—</strong><span>视频样本</span><small>每个频道最近 15 条</small></article>
+      <article><strong data-stat="measurements">—</strong><span>播放量测量点</span><small>同一视频重复测量</small></article>
+      <article><strong data-stat="interval">—</strong><span>测量间隔</span><small>用于判断增长速度</small></article>
+    </section>
+
+    <section class="section" id="discoveries">
+      <div class="section-head">
+        <div><p class="eyebrow">TODAY'S SIGNALS</p><h2>今天最值得看的信号</h2><p>不是最终商业结论，而是“下一步最值得研究什么”。</p></div>
+        <div class="filters" role="group" aria-label="信号筛选">
+          <button class="active" type="button" data-filter="all">全部</button>
+          <button type="button" data-filter="research_now">值得研究</button>
+          <button type="button" data-filter="watch">继续观察</button>
+        </div>
+      </div>
+      <div class="signal-grid" data-signals>
+        <div class="loading">正在读取今日发现…</div>
+      </div>
+    </section>
+
+    <section class="section two-column" id="meaning">
+      <article class="explain-card">
+        <p class="eyebrow">现在已经能看出什么</p>
+        <h2>它能发现“正在变热”的方向</h2>
+        <div class="plain-list">
+          <div><span>1</span><p><strong>近期发布了什么</strong><small>先从官方频道找到新产品、新功能和新叙事。</small></p></div>
+          <div><span>2</span><p><strong>哪些播放量在增长</strong><small>不是只看总播放量，而是比较同一内容前后变化。</small></p></div>
+          <div><span>3</span><p><strong>下一步先研究谁</strong><small>把候选缩小到适合实测、写中文内容或继续追踪的对象。</small></p></div>
+        </div>
+      </article>
+      <article class="explain-card boundary-card">
+        <p class="eyebrow">现在还不能下什么结论</p>
+        <h2>增长信号不等于最终机会</h2>
+        <p>频道可能只是讨论某个工具，并不代表产品归属；播放量增长也不能替代产品实测、版权、安全和中国市场判断。</p>
+        <div class="boundary-tags"><span>不自动发布</span><span>不下载源视频</span><span>不把缺失当作 0</span><span>不把热度当决定</span></div>
+      </article>
+    </section>
+
+    <section class="section scope" id="scope">
+      <div><p class="eyebrow">DATA SCOPE</p><h2>这次究竟抓了什么</h2></div>
+      <div class="scope-grid">
+        <article><strong>来源</strong><p>11 个经过核对的海外 AI 官方 YouTube 频道。</p></article>
+        <article><strong>内容</strong><p>频道最近视频的标题、发布时间、链接和公开播放量。</p></article>
+        <article><strong>没有抓</strong><p>没有下载视频、字幕、评论、用户资料，也没有绕过登录。</p></article>
+        <article><strong>更新时间</strong><p data-capture-window>正在读取本次采集时间。</p></article>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div><strong>Global Tool Radar</strong><span>发现 → 证据 → 实测 → 原创内容</span></div>
+    <a href="./workspace.html">进入专业运营工作台 →</a>
+  </footer>
+
+  <script type="module" src="./today.mjs"></script>
 </body>
 </html>
