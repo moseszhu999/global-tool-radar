@@ -163,7 +163,9 @@ export function buildYouTubeMetadataCandidates(
   const candidates = recent.map((row) => {
     const fresh = freshnessScore(row.publishedAt, now, maxAgeHours);
     const channelCount = row.channelId
-      ? (channelReleaseCount.get(row.channelId) ?? 0)
+      ? row.ageHours <= topicWindowHours
+        ? (channelReleaseCount.get(row.channelId) ?? 0)
+        : 0
       : null;
     const releaseDensity =
       channelCount === null ? null : boundedCountScore(channelCount);
