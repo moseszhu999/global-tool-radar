@@ -15,6 +15,10 @@ for (const contract of [
     path: "../../../apps/worker/src/seed-youtube-watchlist.mjs",
     access: "const result = await seedYouTubeWatchlist",
   },
+  {
+    path: "../../../apps/worker/src/bootstrap-youtube-rss.mjs",
+    access: "const repository = createNeonWorkerRepository",
+  },
 ]) {
   test(`${contract.path} verifies Neon runtime before database access`, () => {
     const source = readFileSync(new URL(contract.path, import.meta.url), "utf8");
