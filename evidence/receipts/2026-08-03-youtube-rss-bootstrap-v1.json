@@ -1,0 +1,60 @@
+{
+  "receiptVersion": "toolradar-youtube-rss-bootstrap-v1",
+  "status": "VERIFIED",
+  "verifiedAt": "2026-08-03T06:19:17.579Z",
+  "repositoryMainBeforeReceipt": "07949fa3d8590da9b7b975a1ccfc3af9263635c5",
+  "databaseBinding": {
+    "provider": "neon",
+    "projectId": "super-night-56614593",
+    "database": "neondb"
+  },
+  "sourceArtifact": {
+    "artifactVersion": "youtube-rss-pilot-v1",
+    "jsonSha256": "813b1e3c8a3ee01de05f385c1e3f2f499de0ba2a727ce6c6c8202a14ae269ba3",
+    "capturedAt": "2026-08-03T05:03:47.241Z",
+    "requestedChannels": 11,
+    "succeededChannels": 11,
+    "failedChannels": 0,
+    "videoCount": 165,
+    "metricSnapshotCount": 165,
+    "sourceCommitSha": null
+  },
+  "normalization": {
+    "version": "youtube-rss-minimal-metadata-v1",
+    "retained": [
+      "videoId",
+      "canonicalVideoUrl",
+      "title",
+      "publishedAt",
+      "channelId",
+      "capturedAt",
+      "viewCount",
+      "sourceArtifactSha256"
+    ],
+    "omitted": [
+      "longDescription"
+    ],
+    "reason": "Historical bootstrap artifact predates source-commit binding; preserve the minimum deterministic public metadata without presenting it as a production snapshot."
+  },
+  "batchReceipts": [
+    {"processed": 38, "revisionsInserted": 38, "snapshotsInserted": 38},
+    {"processed": 38, "revisionsInserted": 38, "snapshotsInserted": 38},
+    {"processed": 38, "revisionsInserted": 38, "snapshotsInserted": 38},
+    {"processed": 36, "revisionsInserted": 36, "snapshotsInserted": 36}
+  ],
+  "databaseVerification": {
+    "sourceIdentities": 165,
+    "sourceRevisions": 165,
+    "metricSnapshots": 165,
+    "activeChannels": 11,
+    "channelsWithBootstrapEvidence": 11,
+    "bootstrapRevisions": 150,
+    "distinctBootstrapArtifactDigests": 1,
+    "revisionsPerChannel": 15
+  },
+  "promotionBoundary": {
+    "countsAsProductionSnapshot": false,
+    "canConfirmMomentumAlone": false,
+    "requiredNextEvidence": "A commit-bound capture with at least 9 of 11 channels successful and a later observable snapshot at least six hours after the prior eligible snapshot."
+  }
+}
