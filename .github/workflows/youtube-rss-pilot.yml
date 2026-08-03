@@ -6,6 +6,7 @@ on:
       - ".github/workflows/youtube-rss-pilot.yml"
       - "apps/worker/src/capture-youtube-rss-pilot.mjs"
       - "packages/youtube-rss-pilot/**"
+      - "packages/youtube-rss-resilience/**"
       - "packages/connectors/youtube-rss/**"
       - "packages/metadata-candidates/**"
       - "config/youtube-watchlist.v1.json"
@@ -37,6 +38,7 @@ jobs:
           TOOLRADAR_PILOT_OUTPUT: out/youtube-rss-pilot.json
           TOOLRADAR_SOURCE_COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           TOOLRADAR_CAPTURE_RUN_ID: ${{ github.run_id }}
+          TOOLRADAR_RSS_MINIMUM_SUCCESS_RATIO: "0.8"
       - name: Upload pilot evidence
         uses: actions/upload-artifact@v4
         with:
