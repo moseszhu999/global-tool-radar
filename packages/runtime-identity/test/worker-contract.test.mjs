@@ -19,6 +19,10 @@ for (const contract of [
     path: "../../../apps/worker/src/bootstrap-youtube-rss.mjs",
     access: "const repository = createNeonWorkerRepository",
   },
+  {
+    path: "../../../apps/worker/src/build-metadata-candidates.mjs",
+    access: "const metadataReader = createYouTubeMetadataReader",
+  },
 ]) {
   test(`${contract.path} verifies Neon runtime before database access`, () => {
     const source = readFileSync(new URL(contract.path, import.meta.url), "utf8");
