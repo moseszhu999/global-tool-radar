@@ -120,6 +120,37 @@ alter function public.get_toolradar_youtube_snapshot_series_v1(
   timestamptz, integer
 ) set search_path = '';
 
+-- New Supabase projects may not grant Data API table access automatically.
+-- Grant the worker role only the operations used by the current runtime.
+grant usage on schema public to service_role;
+
+grant select, insert, update on table
+  public.toolradar_tools,
+  public.toolradar_source_identities,
+  public.toolradar_tool_source_links,
+  public.toolradar_youtube_channel_watchlist,
+  public.toolradar_ingestion_runs
+  to service_role;
+
+grant select, insert on table
+  public.toolradar_source_revisions,
+  public.toolradar_metric_snapshots
+  to service_role;
+
+grant select on table public.toolradar_runtime_identity
+  to service_role;
+
+revoke all on table
+  public.toolradar_tools,
+  public.toolradar_source_identities,
+  public.toolradar_source_revisions,
+  public.toolradar_metric_snapshots,
+  public.toolradar_tool_source_links,
+  public.toolradar_youtube_channel_watchlist,
+  public.toolradar_ingestion_runs,
+  public.toolradar_runtime_identity
+  from anon, authenticated;
+
 revoke all on function public.initialize_toolradar_runtime_identity_v1(text, uuid)
   from public, anon, authenticated;
 revoke all on function public.get_toolradar_runtime_identity_v1()
