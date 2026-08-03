@@ -1,7 +1,6 @@
 -- ToolRadar Source Snapshot + Canonical Tool Entity v1
--- This migration owns source identity, immutable source revisions, metric snapshots,
--- canonical tools, and explicit tool-to-source links. It does not own scoring,
--- test evidence, scripts, rendering, publishing, or platform credentials.
+-- Owns stable source identity, immutable source revisions, append-only metrics,
+-- canonical tools, and explicit tool-to-source links.
 
 create extension if not exists pgcrypto;
 
@@ -23,7 +22,7 @@ create table if not exists public.toolradar_tools (
   )
 );
 
-create table if not exists public.toolradar_source_items (
+create table if not exists public.toolradar_source_identities (
   id uuid primary key default gen_random_uuid(),
   source_type text not null check (
     source_type in (
@@ -37,6 +36,13 @@ create table if not exists public.toolradar_source_items (
   ),
   external_id text not null check (length(btrim(external_id)) > 0),
   source_url text not null check (source_url ~ '^https?://'),
+  created_at timestamptz not null default now(),
+  unique (source_type, external_id)
+);
+
+create table if not exists public.toolradar_source_revisions (
+  id uuid primary key default gen_random_uuid(),
+  source_identity_id uuid not null references public.toolradar_source_identities(id),
   title text not null check (length(btrim(title)) > 0),
   body text not null default '',
   published_at timestamptz null,
@@ -44,27 +50,27 @@ create table if not exists public.toolradar_source_items (
   raw_payload jsonb not null,
   content_hash text not null check (content_hash ~ '^[0-9a-f]{64}$'),
   created_at timestamptz not null default now(),
-  unique (source_type, external_id, content_hash)
+  unique (source_identity_id, content_hash)
 );
 
-create index if not exists toolradar_source_items_identity_idx
-  on public.toolradar_source_items (source_type, external_id, captured_at desc);
+create index if not exists toolradar_source_revisions_timeline_idx
+  on public.toolradar_source_revisions (source_identity_id, captured_at desc);
 
 create table if not exists public.toolradar_metric_snapshots (
   id uuid primary key default gen_random_uuid(),
-  source_item_id uuid not null references public.toolradar_source_items(id),
+  source_identity_id uuid not null references public.toolradar_source_identities(id),
   captured_at timestamptz not null,
   metrics jsonb not null check (jsonb_typeof(metrics) = 'object'),
   created_at timestamptz not null default now(),
-  unique (source_item_id, captured_at)
+  unique (source_identity_id, captured_at)
 );
 
 create index if not exists toolradar_metric_snapshots_timeline_idx
-  on public.toolradar_metric_snapshots (source_item_id, captured_at);
+  on public.toolradar_metric_snapshots (source_identity_id, captured_at);
 
 create table if not exists public.toolradar_tool_source_links (
   tool_id uuid not null references public.toolradar_tools(id),
-  source_item_id uuid not null references public.toolradar_source_items(id),
+  source_identity_id uuid not null references public.toolradar_source_identities(id),
   match_method text not null check (
     match_method in (
       'same_official_domain',
@@ -79,7 +85,7 @@ create table if not exists public.toolradar_tool_source_links (
   confirmed_by uuid null,
   confirmed_at timestamptz null,
   created_at timestamptz not null default now(),
-  primary key (tool_id, source_item_id),
+  primary key (tool_id, source_identity_id),
   check (
     (decision = 'confirmed' and confirmed_at is not null)
     or decision <> 'confirmed'
@@ -95,10 +101,10 @@ begin
 end;
 $$;
 
-drop trigger if exists toolradar_source_items_append_only
-  on public.toolradar_source_items;
-create trigger toolradar_source_items_append_only
-before update or delete on public.toolradar_source_items
+drop trigger if exists toolradar_source_revisions_append_only
+  on public.toolradar_source_revisions;
+create trigger toolradar_source_revisions_append_only
+before update or delete on public.toolradar_source_revisions
 for each row execute function public.toolradar_reject_immutable_mutation();
 
 drop trigger if exists toolradar_metric_snapshots_append_only
@@ -108,9 +114,10 @@ before update or delete on public.toolradar_metric_snapshots
 for each row execute function public.toolradar_reject_immutable_mutation();
 
 alter table public.toolradar_tools enable row level security;
-alter table public.toolradar_source_items enable row level security;
+alter table public.toolradar_source_identities enable row level security;
+alter table public.toolradar_source_revisions enable row level security;
 alter table public.toolradar_metric_snapshots enable row level security;
 alter table public.toolradar_tool_source_links enable row level security;
 
--- No permissive policy is created in v1. Runtime read/write authorization remains closed
--- until the web/worker identity model is introduced in a separate owner.
+-- No permissive policy is created in v1. Runtime read/write authorization remains
+-- closed until the web/worker identity model is introduced in a separate owner.
