@@ -114,7 +114,11 @@ export function parseYouTubeAtomFeed(xml, { capturedAt, expectedChannelId } = {}
 
   const feedChannelId = extractTag(xml, "yt:channelId");
   if (feedChannelId && !CHANNEL_ID_PATTERN.test(feedChannelId)) {
-    throw new Error("YouTube RSS feed returned a noncanonical channel ID");
+    throw new Error(
+      `YouTube RSS feed returned a noncanonical channel ID: ${JSON.stringify(
+        feedChannelId,
+      )} (length ${feedChannelId.length})`,
+    );
   }
   if (
     expectedChannelId &&
@@ -216,7 +220,7 @@ export function createYouTubeRssClient({
         method: "GET",
         headers: {
           Accept: "application/atom+xml, application/xml, text/xml",
-          "User-Agent": "global-tool-radar/0.7",
+          "User-Agent": "global-tool-radar/0.9",
         },
       });
       const text = await response.text().catch(() => "");
