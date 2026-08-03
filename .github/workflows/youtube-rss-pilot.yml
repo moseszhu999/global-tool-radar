@@ -1,14 +1,18 @@
-name: youtube-rss-pilot
+name: youtube-public-capture
 
 on:
   pull_request:
     paths:
       - ".github/workflows/youtube-rss-pilot.yml"
       - "apps/worker/src/capture-youtube-rss-pilot.mjs"
+      - "packages/youtube-api-pilot/**"
+      - "packages/youtube-public-capture/**"
       - "packages/youtube-rss-pilot/**"
       - "packages/youtube-rss-resilience/**"
+      - "packages/connectors/youtube/**"
       - "packages/connectors/youtube-rss/**"
       - "packages/metadata-candidates/**"
+      - "packages/artifact-import/**"
       - "config/youtube-watchlist.v1.json"
       - "package.json"
   workflow_dispatch:
@@ -19,7 +23,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: youtube-rss-pilot-${{ github.ref }}
+  group: youtube-public-capture-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -32,20 +36,31 @@ jobs:
         with:
           node-version: 22
       - run: npm install --ignore-scripts
-      - name: Capture public YouTube RSS evidence
-        id: capture
-        continue-on-error: ${{ github.event_name == 'pull_request' }}
-        run: npm run pilot:youtube-rss
+      - name: Diagnose public YouTube capture without secrets
+        if: github.event_name == 'pull_request'
+        id: capture_pr
+        continue-on-error: true
+        run: npm run capture:youtube-public
         env:
-          TOOLRADAR_PILOT_OUTPUT: out/youtube-rss-pilot.json
-          TOOLRADAR_SOURCE_COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          TOOLRADAR_PILOT_OUTPUT: out/youtube-public-capture.json
+          TOOLRADAR_SOURCE_COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
           TOOLRADAR_CAPTURE_RUN_ID: ${{ github.run_id }}
           TOOLRADAR_RSS_MINIMUM_SUCCESS_RATIO: "0.8"
-      - name: Upload pilot evidence
-        if: steps.capture.outcome == 'success'
+      - name: Capture public YouTube evidence with optional API fallback
+        if: github.event_name != 'pull_request'
+        id: capture_production
+        run: npm run capture:youtube-public
+        env:
+          TOOLRADAR_PILOT_OUTPUT: out/youtube-public-capture.json
+          TOOLRADAR_SOURCE_COMMIT_SHA: ${{ github.sha }}
+          TOOLRADAR_CAPTURE_RUN_ID: ${{ github.run_id }}
+          TOOLRADAR_RSS_MINIMUM_SUCCESS_RATIO: "0.8"
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+      - name: Upload public capture evidence
+        if: ${{ steps.capture_pr.outcome == 'success' || steps.capture_production.outcome == 'success' }}
         uses: actions/upload-artifact@v4
         with:
-          name: toolradar-youtube-rss-pilot-${{ github.sha }}
-          path: out/youtube-rss-pilot.json
+          name: toolradar-youtube-public-capture-${{ github.sha }}
+          path: out/youtube-public-capture.json
           if-no-files-found: error
           retention-days: 14

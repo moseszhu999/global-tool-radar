@@ -166,11 +166,12 @@ test("failures redact database and bearer credentials", async () => {
   assert.doesNotMatch(result.channels[1].error, /npg_secret|token-secret/);
 });
 
-test("pilot workflow is scheduled, read-only, and contains no secret input", () => {
+test("workflow isolates the optional API secret from pull-request diagnostics", () => {
   const workflow = readFileSync(
     new URL("../../../.github/workflows/youtube-rss-pilot.yml", import.meta.url),
     "utf8",
   );
+  assert.match(workflow, /name: youtube-public-capture/);
   assert.match(workflow, /schedule:\s*\n\s+- cron: "17 5 \* \* \*"/);
   assert.match(workflow, /permissions:\s*\n\s+contents: read/);
   assert.match(workflow, /actions\/upload-artifact@v4/);
@@ -179,6 +180,26 @@ test("pilot workflow is scheduled, read-only, and contains no secret input", () 
   assert.match(workflow, /TOOLRADAR_CAPTURE_RUN_ID/);
   assert.doesNotMatch(
     workflow,
-    /secrets\.|DATABASE_URL|YOUTUBE_API_KEY|TOOLRADAR_NEON_|TOOLRADAR_INSTALLATION_ID/,
+    /DATABASE_URL|TOOLRADAR_NEON_|TOOLRADAR_INSTALLATION_ID/,
+  );
+
+  const diagnosticStart = workflow.indexOf(
+    "Diagnose public YouTube capture without secrets",
+  );
+  const productionStart = workflow.indexOf(
+    "Capture public YouTube evidence with optional API fallback",
+  );
+  const uploadStart = workflow.indexOf("Upload public capture evidence");
+  assert.ok(diagnosticStart >= 0);
+  assert.ok(productionStart > diagnosticStart);
+  assert.ok(uploadStart > productionStart);
+  const diagnostic = workflow.slice(diagnosticStart, productionStart);
+  const production = workflow.slice(productionStart, uploadStart);
+  assert.match(diagnostic, /continue-on-error: true/);
+  assert.doesNotMatch(diagnostic, /secrets\.|YOUTUBE_API_KEY/);
+  assert.match(production, /if: github\.event_name != 'pull_request'/);
+  assert.match(
+    production,
+    /YOUTUBE_API_KEY:\s*\$\{\{ secrets\.YOUTUBE_API_KEY \}\}/,
   );
 });

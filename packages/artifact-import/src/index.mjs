@@ -3,6 +3,10 @@ import { createHash } from "node:crypto";
 const HEX_64 = /^[0-9a-f]{64}$/;
 const COMMIT_SHA = /^[0-9a-f]{40}$/;
 const CHANNEL_ID = /^UC[A-Za-z0-9_-]{22}$/;
+const SUPPORTED_ARTIFACT_VERSIONS = new Set([
+  "youtube-rss-pilot-v1",
+  "youtube-public-capture-v1",
+]);
 
 function assertObject(value, field) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -47,8 +51,8 @@ export function validateYouTubeRssArtifact(
   } = {},
 ) {
   assertObject(artifact, "artifact");
-  if (artifact.artifactVersion !== "youtube-rss-pilot-v1") {
-    throw new Error("Unsupported YouTube RSS artifact version");
+  if (!SUPPORTED_ARTIFACT_VERSIONS.has(artifact.artifactVersion)) {
+    throw new Error("Unsupported YouTube public capture artifact version");
   }
   if (artifact.evidenceClass !== "public_metadata_capture") {
     throw new Error("Artifact evidence class is not public metadata capture");
@@ -210,3 +214,6 @@ export async function importYouTubeRssArtifact({
     batches,
   });
 }
+
+export const validateYouTubePublicArtifact = validateYouTubeRssArtifact;
+export const importYouTubePublicArtifact = importYouTubeRssArtifact;
