@@ -1,15 +1,14 @@
-import { createSupabaseWorkerRepository } from "../../../packages/persistence/supabase-rest/src/index.mjs";
-import { verifySupabaseRuntime } from "../../../packages/runtime-identity/src/index.mjs";
+import { createNeonQuery } from "../../../packages/persistence/neon-http/src/client.mjs";
+import { createNeonWorkerRepository } from "../../../packages/persistence/neon-http/src/index.mjs";
+import { verifyNeonRuntime } from "../../../packages/runtime-identity/src/index.mjs";
 import { buildYouTubeDailyCandidates } from "../../../packages/youtube-momentum/src/index.mjs";
-import { readSupabaseRuntimeEnv } from "./runtime-env.mjs";
+import { readNeonRuntimeEnv } from "./runtime-env.mjs";
 
-const runtimeEnv = readSupabaseRuntimeEnv();
-await verifySupabaseRuntime(runtimeEnv);
+const runtimeEnv = readNeonRuntimeEnv();
+const query = createNeonQuery(runtimeEnv.databaseUrl);
+await verifyNeonRuntime({ query, ...runtimeEnv });
 
-const repository = createSupabaseWorkerRepository({
-  supabaseUrl: runtimeEnv.supabaseUrl,
-  serviceRoleKey: runtimeEnv.serviceRoleKey,
-});
+const repository = createNeonWorkerRepository({ query });
 const now = new Date();
 const since = new Date(
   now.getTime() - 14 * 24 * 60 * 60 * 1000,
