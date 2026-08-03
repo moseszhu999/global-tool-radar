@@ -18,6 +18,8 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "17 5 * * *"
+    # 22:20 Beijing time. The 9h03m daytime spacing clears the 6-hour momentum gate.
+    - cron: "20 14 * * *"
 
 permissions:
   contents: read
