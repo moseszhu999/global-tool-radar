@@ -38,6 +38,22 @@ test("privileged functions use an empty search path and restricted execution", (
   );
 });
 
+test("service role receives explicit Data API table privileges only", () => {
+  assert.match(migration, /grant usage on schema public to service_role/);
+  assert.match(
+    migration,
+    /grant select, insert on table[\s\S]*public\.toolradar_source_revisions[\s\S]*to service_role/,
+  );
+  assert.match(
+    migration,
+    /grant select on table public\.toolradar_runtime_identity\s+to service_role/,
+  );
+  assert.match(
+    migration,
+    /revoke all on table[\s\S]*public\.toolradar_runtime_identity[\s\S]*from anon, authenticated/,
+  );
+});
+
 test("preflight query is read-only and detects non-ToolRadar objects", () => {
   const sql = readFileSync(
     new URL(
