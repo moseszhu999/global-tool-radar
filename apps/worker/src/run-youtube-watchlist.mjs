@@ -1,6 +1,8 @@
 import { createYouTubeClient } from "../../../packages/connectors/youtube/src/index.mjs";
 import { createSupabaseWorkerRepository } from "../../../packages/persistence/supabase-rest/src/index.mjs";
+import { verifySupabaseRuntime } from "../../../packages/runtime-identity/src/index.mjs";
 import { runYouTubeWatchlistBatch } from "../../../packages/youtube-ingestion/src/index.mjs";
+import { readSupabaseRuntimeEnv } from "./runtime-env.mjs";
 
 function requiredEnv(name) {
   const value = process.env[name];
@@ -8,9 +10,12 @@ function requiredEnv(name) {
   return value;
 }
 
+const runtimeEnv = readSupabaseRuntimeEnv();
+await verifySupabaseRuntime(runtimeEnv);
+
 const repository = createSupabaseWorkerRepository({
-  supabaseUrl: requiredEnv("SUPABASE_URL"),
-  serviceRoleKey: requiredEnv("SUPABASE_SERVICE_ROLE_KEY"),
+  supabaseUrl: runtimeEnv.supabaseUrl,
+  serviceRoleKey: runtimeEnv.serviceRoleKey,
 });
 const youtubeClient = createYouTubeClient({
   apiKey: requiredEnv("YOUTUBE_API_KEY"),
