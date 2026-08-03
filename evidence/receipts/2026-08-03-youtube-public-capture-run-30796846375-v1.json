@@ -1,0 +1,107 @@
+{
+  "receiptVersion": "toolradar-youtube-public-capture-receipt-v1",
+  "status": "VERIFIED",
+  "verifiedAt": "2026-08-03T08:32:50.529Z",
+  "repositoryMainBeforeReceipt": "b650b3b21876612b2e24c65eb825c3bd360a254e",
+  "databaseBinding": {
+    "provider": "neon",
+    "projectId": "super-night-56614593",
+    "branchId": "br-floral-hill-ax43vqlc",
+    "database": "neondb"
+  },
+  "sourceArtifact": {
+    "artifactVersion": "youtube-public-capture-v1",
+    "runId": "30796846375",
+    "artifactId": "8849196993",
+    "sourceCommitSha": "b650b3b21876612b2e24c65eb825c3bd360a254e",
+    "capturedAt": "2026-08-03T08:18:01.943Z",
+    "zipSha256": "e333bee5e9c91e0d420326f88a81172cb55f68ba304a2c68ea3a33297f17bec4",
+    "jsonSha256": "baa854af766bdcdd1398d065ef115790080bad4b72300c984da7628d3260ed08",
+    "captureMode": "rss_only",
+    "requestedChannels": 11,
+    "succeededChannels": 11,
+    "failedChannels": 0,
+    "requiredChannels": 9,
+    "videoCount": 165,
+    "metricSnapshotCount": 165,
+    "metadataCandidateCount": 77,
+    "providerSummary": {
+      "rssAttemptedChannels": 11,
+      "rssSucceededChannels": 11,
+      "youtubeDataApiAvailable": true,
+      "youtubeDataApiAttemptedChannels": 0,
+      "youtubeAtomFeedVideos": 165
+    }
+  },
+  "importReceipt": {
+    "mode": "metric_snapshot_for_existing_source_revision",
+    "requested": 165,
+    "matchedExistingSources": 165,
+    "processed": 165,
+    "revisionsInserted": 0,
+    "snapshotsInserted": 165,
+    "atomic": true
+  },
+  "exactReplay": {
+    "processed": 165,
+    "revisionsInserted": 0,
+    "snapshotsInserted": 0
+  },
+  "databaseVerification": {
+    "sourceIdentities": 165,
+    "sourceRevisions": 165,
+    "metricSnapshots": 330,
+    "activeChannels": 11,
+    "videosWithMeasuredIntervals": 165,
+    "positiveIntervals": 140,
+    "zeroIntervals": 25,
+    "negativeIntervals": 0,
+    "intervalHours": 3.2374172222222222,
+    "averageDeltaViews": 1309.36,
+    "maximumDeltaViews": 189395,
+    "channelsWithIntervals": 11,
+    "minimumIntervalsPerChannel": 15,
+    "maximumIntervalsPerChannel": 15,
+    "channelsWithPositiveBaseline": 10
+  },
+  "leadingObservedDeltas": [
+    {
+      "videoId": "r7b_EsFgeyM",
+      "title": "Making New York City miniature with Claude",
+      "deltaViews": 189395,
+      "viewsPerHour": 58501.88
+    },
+    {
+      "videoId": "R-Yqes8AotY",
+      "title": "Reconstructing Pelé’s lost goal",
+      "deltaViews": 13983,
+      "viewsPerHour": 4319.18
+    },
+    {
+      "videoId": "yn4MSHbKgmo",
+      "title": "Seedance 2.5 is Here — Everything You need to Know",
+      "deltaViews": 4892,
+      "viewsPerHour": 1511.08
+    },
+    {
+      "videoId": "aw_NlbKzVyY",
+      "title": "Introducing Replit Design",
+      "deltaViews": 1727,
+      "viewsPerHour": 533.45
+    },
+    {
+      "videoId": "fj2_OcZbumE",
+      "title": "Why OpenClaw feels like the Linux of AI",
+      "deltaViews": 382,
+      "viewsPerHour": 118.0
+    }
+  ],
+  "promotionBoundary": {
+    "currentGate": "METRIC_CONFIRMATION_REQUIRED",
+    "momentumConfirmedCount": 0,
+    "minimumRequiredIntervalHours": 6,
+    "observedIntervalHours": 3.2374172222222222,
+    "blockingReason": "SNAPSHOT_INTERVAL_TOO_SHORT",
+    "requiredNextEvidence": "A later eligible public capture at least six hours after 2026-08-03T05:03:47.241Z, followed by canonical import and gate evaluation."
+  }
+}
