@@ -5,6 +5,7 @@ import {
 
 const DEFAULT_ENDPOINT = "https://www.youtube.com/feeds/videos.xml";
 const CHANNEL_ID_PATTERN = /^UC[A-Za-z0-9_-]{22}$/;
+const CHANNEL_SUFFIX_PATTERN = /^[A-Za-z0-9_-]{22}$/;
 const VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{11}$/;
 
 function assertNonEmptyString(value, field) {
@@ -27,6 +28,14 @@ function assertChannelId(channelId) {
   if (!CHANNEL_ID_PATTERN.test(channelId)) {
     throw new TypeError("channelId must be a canonical YouTube UC channel ID");
   }
+}
+
+function normalizeFeedChannelId(value) {
+  if (value === null || value === undefined) return null;
+  const normalized = String(value).trim();
+  if (CHANNEL_ID_PATTERN.test(normalized)) return normalized;
+  if (CHANNEL_SUFFIX_PATTERN.test(normalized)) return `UC${normalized}`;
+  return null;
 }
 
 function decodeXml(value) {
@@ -112,12 +121,13 @@ export function parseYouTubeAtomFeed(xml, { capturedAt, expectedChannelId } = {}
   const captured = normalizeTimestamp(capturedAt, "capturedAt");
   if (expectedChannelId !== undefined) assertChannelId(expectedChannelId);
 
-  const feedChannelId = extractTag(xml, "yt:channelId");
-  if (feedChannelId && !CHANNEL_ID_PATTERN.test(feedChannelId)) {
+  const rawFeedChannelId = extractTag(xml, "yt:channelId");
+  const feedChannelId = normalizeFeedChannelId(rawFeedChannelId);
+  if (rawFeedChannelId && !feedChannelId) {
     throw new Error(
       `YouTube RSS feed returned a noncanonical channel ID: ${JSON.stringify(
-        feedChannelId,
-      )} (length ${feedChannelId.length})`,
+        rawFeedChannelId,
+      )} (length ${rawFeedChannelId.length})`,
     );
   }
   if (
@@ -139,10 +149,16 @@ export function parseYouTubeAtomFeed(xml, { capturedAt, expectedChannelId } = {}
     if (!videoId || seenVideoIds.has(videoId)) continue;
     seenVideoIds.add(videoId);
 
-    const channelId = extractTag(entry, "yt:channelId") ?? feedChannelId ?? null;
-    if (channelId && !CHANNEL_ID_PATTERN.test(channelId)) {
-      throw new Error(`Video ${videoId} has a noncanonical channel ID`);
+    const rawEntryChannelId = extractTag(entry, "yt:channelId");
+    const entryChannelId = normalizeFeedChannelId(rawEntryChannelId);
+    if (rawEntryChannelId && !entryChannelId) {
+      throw new Error(
+        `Video ${videoId} has a noncanonical channel ID: ${JSON.stringify(
+          rawEntryChannelId,
+        )}`,
+      );
     }
+    const channelId = entryChannelId ?? feedChannelId ?? null;
     if (expectedChannelId && channelId && channelId !== expectedChannelId) {
       throw new Error(`Video ${videoId} belongs to an unexpected channel`);
     }
