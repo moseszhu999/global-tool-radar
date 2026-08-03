@@ -2,67 +2,62 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-const migration = readFileSync(
-  new URL(
-    "../../../supabase/migrations/20260803090000_toolradar_runtime_identity_v1.sql",
-    import.meta.url,
-  ),
-  "utf8",
+const migrationUrls = [
+  "../../../neon/migrations/20260803100000_toolradar_neon_tables_v1.sql",
+  "../../../neon/migrations/20260803101000_toolradar_neon_identity_v1.sql",
+  "../../../neon/migrations/20260803102000_toolradar_neon_runtime_functions_v1.sql",
+];
+const migrations = migrationUrls.map((path) =>
+  readFileSync(new URL(path, import.meta.url), "utf8"),
 );
+const joined = migrations.join("\n");
 
-test("runtime migration creates a singleton identity with closed RLS", () => {
-  assert.match(migration, /create table if not exists public\.toolradar_runtime_identity/);
-  assert.match(migration, /primary key default true check \(singleton\)/);
-  assert.match(migration, /enable row level security/);
-  assert.doesNotMatch(migration, /create policy/i);
+test("Neon migrations create the eight bounded runtime tables", () => {
+  for (const table of [
+    "toolradar_tools",
+    "toolradar_source_identities",
+    "toolradar_source_revisions",
+    "toolradar_metric_snapshots",
+    "toolradar_tool_source_links",
+    "toolradar_youtube_channel_watchlist",
+    "toolradar_ingestion_runs",
+    "toolradar_runtime_identity",
+  ]) {
+    assert.match(joined, new RegExp(`CREATE TABLE IF NOT EXISTS public\\.${table}`));
+  }
 });
 
-test("initialization rejects shared projects with foreign public objects", () => {
-  assert.match(migration, /requires a dedicated Supabase project/);
-  assert.match(migration, /relation\.relname not like 'toolradar\\_%'/);
-  assert.match(migration, /pg_catalog\.pg_class/);
+test("runtime identity binds Neon project, branch, database, and installation", () => {
+  assert.match(joined, /provider text NOT NULL DEFAULT 'neon'/);
+  assert.match(joined, /p_project_id text/);
+  assert.match(joined, /p_branch_id text/);
+  assert.match(joined, /p_database_name text/);
+  assert.match(joined, /p_installation_id uuid/);
+  assert.match(joined, /requires a dedicated Neon database/);
 });
 
-test("privileged functions use an empty search path and restricted execution", () => {
-  const emptySearchPathCount = (
-    migration.match(/set search_path = ''/g) ?? []
-  ).length;
-  assert.ok(emptySearchPathCount >= 6);
-  assert.match(
-    migration,
-    /revoke all on function public\.initialize_toolradar_runtime_identity_v1/,
-  );
-  assert.match(
-    migration,
-    /grant execute on function public\.get_toolradar_runtime_identity_v1\(\)\s+to service_role/,
-  );
+test("immutable evidence tables retain append-only triggers", () => {
+  assert.match(joined, /toolradar_source_revisions_append_only/);
+  assert.match(joined, /toolradar_metric_snapshots_append_only/);
+  assert.match(joined, /is append-only/);
 });
 
-test("service role receives explicit Data API table privileges only", () => {
-  assert.match(migration, /grant usage on schema public to service_role/);
-  assert.match(
-    migration,
-    /grant select, insert on table[\s\S]*public\.toolradar_source_revisions[\s\S]*to service_role/,
-  );
-  assert.match(
-    migration,
-    /grant select on table public\.toolradar_runtime_identity\s+to service_role/,
-  );
-  assert.match(
-    migration,
-    /revoke all on table[\s\S]*public\.toolradar_runtime_identity[\s\S]*from anon, authenticated/,
-  );
+test("atomic capture uses named constraints and leases use skip locked", () => {
+  assert.match(joined, /persist_toolradar_source_capture_v1/);
+  assert.match(joined, /ON CONFLICT ON CONSTRAINT toolradar_source_revisions_source_identity_id_content_hash_key/);
+  assert.match(joined, /FOR UPDATE SKIP LOCKED/);
+  assert.match(joined, /watchlist lease is not owned by worker/);
 });
 
-test("preflight query is read-only and detects non-ToolRadar objects", () => {
-  const sql = readFileSync(
-    new URL(
-      "../../../supabase/preflight/toolradar_dedicated_project.sql",
-      import.meta.url,
-    ),
-    "utf8",
-  );
-  assert.match(sql, /^--[\s\S]*select/i);
-  assert.doesNotMatch(sql, /\b(insert|update|delete|create|alter|drop|truncate)\b/i);
-  assert.match(sql, /not like 'toolradar\\_%'/);
+test("Neon migrations contain no Supabase roles or browser policies", () => {
+  assert.doesNotMatch(joined, /\b(service_role|anon|authenticated)\b/);
+  assert.doesNotMatch(joined, /enable row level security/i);
+  assert.doesNotMatch(joined, /create policy/i);
+});
+
+test("all privileged functions use an empty search path", () => {
+  const securityDefinerCount = (joined.match(/SECURITY DEFINER/g) ?? []).length;
+  const emptySearchPathCount = (joined.match(/SET search_path = ''/g) ?? []).length;
+  assert.ok(securityDefinerCount >= 7);
+  assert.ok(emptySearchPathCount >= securityDefinerCount);
 });
