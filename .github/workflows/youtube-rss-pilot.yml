@@ -17,6 +17,11 @@ on:
       - "packages/artifact-import/**"
       - "config/youtube-watchlist.v1.json"
       - "package.json"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/toolradar-production-trigger"
   workflow_dispatch:
   schedule:
     - cron: "17 5 * * *"
@@ -53,7 +58,7 @@ jobs:
           previous_run_id="$(curl --fail --silent --show-error \
             -H "Authorization: Bearer ${GH_TOKEN}" \
             -H "Accept: application/vnd.github+json" \
-            "${runs_url}" | jq -r '[.workflow_runs[] | select(.event == "schedule" or .event == "workflow_dispatch")] | first | .id // empty')"
+            "${runs_url}" | jq -r '[.workflow_runs[] | select(.event != "pull_request")] | first | .id // empty')"
           if [[ -z "${previous_run_id}" ]]; then
             echo "No prior successful production capture is available."
             exit 0
