@@ -166,14 +166,17 @@ test("failures redact database and bearer credentials", async () => {
   assert.doesNotMatch(result.channels[1].error, /npg_secret|token-secret/);
 });
 
-test("pilot workflow is read-only and contains no secret or database input", () => {
+test("pilot workflow is scheduled, read-only, and contains no secret input", () => {
   const workflow = readFileSync(
     new URL("../../../.github/workflows/youtube-rss-pilot.yml", import.meta.url),
     "utf8",
   );
+  assert.match(workflow, /schedule:\s*\n\s+- cron: "17 5 \* \* \*"/);
   assert.match(workflow, /permissions:\s*\n\s+contents: read/);
   assert.match(workflow, /actions\/upload-artifact@v4/);
-  assert.match(workflow, /retention-days: 7/);
+  assert.match(workflow, /retention-days: 14/);
+  assert.match(workflow, /TOOLRADAR_SOURCE_COMMIT_SHA/);
+  assert.match(workflow, /TOOLRADAR_CAPTURE_RUN_ID/);
   assert.doesNotMatch(
     workflow,
     /secrets\.|DATABASE_URL|YOUTUBE_API_KEY|TOOLRADAR_NEON_|TOOLRADAR_INSTALLATION_ID/,
