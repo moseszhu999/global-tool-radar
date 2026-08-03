@@ -102,3 +102,26 @@ test("API failures redact the API key from error messages", async () => {
       !error.message.includes("secret-key"),
   );
 });
+
+test("metric-only changes do not create a new source revision hash", () => {
+  const base = {
+    id: "video-1",
+    snippet: { title: "Tool", publishedAt: "2026-08-03T00:00:00Z" },
+    contentDetails: { duration: "PT1M" },
+    status: { privacyStatus: "public" },
+  };
+  const first = normalizeYouTubeVideo(
+    { ...base, statistics: { viewCount: "100" } },
+    "2026-08-03T01:00:00Z",
+  );
+  const second = normalizeYouTubeVideo(
+    { ...base, statistics: { viewCount: "200" } },
+    "2026-08-03T02:00:00Z",
+  );
+
+  assert.equal(first.sourceItem.contentHash, second.sourceItem.contentHash);
+  assert.notEqual(
+    first.metricSnapshot.metrics.viewCount,
+    second.metricSnapshot.metrics.viewCount,
+  );
+});
