@@ -24,7 +24,7 @@ for (const contract of [
     access: "const metadataReader = createYouTubeMetadataReader",
   },
   {
-    path: "../../../apps/worker/src/import-youtube-rss-artifact.mjs",
+    path: "../../../apps/worker/src/import-youtube-public-artifact.mjs",
     access: "const repository = createNeonArtifactImportRepository",
   },
 ]) {
@@ -37,3 +37,18 @@ for (const contract of [
     assert.doesNotMatch(source, /Supabase|serviceRoleKey|SUPABASE_/);
   });
 }
+
+test("legacy RSS artifact command delegates to the runtime-verified public importer", () => {
+  const source = readFileSync(
+    new URL(
+      "../../../apps/worker/src/import-youtube-rss-artifact.mjs",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.match(source, /import\("\.\/import-youtube-public-artifact\.mjs"\)/);
+  assert.doesNotMatch(
+    source,
+    /createNeonQuery|createNeonArtifactImportRepository|DATABASE_URL|Supabase/,
+  );
+});
