@@ -40,7 +40,7 @@ function visibleSignals(){
 function renderSignals(){
   const signals = visibleSignals();
   const container = $('[data-signals]');
-  if(!signals.length){container.innerHTML = '<div class="empty">当前筛选下没有信号；缺失不等于0。</div>';return;}
+  if(!signals.length){container.innerHTML = '<div class="empty">当前筛选下没有信号；缺失不等于 0。</div>';return;}
   container.innerHTML = signals.map((signal) => `
     <article class="signal-card">
       <header>
@@ -73,7 +73,7 @@ async function load(){
     renderStats();
     renderSignals();
   }catch(error){
-    $('[data-signals]').innerHTML = `<div class="empty">今日数据读取失败：${esc(error.message)}。页面不会把缺失数据显示成0。</div>`;
+    $('[data-signals]').innerHTML = `<div class="empty">今日数据读取失败：${esc(error.message)}。页面不会把缺失数据显示成 0。</div>`;
     $('[data-generated]').textContent = '数据暂不可用';
   }
 }
