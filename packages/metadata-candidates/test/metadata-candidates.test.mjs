@@ -134,6 +134,44 @@ test("release density is observable but cannot remove the metric gate", () => {
   );
 });
 
+test("old candidate does not inherit a later channel release burst", () => {
+  const candidates = buildYouTubeMetadataCandidates(
+    [
+      row(
+        "oldoldold01",
+        "channel-a",
+        "2026-07-29T12:00:00Z",
+        "Older reasoning model",
+      ),
+      row(
+        "aaaaaaaaaaa",
+        "channel-a",
+        "2026-08-03T11:00:00Z",
+        "Reasoning model one",
+      ),
+      row(
+        "bbbbbbbbbbb",
+        "channel-a",
+        "2026-08-03T10:00:00Z",
+        "Reasoning model two",
+      ),
+      row(
+        "ccccccccccc",
+        "channel-a",
+        "2026-08-03T09:00:00Z",
+        "Reasoning model three",
+      ),
+    ],
+    { now, channels },
+  );
+  const old = candidates.find(
+    (candidate) => candidate.externalId === "oldoldold01",
+  );
+  assert.equal(old.channelVideoCountInWindow, 0);
+  assert.equal(old.releaseDensityScore, 0);
+  assert.ok(!old.reasonCodes.includes("CHANNEL_RELEASE_BURST"));
+});
+
 test("missing channel identity stays missing rather than becoming zero", () => {
   const candidates = buildYouTubeMetadataCandidates(
     [
