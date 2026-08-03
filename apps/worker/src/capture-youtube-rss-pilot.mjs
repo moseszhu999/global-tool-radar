@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { createYouTubeRssClient } from "../../../packages/connectors/youtube-rss/src/index.mjs";
+import { buildYouTubeMetadataCandidates } from "../../../packages/metadata-candidates/src/index.mjs";
 import { captureYouTubeRssPilot } from "../../../packages/youtube-rss-pilot/src/index.mjs";
 
 const manifest = JSON.parse(
@@ -41,8 +42,30 @@ try {
   throw error;
 }
 
+const candidateRows = artifact.videos.map((video) => ({
+  sourceIdentityId: video.sourceItem.sourceKey,
+  externalId: video.sourceItem.externalId,
+  sourceUrl: video.sourceItem.sourceUrl,
+  title: video.sourceItem.title,
+  body: video.sourceItem.body,
+  publishedAt: video.sourceItem.publishedAt,
+  channelId: video.sourceItem.rawPayload.channelId ?? null,
+  capturedAt: video.sourceItem.capturedAt,
+  ingestionSource: video.ingestionSource,
+}));
+const metadataCandidates = buildYouTubeMetadataCandidates(candidateRows, {
+  now: artifact.capturedAt,
+  channels: manifest.channels,
+});
+const bundle = Object.freeze({
+  ...artifact,
+  metadataCandidateVersion: "youtube-metadata-v1",
+  metadataCandidateCount: metadataCandidates.length,
+  metadataCandidates,
+});
+
 await mkdir(dirname(outputPath), { recursive: true });
-await writeFile(outputPath, `${JSON.stringify(artifact, null, 2)}\n`, {
+await writeFile(outputPath, `${JSON.stringify(bundle, null, 2)}\n`, {
   encoding: "utf8",
   flag: "w",
 });
@@ -50,15 +73,16 @@ await writeFile(outputPath, `${JSON.stringify(artifact, null, 2)}\n`, {
 console.log(
   JSON.stringify(
     {
-      artifactVersion: artifact.artifactVersion,
-      capturedAt: artifact.capturedAt,
+      artifactVersion: bundle.artifactVersion,
+      capturedAt: bundle.capturedAt,
       outputPath,
-      requestedChannels: artifact.requestedChannels,
-      succeededChannels: artifact.succeededChannels,
-      failedChannels: artifact.failedChannels,
-      videoCount: artifact.videoCount,
-      metricSnapshotCount: artifact.metricSnapshotCount,
-      promotionGate: artifact.promotionGate,
+      requestedChannels: bundle.requestedChannels,
+      succeededChannels: bundle.succeededChannels,
+      failedChannels: bundle.failedChannels,
+      videoCount: bundle.videoCount,
+      metricSnapshotCount: bundle.metricSnapshotCount,
+      metadataCandidateCount: bundle.metadataCandidateCount,
+      promotionGate: bundle.promotionGate,
     },
     null,
     2,
