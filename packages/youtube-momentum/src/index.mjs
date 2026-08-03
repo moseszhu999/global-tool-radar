@@ -2,6 +2,8 @@ import { deriveMetricVelocity } from "../../source-records/src/index.mjs";
 import { weightedScore } from "../../scoring/src/index.mjs";
 
 const round = (value) => Math.round(value * 100) / 100;
+const METRIC_REQUIRED = "METRIC_CONFIRMATION_REQUIRED";
+const MOMENTUM_CONFIRMED = "MOMENTUM_CONFIRMED";
 
 export function median(values) {
   if (!Array.isArray(values)) throw new TypeError("values must be an array");
@@ -47,6 +49,13 @@ function toSnapshot(row) {
   };
 }
 
+function intervalHours(earlier, later) {
+  const start = new Date(earlier).getTime();
+  const end = new Date(later).getTime();
+  if (Number.isNaN(start) || Number.isNaN(end)) return null;
+  return (end - start) / 3_600_000;
+}
+
 function groupRows(rows) {
   const grouped = new Map();
   for (const row of rows) {
@@ -61,47 +70,102 @@ function groupRows(rows) {
   return grouped;
 }
 
-function deriveIntervals(bucket) {
+function derivePair(earlier, later) {
+  const hours = intervalHours(earlier.capturedAt, later.capturedAt);
+  const velocity = deriveMetricVelocity(
+    toSnapshot(earlier),
+    toSnapshot(later),
+    "viewCount",
+  );
+  return Object.freeze({
+    sourceIdentityId: later.sourceIdentityId,
+    channelId: later.channelId,
+    endingAt: later.capturedAt,
+    intervalHours: hours === null ? null : round(hours),
+    observable: velocity.observable,
+    perHour: velocity.observable ? velocity.perHour : null,
+  });
+}
+
+function deriveBaselineIntervals(bucket, minSnapshotIntervalHours) {
   const intervals = [];
   for (let index = 1; index < bucket.length; index += 1) {
-    const velocity = deriveMetricVelocity(
-      toSnapshot(bucket[index - 1]),
-      toSnapshot(bucket[index]),
-      "viewCount",
-    );
-    if (velocity.observable) {
-      intervals.push({
-        sourceIdentityId: bucket[index].sourceIdentityId,
-        channelId: bucket[index].channelId,
-        endingAt: bucket[index].capturedAt,
-        perHour: velocity.perHour,
-      });
+    const interval = derivePair(bucket[index - 1], bucket[index]);
+    if (
+      interval.observable &&
+      interval.intervalHours !== null &&
+      interval.intervalHours >= minSnapshotIntervalHours
+    ) {
+      intervals.push(interval);
     }
   }
   return intervals;
 }
 
+export function evaluateYouTubeMomentumGate({
+  snapshotCount,
+  snapshotIntervalHours,
+  viewCountsObservable,
+  channelId,
+  baselineSampleCount,
+  channelBaselineViewsPerHour,
+  minSnapshotIntervalHours = 6,
+  minBaselineSamples = 3,
+} = {}) {
+  const reasons = [];
+  if (!Number.isInteger(snapshotCount) || snapshotCount < 2) {
+    reasons.push("NEEDS_TWO_SNAPSHOTS");
+  }
+  if (
+    !Number.isFinite(snapshotIntervalHours) ||
+    snapshotIntervalHours < minSnapshotIntervalHours
+  ) {
+    reasons.push("SNAPSHOT_INTERVAL_TOO_SHORT");
+  }
+  if (viewCountsObservable !== true) reasons.push("VIEW_COUNT_NOT_OBSERVABLE");
+  if (!channelId) reasons.push("CHANNEL_ID_NOT_OBSERVABLE");
+  if (!Number.isInteger(baselineSampleCount) || baselineSampleCount < minBaselineSamples) {
+    reasons.push("CHANNEL_BASELINE_INSUFFICIENT");
+  }
+  if (!(Number.isFinite(channelBaselineViewsPerHour) && channelBaselineViewsPerHour > 0)) {
+    reasons.push("CHANNEL_BASELINE_NOT_POSITIVE");
+  }
+  return Object.freeze({
+    promotionGate: reasons.length === 0 ? MOMENTUM_CONFIRMED : METRIC_REQUIRED,
+    gateReasons: Object.freeze(reasons),
+    snapshotCount,
+    snapshotIntervalHours,
+    baselineSampleCount,
+    minSnapshotIntervalHours,
+    minBaselineSamples,
+  });
+}
+
 export function buildYouTubeDailyCandidates(
   rows,
-  { now = new Date().toISOString(), minBaselineSamples = 3, maxAgeHours = 168 } = {},
+  {
+    now = new Date().toISOString(),
+    minBaselineSamples = 3,
+    minSnapshotIntervalHours = 6,
+    maxAgeHours = 168,
+  } = {},
 ) {
   if (!Array.isArray(rows)) throw new TypeError("rows must be an array");
   if (!Number.isInteger(minBaselineSamples) || minBaselineSamples < 1) {
     throw new TypeError("minBaselineSamples must be a positive integer");
   }
+  if (!Number.isFinite(minSnapshotIntervalHours) || minSnapshotIntervalHours <= 0) {
+    throw new TypeError("minSnapshotIntervalHours must be positive");
+  }
 
   const grouped = groupRows(rows);
-  const intervalsBySource = new Map();
-  const channelIntervals = new Map();
-
-  for (const [sourceIdentityId, bucket] of grouped.entries()) {
-    const intervals = deriveIntervals(bucket);
-    intervalsBySource.set(sourceIdentityId, intervals);
-    for (const interval of intervals) {
+  const baselineIntervalsByChannel = new Map();
+  for (const bucket of grouped.values()) {
+    for (const interval of deriveBaselineIntervals(bucket, minSnapshotIntervalHours)) {
       if (!interval.channelId) continue;
-      const channelBucket = channelIntervals.get(interval.channelId) ?? [];
+      const channelBucket = baselineIntervalsByChannel.get(interval.channelId) ?? [];
       channelBucket.push(interval);
-      channelIntervals.set(interval.channelId, channelBucket);
+      baselineIntervalsByChannel.set(interval.channelId, channelBucket);
     }
   }
 
@@ -109,11 +173,8 @@ export function buildYouTubeDailyCandidates(
   for (const [sourceIdentityId, bucket] of grouped.entries()) {
     if (bucket.length < 2) continue;
     const latestRow = bucket.at(-1);
-    const intervals = intervalsBySource.get(sourceIdentityId) ?? [];
-    const current = intervals.at(-1);
-    if (!current) continue;
-
-    const baselineValues = (channelIntervals.get(latestRow.channelId) ?? [])
+    const current = derivePair(bucket.at(-2), latestRow);
+    const baselineValues = (baselineIntervalsByChannel.get(latestRow.channelId) ?? [])
       .filter(
         (interval) =>
           !(
@@ -122,9 +183,22 @@ export function buildYouTubeDailyCandidates(
           ),
       )
       .map((interval) => interval.perHour)
-      .filter((value) => value > 0);
-    const baseline = baselineValues.length >= minBaselineSamples ? median(baselineValues) : null;
-    const relativeRatio = baseline && baseline > 0 ? current.perHour / baseline : null;
+      .filter((value) => Number.isFinite(value) && value > 0);
+    const baseline =
+      baselineValues.length >= minBaselineSamples ? median(baselineValues) : null;
+    const gate = evaluateYouTubeMomentumGate({
+      snapshotCount: bucket.length,
+      snapshotIntervalHours: current.intervalHours,
+      viewCountsObservable: current.observable,
+      channelId: latestRow.channelId,
+      baselineSampleCount: baselineValues.length,
+      channelBaselineViewsPerHour: baseline,
+      minSnapshotIntervalHours,
+      minBaselineSamples,
+    });
+    const confirmed = gate.promotionGate === MOMENTUM_CONFIRMED;
+    const relativeRatio =
+      confirmed && baseline > 0 ? current.perHour / baseline : null;
     const relativeVelocityScore = scoreRelativeVelocity(relativeRatio);
     const fresh = latestRow.publishedAt
       ? freshnessScore(latestRow.publishedAt, now, maxAgeHours)
@@ -137,12 +211,21 @@ export function buildYouTubeDailyCandidates(
 
     candidates.push(
       Object.freeze({
+        signalVersion: "youtube-momentum-v1",
+        signalClass: confirmed ? "metric_momentum" : "metric_pending",
+        promotionGate: gate.promotionGate,
+        gateReasons: gate.gateReasons,
         sourceIdentityId,
         externalId: latestRow.externalId,
         title: latestRow.title,
         channelId: latestRow.channelId,
         publishedAt: latestRow.publishedAt,
+        snapshotCount: bucket.length,
+        snapshotIntervalHours: current.intervalHours,
+        minSnapshotIntervalHours,
         currentViewsPerHour: current.perHour,
+        baselineSampleCount: baselineValues.length,
+        minBaselineSamples,
         channelBaselineViewsPerHour: baseline === null ? null : round(baseline),
         relativeRatio: relativeRatio === null ? null : round(relativeRatio),
         relativeVelocityScore,
@@ -159,10 +242,13 @@ export function buildYouTubeDailyCandidates(
   return Object.freeze(
     candidates.sort(
       (a, b) =>
+        (a.promotionGate === MOMENTUM_CONFIRMED ? -1 : 0) -
+          (b.promotionGate === MOMENTUM_CONFIRMED ? -1 : 0) ||
         (b.rankingScore ?? -1) - (a.rankingScore ?? -1) ||
         b.coverage - a.coverage ||
         (b.score ?? -1) - (a.score ?? -1) ||
-        b.currentViewsPerHour - a.currentViewsPerHour,
+        (b.currentViewsPerHour ?? -Infinity) -
+          (a.currentViewsPerHour ?? -Infinity),
     ),
   );
 }
