@@ -17,7 +17,9 @@ on:
       - "package.json"
   workflow_dispatch:
   schedule:
+    # 13:17 and 22:20 Beijing time. The 9h03m spacing clears the 6-hour momentum gate.
     - cron: "17 5 * * *"
+    - cron: "20 14 * * *"
 
 permissions:
   contents: read
