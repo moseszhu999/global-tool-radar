@@ -1,15 +1,18 @@
 {
   "name": "global-tool-radar",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "node --check packages/contracts/src/index.mjs && node --check packages/scoring/src/index.mjs && node --check packages/source-records/src/index.mjs && node --check packages/tool-entities/src/index.mjs && node --check packages/connectors/youtube/src/index.mjs && node --check packages/persistence/supabase-rest/src/index.mjs && node --check packages/runtime-identity/src/index.mjs && node --check packages/youtube-ingestion/src/index.mjs && node --check packages/youtube-momentum/src/index.mjs && node --check apps/worker/src/demo.mjs && node --check apps/worker/src/runtime-env.mjs && node --check apps/worker/src/initialize-runtime.mjs && node --check apps/worker/src/verify-runtime.mjs && node --check apps/worker/src/run-youtube-watchlist.mjs && node --check apps/worker/src/build-daily-candidates.mjs",
-    "test": "node --test packages/scoring/test/*.test.mjs packages/source-records/test/*.test.mjs packages/tool-entities/test/*.test.mjs packages/connectors/youtube/test/*.test.mjs packages/persistence/supabase-rest/test/*.test.mjs packages/runtime-identity/test/*.test.mjs packages/youtube-ingestion/test/*.test.mjs packages/youtube-momentum/test/*.test.mjs",
+    "check": "node --check packages/contracts/src/index.mjs && node --check packages/scoring/src/index.mjs && node --check packages/source-records/src/index.mjs && node --check packages/tool-entities/src/index.mjs && node --check packages/connectors/youtube/src/index.mjs && node --check packages/persistence/neon-http/src/index.mjs && node --check packages/persistence/neon-http/src/client.mjs && node --check packages/runtime-identity/src/index.mjs && node --check packages/youtube-ingestion/src/index.mjs && node --check packages/youtube-momentum/src/index.mjs && node --check apps/worker/src/demo.mjs && node --check apps/worker/src/runtime-env.mjs && node --check apps/worker/src/initialize-runtime.mjs && node --check apps/worker/src/verify-runtime.mjs && node --check apps/worker/src/run-youtube-watchlist.mjs && node --check apps/worker/src/build-daily-candidates.mjs",
+    "test": "node --test packages/scoring/test/*.test.mjs packages/source-records/test/*.test.mjs packages/tool-entities/test/*.test.mjs packages/connectors/youtube/test/*.test.mjs packages/persistence/neon-http/test/*.test.mjs packages/runtime-identity/test/*.test.mjs packages/youtube-ingestion/test/*.test.mjs packages/youtube-momentum/test/*.test.mjs",
     "demo": "node apps/worker/src/demo.mjs",
     "runtime:initialize": "node apps/worker/src/initialize-runtime.mjs",
     "runtime:verify": "node apps/worker/src/verify-runtime.mjs",
     "worker:youtube": "node apps/worker/src/run-youtube-watchlist.mjs",
     "radar:daily": "node apps/worker/src/build-daily-candidates.mjs"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "1.1.0"
   }
 }
