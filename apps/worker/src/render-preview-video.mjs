@@ -115,8 +115,14 @@ if (renderPackage.gates.previewRenderAllowed !== true) throw new Error("preview 
 if (renderPackage.gates.publicationAllowed !== false) throw new Error("preview publication must remain disabled");
 if (renderPackage.policy.sourceVideoReuseAllowed !== false) throw new Error("source video reuse must remain disabled");
 
-for (const command of ["ffmpeg", "ffprobe", "espeak-ng", "rsvg-convert"]) {
-  run(command, ["--version"], { capture: true });
+const versionArgs = new Map([
+  ["ffmpeg", ["-version"]],
+  ["ffprobe", ["-version"]],
+  ["espeak-ng", ["--version"]],
+  ["rsvg-convert", ["--version"]],
+]);
+for (const [command, args] of versionArgs) {
+  run(command, args, { capture: true });
 }
 await mkdir(workDir, { recursive: true });
 await mkdir(dirname(outputPath), { recursive: true });
