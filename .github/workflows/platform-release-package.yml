@@ -1,0 +1,67 @@
+name: platform-release-package
+
+on:
+  pull_request:
+    paths:
+      - "packages/platform-release-package/**"
+      - "apps/worker/src/build-platform-release-package.mjs"
+      - ".github/workflows/platform-release-package.yml"
+      - "apps/web/data/replit-design-production-case.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install deterministic media runtime
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg espeak-ng librsvg2-bin fonts-noto-cjk
+      - run: npm install --ignore-scripts
+      - name: Validate M11 code and contracts
+        run: |
+          node --check packages/platform-release-package/src/index.mjs
+          node --check apps/worker/src/build-platform-release-package.mjs
+          node --test packages/platform-release-package/test/*.test.mjs
+      - name: Rebuild exact preview and quality evidence
+        run: |
+          npm run production:render-package:replit
+          npm run production:render-preview:replit
+          npm run production:quality-gate:replit
+      - name: Build blocked-by-default platform package
+        run: |
+          node apps/worker/src/build-platform-release-package.mjs \
+            --case apps/web/data/replit-design-production-case.json \
+            --render-package build/replit-design-render-preview-package.json \
+            --render-receipt build/replit-design-render-receipt.json \
+            --quality-report build/replit-design-video-quality-report.json \
+            --output build/replit-design-platform-release-package.json \
+            --generated-at 2026-08-04T12:00:00.000Z
+      - name: Verify authority remains disabled
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFile } from 'node:fs/promises';
+          const value = JSON.parse(await readFile('build/replit-design-platform-release-package.json', 'utf8'));
+          if (value.platforms.douyin.technicalPreflight !== 'PASS') throw new Error('Douyin preflight failed');
+          if (value.platforms.bilibili.technicalPreflight !== 'PASS') throw new Error('Bilibili preflight failed');
+          if (value.gates.uploadAllowed !== false) throw new Error('upload authority leaked');
+          if (value.gates.publicationAllowed !== false) throw new Error('publication authority leaked');
+          if (value.state !== 'BLOCKED_BEFORE_UPLOAD') throw new Error('preview must remain blocked');
+          NODE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: toolradar-m11-platform-release-package
+          path: |
+            build/replit-design-platform-release-package.json
+            build/replit-design-video-quality-report.json
+            build/replit-design-render-receipt.json
+            build/replit-design-preview.srt
+            build/replit-design-preview.mp4
+          retention-days: 14
