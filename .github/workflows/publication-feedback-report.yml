@@ -1,0 +1,23 @@
+name: publication-feedback-report
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-feedback-boundary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Syntax check
+        run: node --check packages/publication-feedback/src/index.mjs
+      - name: Truth-boundary tests
+        run: node --test packages/publication-feedback/test/*.test.mjs
