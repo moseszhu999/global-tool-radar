@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Global Tool Radar · 分镜与素材任务</title>
+  <meta name="description" content="从完整原创脚本到连续分镜和自有素材清单的可核验生产任务。">
+  <link rel="stylesheet" href="./storyboard.css">
+</head>
+<body>
+  <header class="topbar">
+    <a href="./production-case.html">← 完整脚本</a>
+    <div><strong>Global Tool Radar</strong><span>Storyboard & Asset Manifest</span></div>
+    <a href="./">今日信号</a>
+  </header>
+
+  <main>
+    <section class="hero">
+      <p class="eyebrow">SECOND PRODUCTION MILESTONE</p>
+      <h1>脚本已经拆成可执行分镜</h1>
+      <p>每个镜头都有起止时间、画面指令、屏幕文字、证据引用和所需素材；来源视频禁止下载或复用。</p>
+      <div class="summary"><span data-duration>读取时间轴</span><span data-shots>读取镜头</span><span data-assets>读取素材</span><span data-next>读取下一步</span></div>
+    </section>
+
+    <section class="card">
+      <div class="section-head"><div><p class="eyebrow">TIMELINE</p><h2>89秒连续分镜</h2></div><span data-status>读取状态</span></div>
+      <div class="timeline" data-timeline></div>
+    </section>
+
+    <section class="grid two">
+      <article class="card">
+        <p class="eyebrow">ASSET MANIFEST</p>
+        <h2>素材清单</h2>
+        <div class="asset-list" data-assets-list></div>
+      </article>
+      <article class="card">
+        <p class="eyebrow">HUMAN CAPTURE TASKS</p>
+        <h2>必须人工完成的隔离录屏</h2>
+        <div class="task-list" data-tasks></div>
+      </article>
+    </section>
+
+    <section class="card boundary">
+      <h2>仍未开放的动作</h2>
+      <p>当前只完成分镜和素材任务规划。录屏、配音、字幕、剪辑、渲染和发布尚未执行；没有自有录屏文件之前，系统不得生成“成片已完成”的状态。</p>
+    </section>
+  </main>
+
+  <footer>完整脚本 → 分镜时间轴 → 自有素材任务 → 下一步：素材采集与成片渲染</footer>
+  <script type="module" src="./storyboard.mjs"></script>
+</body>
+</html>
