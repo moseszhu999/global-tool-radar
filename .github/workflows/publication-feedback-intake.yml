@@ -1,0 +1,60 @@
+name: publication-feedback-intake
+
+on:
+  pull_request:
+    paths:
+      - "packages/publication-feedback-intake/**"
+      - "apps/worker/src/build-publication-intake-plan.mjs"
+      - "apps/web/data/replit-design-release-identity.json"
+      - ".github/workflows/publication-feedback-intake.yml"
+      - "docs/product/toolradar-m12-publication-feedback-intake-v1.md"
+  push:
+    branches: [main]
+    paths:
+      - "packages/publication-feedback-intake/**"
+      - "apps/worker/src/build-publication-intake-plan.mjs"
+      - "apps/web/data/replit-design-release-identity.json"
+      - ".github/workflows/publication-feedback-intake.yml"
+      - "docs/product/toolradar-m12-publication-feedback-intake-v1.md"
+  workflow_dispatch:
+
+jobs:
+  validate-feedback-intake:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Syntax check
+        run: |
+          node --check packages/publication-feedback-intake/src/index.mjs
+          node --check apps/worker/src/build-publication-intake-plan.mjs
+      - name: Run truth-gate tests
+        run: node --test packages/publication-feedback-intake/test/*.test.mjs
+      - name: Build real-case empty intake plan
+        run: |
+          node apps/worker/src/build-publication-intake-plan.mjs \
+            --input apps/web/data/replit-design-release-identity.json \
+            --output build/replit-design-publication-intake-plan.json \
+            --generated-at 2026-08-04T13:00:00.000Z
+      - name: Verify no fabricated publication or metrics
+        run: |
+          node - <<'NODE'
+          const plan = require('./build/replit-design-publication-intake-plan.json');
+          if (plan.state !== 'AWAITING_REAL_PUBLICATION') throw new Error('unexpected intake state');
+          if (plan.gates.analyticsCollectionAllowed !== false) throw new Error('analytics must remain blocked');
+          if (plan.gates.optimizationAllowed !== false) throw new Error('optimization must remain blocked');
+          if (plan.policy.fabricatedPublicationReceiptAllowed !== false) throw new Error('fabricated receipt guard missing');
+          if (plan.policy.fabricatedMetricsAllowed !== false) throw new Error('fabricated metrics guard missing');
+          for (const platform of Object.values(plan.platforms)) {
+            if (platform.publicationReceiptTemplate.platformVideoId !== null) throw new Error('fake video id detected');
+            if (Object.values(platform.analyticsSnapshotTemplate.metrics).some(v => v !== null)) throw new Error('fake metric detected');
+          }
+          console.log(JSON.stringify({state: plan.state, platforms: Object.keys(plan.platforms), mediaSha256: plan.mediaSha256}, null, 2));
+          NODE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: toolradar-replit-design-publication-intake-plan
+          path: build/replit-design-publication-intake-plan.json
+          retention-days: 14
