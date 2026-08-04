@@ -1,0 +1,164 @@
+{
+  "schemaVersion": "toolradar.video-production-case.v1",
+  "caseId": "video-case:aw_nlbkzvyy",
+  "generatedAt": "2026-08-04T08:30:00.000Z",
+  "status": "SCRIPT_READY_FOR_HUMAN_REVIEW",
+  "sourceSignal": {
+    "id": "aw_NlbKzVyY",
+    "title": "Introducing Replit Design",
+    "channel": "Replit",
+    "sourceUrl": "https://www.youtube.com/watch?v=aw_NlbKzVyY",
+    "observedStatus": "research_now"
+  },
+  "gates": {
+    "testEvidenceState": "available",
+    "rightsState": "needs_review",
+    "securityState": "passed_for_sandbox",
+    "humanScriptReviewRequired": true,
+    "publicationAllowed": false
+  },
+  "topicBrief": {
+    "schemaVersion": "toolradar.topic-brief.v1",
+    "topicId": "topic:aw_nlbkzvyy",
+    "sourceSignalId": "aw_NlbKzVyY",
+    "productName": "Replit Design",
+    "workingTitle": "Replit Design 实测：能快速出设计，但能否直接交付？",
+    "category": "AI网页与设计",
+    "audience": ["独立开发者", "产品经理", "需要快速探索界面的创作者"],
+    "audienceProblem": "需要快速把文字需求转成可讨论的桌面和移动界面，但不想把设计稿误当成生产代码",
+    "contentPromise": "展示一次可复现的独立测试，并明确设计探索和生产交付的边界",
+    "whyNow": "官方视频在6.455小时内新增1500次公开播放，但视频增长不代表产品采用。",
+    "angle": "独立实测：把设计探索能力与生产交付能力分开评价",
+    "claimBoundary": "设计草图通过；生产代码交付未证明",
+    "nonClaims": ["不声称全球或中国市场火爆", "不声称能直接交付生产代码", "不声称免费额度或成本具有普遍性"],
+    "evidenceRefs": ["momentum-1", "test-method", "design-result", "build-limit"]
+  },
+  "researchEvidence": [
+    {
+      "evidenceId": "momentum-1",
+      "type": "momentum_signal",
+      "claim": "官方视频出现确认增长",
+      "observation": "官方视频在6.455小时内新增1500次公开播放",
+      "sourceRef": "today-brief:aw_NlbKzVyY",
+      "observedAt": null
+    },
+    {
+      "evidenceId": "test-method",
+      "type": "test_method",
+      "claim": "测试使用固定中文需求和隔离环境",
+      "observation": "未连接外部账号、数据库、支付信息或生产文件",
+      "sourceRef": "toolradar-replit-design-real-test-v1",
+      "observedAt": null
+    },
+    {
+      "evidenceId": "design-result",
+      "type": "product_test_positive",
+      "claim": "Design Canvas生成了完整设计",
+      "observation": "约3分钟内生成了桌面和390px移动设计稿，并可继续进行可视化修改",
+      "sourceRef": "native-owner-dashboard:replit-result",
+      "observedAt": null
+    },
+    {
+      "evidenceId": "build-limit",
+      "type": "product_test_limitation",
+      "claim": "Build阶段没有可预览成品",
+      "observation": "切换到Build后仍显示Nothing to preview yet，没有证据证明已生成可运行页面",
+      "sourceRef": "native-owner-dashboard:replit-result",
+      "observedAt": null
+    }
+  ],
+  "script": {
+    "schemaVersion": "toolradar.original-script.v1",
+    "scriptId": "script:aw_nlbkzvyy:v1",
+    "version": 1,
+    "language": "zh-CN",
+    "format": "9:16 portrait",
+    "targetDurationSeconds": 90,
+    "estimatedDurationSeconds": 89,
+    "titleOptions": [
+      "Replit Design实测：3分钟出设计，但能直接上线吗？",
+      "别被演示骗了：Replit Design真正能交付到哪一步",
+      "Replit Design首轮实测：设计通过，生产交付未证明"
+    ],
+    "coverText": "Replit Design\n设计快 ≠ 能上线",
+    "voiceoverSegments": [
+      {
+        "order": 1,
+        "role": "hook",
+        "text": "Replit Design，真的能把一句中文需求变成可用界面吗？我们做了一次独立实测。",
+        "estimatedSeconds": 10,
+        "claimRefs": ["design-result"]
+      },
+      {
+        "order": 2,
+        "role": "why_now",
+        "text": "它进入选题，不是因为“看起来很火”，而是官方视频在6.455小时新增1500次播放；这只代表关注增长，不能证明产品已经普及。",
+        "estimatedSeconds": 14,
+        "claimRefs": ["momentum-1"]
+      },
+      {
+        "order": 3,
+        "role": "test_method",
+        "text": "我们用固定需求，在隔离环境测试，不接真实账号、数据库、支付或生产文件。",
+        "estimatedSeconds": 8,
+        "claimRefs": ["test-method"]
+      },
+      {
+        "order": 4,
+        "role": "verified_result",
+        "text": "约3分钟内生成了桌面和390px移动设计稿，并可继续进行可视化修改。设计探索这一关，通过。",
+        "estimatedSeconds": 10,
+        "claimRefs": ["design-result"]
+      },
+      {
+        "order": 5,
+        "role": "limitation",
+        "text": "切换到Build后仍显示Nothing to preview yet，没有证据证明已生成可运行页面。所以目前没有证据证明它能直接生成并交付生产页面；本次测试没有证明导出、部署、长期维护和复杂交互能力。",
+        "estimatedSeconds": 23,
+        "claimRefs": ["build-limit"]
+      },
+      {
+        "order": 6,
+        "role": "verdict",
+        "text": "我的结论是：Replit Design适合快速设计探索，但当前证据不足以证明它能直接交付生产页面。它适合快速出草图、对齐想法，不应把设计稿直接当成上线代码。",
+        "estimatedSeconds": 18,
+        "claimRefs": ["design-result", "build-limit"]
+      },
+      {
+        "order": 7,
+        "role": "cta",
+        "text": "下一条，我们继续测修改、导出和交付。你想看它和谁对比？",
+        "estimatedSeconds": 6,
+        "claimRefs": []
+      }
+    ],
+    "fullVoiceover": "Replit Design，真的能把一句中文需求变成可用界面吗？我们做了一次独立实测。\n它进入选题，不是因为“看起来很火”，而是官方视频在6.455小时新增1500次播放；这只代表关注增长，不能证明产品已经普及。\n我们用固定需求，在隔离环境测试，不接真实账号、数据库、支付或生产文件。\n约3分钟内生成了桌面和390px移动设计稿，并可继续进行可视化修改。设计探索这一关，通过。\n切换到Build后仍显示Nothing to preview yet，没有证据证明已生成可运行页面。所以目前没有证据证明它能直接生成并交付生产页面；本次测试没有证明导出、部署、长期维护和复杂交互能力。\n我的结论是：Replit Design适合快速设计探索，但当前证据不足以证明它能直接交付生产页面。它适合快速出草图、对齐想法，不应把设计稿直接当成上线代码。\n下一条，我们继续测修改、导出和交付。你想看它和谁对比？",
+    "platformCopy": {
+      "douyin": {
+        "title": "Replit Design实测：3分钟出设计，但别急着当成成品",
+        "description": "我们用固定任务独立测试 Replit Design：设计探索有效，生产交付仍需验证。所有结论仅限本次测试证据。",
+        "tags": ["Replit Design", "AI网页与设计", "AI工具实测", "效率工具"]
+      },
+      "bilibili": {
+        "title": "Replit Design真实测试：设计稿很快，Build为什么没有成品？",
+        "description": "从增长信号、测试方法、首个设计结果到Build限制，完整展示本次独立验证。不会把官方视频增长解释为产品采用，也不会把设计稿宣传成生产代码。",
+        "tags": ["Replit Design", "AI网页与设计", "AI工具实测", "效率工具"]
+      }
+    },
+    "reviewChecklist": [
+      "每个事实性结论必须绑定 evidenceRef",
+      "不得把 YouTube 视频增长解释为产品采用或地区热度",
+      "不得声称生产交付已经通过",
+      "不得使用或下载来源视频作为成片素材",
+      "发布前必须完成人工版权、事实和平台规格审核"
+    ]
+  },
+  "nextMilestone": "STORYBOARD_AND_ASSET_MANIFEST",
+  "policy": {
+    "sourceVideoDownloadAllowed": false,
+    "sourceVideoReuseAllowed": false,
+    "automaticPublishingAllowed": false,
+    "unsupportedClaimAllowed": false,
+    "formalPublicationPerformed": false
+  }
+}

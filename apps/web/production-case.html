@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Global Tool Radar · 视频生产任务</title>
+  <meta name="description" content="从确认主题到完整原创脚本的可核验视频生产任务。">
+  <link rel="stylesheet" href="./production-case.css">
+</head>
+<body>
+  <header class="topbar">
+    <a href="./">← 今日信号</a>
+    <div><strong>Global Tool Radar</strong><span>Video Production Case</span></div>
+    <a href="./workspace.html">运营工作台</a>
+  </header>
+
+  <main>
+    <section class="hero">
+      <p class="eyebrow">FIRST REAL PRODUCTION CASE</p>
+      <h1 data-title>读取视频生产任务…</h1>
+      <p class="lead" data-promise></p>
+      <div class="status-row">
+        <span data-status>读取状态</span>
+        <span data-duration>读取时长</span>
+        <span data-next>读取下一里程碑</span>
+      </div>
+    </section>
+
+    <section class="grid two">
+      <article class="card">
+        <p class="eyebrow">TOPIC BRIEF</p>
+        <h2>选题立项</h2>
+        <dl data-topic></dl>
+      </article>
+      <article class="card">
+        <p class="eyebrow">GATES</p>
+        <h2>进入制作前的门</h2>
+        <dl data-gates></dl>
+        <div class="boundary">脚本已经形成，但自动发布仍然关闭；版权、事实和平台规格必须人工审核。</div>
+      </article>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <div><p class="eyebrow">ORIGINAL SCRIPT V1</p><h2>完整原创口播脚本</h2></div>
+        <button type="button" data-copy>复制完整脚本</button>
+      </div>
+      <div class="script" data-script></div>
+    </section>
+
+    <section class="grid two">
+      <article class="card">
+        <p class="eyebrow">PLATFORM COPY</p>
+        <h2>抖音版本</h2>
+        <div data-douyin></div>
+      </article>
+      <article class="card">
+        <p class="eyebrow">PLATFORM COPY</p>
+        <h2>B站版本</h2>
+        <div data-bilibili></div>
+      </article>
+    </section>
+
+    <section class="card">
+      <p class="eyebrow">EVIDENCE MAP</p>
+      <h2>脚本依据</h2>
+      <div class="evidence-grid" data-evidence></div>
+    </section>
+  </main>
+
+  <footer>发现信号 → 研究证据 → Topic Brief → 原创脚本 → 下一步：分镜与素材任务</footer>
+  <script type="module" src="./production-case.mjs"></script>
+</body>
+</html>
