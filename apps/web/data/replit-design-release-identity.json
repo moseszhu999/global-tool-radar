@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "toolradar.platform-release-package.v1",
+  "releasePackageId": "video-case:aw_nlbkzvyy:release:v1",
+  "sourceCaseId": "video-case:aw_nlbkzvyy",
+  "media": {
+    "fileName": "replit-design-preview.mp4",
+    "sha256": "13a72f8139040d15956c1cbc74d45f0193a7eb9269bbeec2e3a6292cddf87f1c",
+    "bytes": 2161388,
+    "durationSeconds": 89.046,
+    "width": 1080,
+    "height": 1920,
+    "frameRate": 30,
+    "container": "mp4"
+  },
+  "state": "BLOCKED_BEFORE_UPLOAD",
+  "gates": {
+    "uploadAllowed": false,
+    "publicationAllowed": false
+  },
+  "policy": {
+    "fabricatedPublicationReceiptAllowed": false
+  }
+}
