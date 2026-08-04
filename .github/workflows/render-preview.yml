@@ -7,7 +7,9 @@ on:
       - "apps/web/data/replit-design-storyboard-package.json"
       - "apps/worker/src/build-render-preview-package.mjs"
       - "apps/worker/src/render-preview-video.mjs"
+      - "apps/worker/src/run-video-quality-gate.mjs"
       - "packages/render-preview/**"
+      - "packages/video-quality-gate/**"
       - "package.json"
   push:
     branches: [main]
@@ -16,7 +18,9 @@ on:
       - "apps/web/data/replit-design-storyboard-package.json"
       - "apps/worker/src/build-render-preview-package.mjs"
       - "apps/worker/src/render-preview-video.mjs"
+      - "apps/worker/src/run-video-quality-gate.mjs"
       - "packages/render-preview/**"
+      - "packages/video-quality-gate/**"
       - "package.json"
   workflow_dispatch:
 
@@ -41,24 +45,22 @@ jobs:
         run: npm run production:render-package:replit
       - name: Render 9:16 MP4 preview
         run: npm run production:render-preview:replit
-      - name: Verify render receipt
+      - name: Run M10 automated video quality gate
+        run: npm run production:quality-gate:replit
+      - name: Verify release remains blocked
         run: |
           node --input-type=module <<'NODE'
           import { readFile } from "node:fs/promises";
-          const receipt = JSON.parse(await readFile("build/replit-design-render-receipt.json", "utf8"));
-          if (receipt.publicationAllowed !== false || receipt.finalRender !== false) {
-            throw new Error("preview publication boundary failed");
+          const report = JSON.parse(await readFile("build/replit-design-video-quality-report.json", "utf8"));
+          if (report.automatedGate !== "PASS") throw new Error("automated video QA failed");
+          if (report.releaseDecision !== "BLOCKED" || report.publicationAllowed !== false) {
+            throw new Error("preview must remain blocked from release");
           }
-          if (receipt.placeholderSlideIds.length !== 3) {
-            throw new Error("expected three visible placeholder slides");
+          const expected = ["OWNED_SCREEN_RECORDINGS_REQUIRED", "FINAL_VOICE_APPROVAL_REQUIRED", "HUMAN_QUALITY_REVIEW_REQUIRED"];
+          if (JSON.stringify(report.releaseBlockers) !== JSON.stringify(expected)) {
+            throw new Error(`unexpected release blockers: ${report.releaseBlockers.join(", ")}`);
           }
-          if (Math.abs(receipt.actualDurationSeconds - receipt.targetDurationSeconds) > 0.75) {
-            throw new Error(`duration mismatch: ${receipt.actualDurationSeconds}`);
-          }
-          if (receipt.width !== 1080 || receipt.height !== 1920) {
-            throw new Error("9:16 output dimensions are invalid");
-          }
-          console.log(receipt);
+          console.log(report);
           NODE
       - uses: actions/upload-artifact@v4
         with:
@@ -70,3 +72,4 @@ jobs:
             build/replit-design-preview.srt
             build/replit-design-render-preview-package.json
             build/replit-design-render-receipt.json
+            build/replit-design-video-quality-report.json
