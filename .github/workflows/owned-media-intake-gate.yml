@@ -1,0 +1,25 @@
+name: owned-media-intake-gate
+
+on:
+  pull_request:
+    paths:
+      - "packages/owned-media-intake/**"
+      - ".github/workflows/owned-media-intake-gate.yml"
+  push:
+    branches: [main]
+    paths:
+      - "packages/owned-media-intake/**"
+      - ".github/workflows/owned-media-intake-gate.yml"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check intake runtime syntax
+        run: node --check packages/owned-media-intake/src/index.mjs
+      - name: Test intake truth boundaries
+        run: node --test packages/owned-media-intake/test/*.test.mjs
