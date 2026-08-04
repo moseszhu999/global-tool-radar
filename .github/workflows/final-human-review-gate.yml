@@ -1,0 +1,25 @@
+name: final-human-review-gate
+
+on:
+  pull_request:
+    paths:
+      - "packages/final-human-review/**"
+      - ".github/workflows/final-human-review-gate.yml"
+  push:
+    branches: [main]
+    paths:
+      - "packages/final-human-review/**"
+      - ".github/workflows/final-human-review-gate.yml"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check review runtime syntax
+        run: node --check packages/final-human-review/src/index.mjs
+      - name: Test review truth boundaries
+        run: node --test packages/final-human-review/test/*.test.mjs
