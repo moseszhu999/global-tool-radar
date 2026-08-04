@@ -93,7 +93,7 @@ function slideSvg(slide, totalSlides) {
 }
 
 function synthesizeVoice(text, outputPath) {
-  for (const voice of ["cmn", "zh"] ) {
+  for (const voice of ["cmn", "zh"]) {
     const result = spawnSync("espeak-ng", ["-v", voice, "-s", "185", "-p", "48", "-w", outputPath, text], {
       encoding: "utf8",
       stdio: "pipe",
@@ -112,6 +112,8 @@ const fontPath = arg("--font", "/usr/share/fonts/opentype/noto/NotoSansCJK-Regul
 const renderPackage = JSON.parse(await readFile(inputPath, "utf8"));
 validateRenderPreviewPackage(renderPackage);
 if (renderPackage.gates.previewRenderAllowed !== true) throw new Error("preview render is not allowed");
+if (renderPackage.gates.publicationAllowed !== false) throw new Error("preview publication must remain disabled");
+if (renderPackage.policy.sourceVideoReuseAllowed !== false) throw new Error("source video reuse must remain disabled");
 
 for (const command of ["ffmpeg", "ffprobe", "espeak-ng", "rsvg-convert"]) {
   run(command, ["--version"], { capture: true });
