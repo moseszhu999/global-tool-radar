@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ToolRadar · 真实发布反馈报告</title>
+  <style>
+    :root{color-scheme:dark;--bg:#07111f;--panel:#0d1b2a;--line:#29435e;--text:#eef6ff;--muted:#9fb2c7;--ok:#74e0ad;--bad:#ff9a9a;--accent:#78b7ff}
+    *{box-sizing:border-box}body{margin:0;background:linear-gradient(135deg,#07111f,#0a1c2f);color:var(--text);font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif}
+    main{max-width:1120px;margin:auto;padding:34px 20px 70px}h1{margin:0 0 6px;font-size:34px}.sub{color:var(--muted)}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:24px 0}.card{background:rgba(13,27,42,.94);border:1px solid var(--line);border-radius:16px;padding:18px}
+    label{display:block;margin:13px 0 6px;color:var(--muted);font-weight:700}input[type=file]{width:100%;padding:12px;border:1px dashed var(--line);border-radius:10px;background:#081827}
+    button{border:0;border-radius:10px;padding:12px 16px;background:#1769aa;color:white;font-weight:800;cursor:pointer;margin:8px 8px 0 0}button[disabled]{opacity:.4;cursor:not-allowed}.secondary{background:#20364d}
+    .status{padding:13px 15px;border-radius:10px;background:#081827;border-left:4px solid var(--accent);margin-top:15px}.ok{color:var(--ok)}.bad{color:var(--bad)}
+    pre{white-space:pre-wrap;word-break:break-word;background:#06101c;border:1px solid var(--line);padding:16px;border-radius:12px;max-height:520px;overflow:auto}
+    table{width:100%;border-collapse:collapse;background:var(--panel);border-radius:12px;overflow:hidden}th,td{padding:12px;border-bottom:1px solid var(--line);text-align:left}th{color:var(--muted)}
+    code{background:#06101c;padding:2px 6px;border-radius:5px}.gate{font-family:monospace}.small{font-size:14px;color:var(--muted)}
+  </style>
+</head>
+<body><main>
+  <h1>真实发布反馈报告工作台</h1>
+  <div class="sub">只接受人工确认的真实发布回执与同一视频至少两次真实指标快照。页面不登录平台、不调用 API、不保存凭证。</div>
+
+  <div class="grid">
+    <section class="card">
+      <h2>1. 导入发布回执</h2>
+      <label for="receiptFile">publication-receipt JSON</label>
+      <input id="receiptFile" type="file" accept="application/json,.json">
+      <div id="receiptStatus" class="status">尚未导入。</div>
+    </section>
+    <section class="card">
+      <h2>2. 导入指标快照</h2>
+      <label for="snapshotFiles">至少两个 analytics-snapshot JSON</label>
+      <input id="snapshotFiles" type="file" accept="application/json,.json" multiple>
+      <div id="snapshotStatus" class="status">尚未导入。</div>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>3. 真值确认</h2>
+    <label><input id="humanReview" type="checkbox"> 我确认这些文件来自同一条真实平台发布，且指标为人工观察或平台真实导出。</label>
+    <button id="buildButton" disabled>生成有限反馈报告</button>
+    <button id="downloadButton" class="secondary" disabled>下载报告 JSON</button>
+    <div id="buildStatus" class="status">等待真实证据。</div>
+  </section>
+
+  <section class="card">
+    <h2>观察结果</h2>
+    <div id="summary" class="small">报告尚未生成。</div>
+    <table id="deltaTable" hidden>
+      <thead><tr><th>指标</th><th>首次</th><th>末次</th><th>绝对变化</th><th>相对变化</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <h3>完整 JSON</h3>
+    <pre id="output">{}</pre>
+  </section>
+
+  <section class="card">
+    <h2>固定边界</h2>
+    <div class="gate">causalClaimAllowed = false</div>
+    <div class="gate">automaticContentMutationAllowed = false</div>
+    <div class="gate">automaticRepublishingAllowed = false</div>
+    <div class="gate">humanReviewRequired = true</div>
+  </section>
+
+<script>
+const METRICS=["views","likes","comments","favorites","shares","followersGained","averageWatchSeconds","completionRate"];
+const LABELS={views:"播放",likes:"点赞",comments:"评论",favorites:"收藏",shares:"分享",followersGained:"新增关注",averageWatchSeconds:"平均观看秒数",completionRate:"完播率"};
+let receipt=null,snapshots=[],report=null;
+const $=id=>document.getElementById(id);
+function requireObject(v,l){if(!v||typeof v!=="object"||Array.isArray(v))throw new Error(l+" must be an object")}
+function requireString(v,l){if(typeof v!=="string"||v.trim()==="")throw new Error(l+" must be a non-empty string")}
+function requireIso(v,l){requireString(v,l);const p=Date.parse(v);if(!Number.isFinite(p))throw new Error(l+" must be ISO-8601");return p}
+function normalizeNumber(v){return Number(v.toFixed(12))}
+function metricValue(s,n){const v=s.metrics?.[n];if(v===null||v===undefined)return null;if(typeof v!=="number"||!Number.isFinite(v)||v<0)throw new Error("metrics."+n+" must be null or non-negative");if(n==="completionRate"&&v>1)throw new Error("completionRate must be between 0 and 1");return v}
+function validateReceipt(r){requireObject(r,"publicationReceipt");requireString(r.platform,"platform");requireString(r.platformVideoId,"platformVideoId");requireString(r.canonicalUrl,"canonicalUrl");if(!r.canonicalUrl.startsWith("https://"))throw new Error("canonicalUrl must use https");requireIso(r.publishedAt,"publishedAt");requireString(r.mediaSha256,"mediaSha256");if(!/^[a-f0-9]{64}$/i.test(r.mediaSha256))throw new Error("mediaSha256 must be SHA-256");if(r.humanConfirmed!==true)throw new Error("publication receipt must be human confirmed");return r}
+function validateSnapshot(s,r){requireObject(s,"analyticsSnapshot");requireString(s.platform,"snapshot platform");requireString(s.platformVideoId,"snapshot video id");requireString(s.mediaSha256,"snapshot media SHA");const captured=requireIso(s.capturedAt,"capturedAt");if(s.platform!==r.platform)throw new Error("snapshot platform mismatch");if(s.platformVideoId!==r.platformVideoId)throw new Error("snapshot video id mismatch");if(s.mediaSha256!==r.mediaSha256)throw new Error("snapshot media digest mismatch");if(captured<Date.parse(r.publishedAt))throw new Error("snapshot predates publication");if(s.humanConfirmed!==true)throw new Error("analytics snapshot must be human confirmed");const metrics=Object.fromEntries(METRICS.map(n=>[n,metricValue(s,n)]));if(Object.values(metrics).every(v=>v===null))throw new Error("snapshot must include at least one real metric");return {...s,metrics}}
+function delta(a,b,n){const from=a.metrics[n],to=b.metrics[n];if(from===null||to===null)return{from,to,absolute:null,relative:null};const absolute=normalizeNumber(to-from);return{from,to,absolute,relative:from===0?null:normalizeNumber(absolute/from)}}
+function buildReport(r,items){const valid=validateReceipt(r);if(!Array.isArray(items)||items.length<2)throw new Error("at least two real analytics snapshots are required");const ordered=items.map(s=>validateSnapshot(s,valid)).sort((a,b)=>Date.parse(a.capturedAt)-Date.parse(b.capturedAt));for(let i=1;i<ordered.length;i++)if(ordered[i].capturedAt===ordered[i-1].capturedAt)throw new Error("snapshot timestamps must be distinct");const first=ordered[0],last=ordered.at(-1);const deltas=Object.fromEntries(METRICS.map(n=>[n,delta(first,last,n)]));const recommendations=[];if(deltas.completionRate.from!==null&&deltas.completionRate.to!==null)recommendations.push({type:"observe_completion_rate",evidence:deltas.completionRate,action:deltas.completionRate.absolute<0?"先检查开头钩子和第一处转场，不要立即改变主题或事实结论。":"在出现另一条真实发布对照证据前，保持当前开头结构不变。"});if(deltas.views.from!==null&&deltas.views.to!==null)recommendations.push({type:"observe_view_growth",evidence:deltas.views,action:"播放增长只视为分发证据，不据此推断产品采用或内容质量。"});return{schemaVersion:"toolradar.bounded-publication-feedback-report.v1",generatedAt:new Date().toISOString(),publication:{platform:valid.platform,platformVideoId:valid.platformVideoId,canonicalUrl:valid.canonicalUrl,publishedAt:valid.publishedAt,mediaSha256:valid.mediaSha256},observationWindow:{firstCapturedAt:first.capturedAt,lastCapturedAt:last.capturedAt,snapshotCount:ordered.length},deltas,recommendations,gates:{realPublicationProven:true,multipleRealSnapshotsProven:true,causalClaimAllowed:false,automaticContentMutationAllowed:false,automaticRepublishingAllowed:false,humanReviewRequired:true}}}
+async function readJson(file){return JSON.parse(await file.text())}
+function refresh(){const ready=receipt&&snapshots.length>=2&&$("humanReview").checked;$("buildButton").disabled=!ready}
+$("receiptFile").addEventListener("change",async e=>{try{receipt=validateReceipt(await readJson(e.target.files[0]));$("receiptStatus").innerHTML='<span class="ok">已验证：</span>'+receipt.platform+' / '+receipt.platformVideoId+'<br><code>'+receipt.mediaSha256+'</code>'}catch(err){receipt=null;$("receiptStatus").innerHTML='<span class="bad">拒绝：</span>'+err.message}refresh()});
+$("snapshotFiles").addEventListener("change",async e=>{try{if(!receipt)throw new Error("请先导入发布回执");snapshots=[];for(const file of e.target.files)snapshots.push(validateSnapshot(await readJson(file),receipt));if(snapshots.length<2)throw new Error("至少需要两个真实指标快照");$("snapshotStatus").innerHTML='<span class="ok">已验证 '+snapshots.length+' 个快照。</span>'}catch(err){snapshots=[];$("snapshotStatus").innerHTML='<span class="bad">拒绝：</span>'+err.message}refresh()});
+$("humanReview").addEventListener("change",refresh);
+$("buildButton").addEventListener("click",()=>{try{report=buildReport(receipt,snapshots);$("output").textContent=JSON.stringify(report,null,2);$("buildStatus").innerHTML='<span class="ok">报告已生成；仍需人工审核，不能自动改稿或重发。</span>';$("downloadButton").disabled=false;const tbody=$("deltaTable").querySelector("tbody");tbody.innerHTML="";for(const n of METRICS){const d=report.deltas[n],tr=document.createElement("tr");tr.innerHTML=`<td>${LABELS[n]}</td><td>${d.from??"未知"}</td><td>${d.to??"未知"}</td><td>${d.absolute??"未知"}</td><td>${d.relative===null?"未知":(d.relative*100).toFixed(2)+"%"}</td>`;tbody.appendChild(tr)}$("deltaTable").hidden=false;$("summary").textContent=`${report.publication.platform} · ${report.publication.platformVideoId} · ${report.observationWindow.snapshotCount} 个快照`; }catch(err){report=null;$("buildStatus").innerHTML='<span class="bad">拒绝：</span>'+err.message;$("downloadButton").disabled=true}});
+$("downloadButton").addEventListener("click",()=>{if(!report)return;const blob=new Blob([JSON.stringify(report,null,2)+"\n"],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="toolradar-bounded-feedback-report.json";a.click();URL.revokeObjectURL(a.href)});
+</script>
+</main></body></html>
