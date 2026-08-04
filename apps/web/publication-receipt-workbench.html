@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ToolRadar 真实发布回执工作台</title>
+<style>
+:root{color-scheme:dark;--bg:#07111f;--panel:#0d1b2a;--line:#29435e;--text:#edf5ff;--muted:#9fb2c7;--ok:#74e0ad;--bad:#ff9a9a;--accent:#78b7ff}*{box-sizing:border-box}body{margin:0;background:linear-gradient(135deg,#07111f,#0b1d31);color:var(--text);font:16px/1.55 system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif}main{max-width:1060px;margin:auto;padding:32px 20px 70px}h1{margin:0 0 6px;font-size:32px}.sub{color:var(--muted)}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:24px 0}.card,fieldset{background:rgba(13,27,42,.94);border:1px solid var(--line);border-radius:15px;padding:18px}fieldset{margin:18px 0}legend{padding:0 8px;font-weight:700}label{display:block;margin:12px 0 5px;color:var(--muted)}input,select,textarea{width:100%;border:1px solid #3b5d7d;background:#071522;color:var(--text);border-radius:9px;padding:10px 12px;font:inherit}textarea{min-height:90px}button{border:0;border-radius:9px;padding:11px 16px;margin:8px 8px 0 0;background:#1769aa;color:#fff;font-weight:700;cursor:pointer}button.secondary{background:#28435e}.status{font-size:22px;font-weight:800}.ok{color:var(--ok)}.blocked{color:var(--bad)}code{word-break:break-all;background:#06101c;padding:2px 6px;border-radius:5px}pre{white-space:pre-wrap;word-break:break-word;background:#06101c;border:1px solid var(--line);border-radius:12px;padding:15px}.truth{border-left:4px solid var(--bad);padding:12px 16px;background:#18151c;border-radius:8px}.check{display:flex;gap:10px;align-items:flex-start}.check input{width:auto;margin-top:5px}</style>
+</head>
+<body><main>
+<h1>真实发布回执工作台</h1>
+<div class="sub">只在真实上传或发布完成后填写。数据仅保存在当前浏览器，并由操作者主动下载。</div>
+<div class="grid">
+ <div class="card"><div class="sub">来源案例</div><strong>video-case:aw_nlbkzvyy</strong></div>
+ <div class="card"><div class="sub">媒体 SHA-256</div><code id="digest">13a72f8139040d15956c1cbc74d45f0193a7eb9269bbeec2e3a6292cddf87f1c</code></div>
+ <div class="card"><div class="sub">当前状态</div><div id="state" class="status blocked">等待真实发布</div></div>
+</div>
+<div class="truth"><strong>真值边界：</strong>本页面不会登录平台、上传视频、调用平台 API，也不会生成虚假视频 ID、链接、发布时间或指标。</div>
+<fieldset><legend>发布回执</legend>
+<label>平台</label><select id="platform"><option value="douyin">抖音</option><option value="bilibili">B站</option></select>
+<label>平台视频 ID</label><input id="videoId" autocomplete="off" placeholder="从平台已发布视频中复制">
+<label>公开视频链接（HTTPS）</label><input id="url" type="url" placeholder="https://...">
+<label>实际发布时间</label><input id="publishedAt" type="datetime-local">
+<label>证据捕获时间</label><input id="capturedAt" type="datetime-local">
+<label>捕获方式</label><select id="method"><option value="platform_ui">平台页面人工核对</option><option value="manual_verified_export">人工核对的平台导出</option><option value="platform_api">已授权平台 API</option></select>
+<label>证据链接（可选）</label><input id="evidence" type="url" placeholder="https://...">
+<div class="check"><input id="confirmed" type="checkbox"><label for="confirmed">我已逐项核对：视频 ID、公开视频链接、发布时间和媒体 SHA-256 均对应同一条真实发布。</label></div>
+<button id="validate">校验回执</button><button id="download" class="secondary" disabled>下载 JSON 回执</button>
+</fieldset>
+<h2>校验结果</h2><pre id="result">尚未校验。</pre>
+<script>
+const RELEASE_PACKAGE_ID='video-case:aw_nlbkzvyy:release:v1';
+const SOURCE_CASE_ID='video-case:aw_nlbkzvyy';
+const MEDIA_SHA256=document.querySelector('#digest').textContent;
+const $=s=>document.querySelector(s);
+const iso=v=>v?new Date(v).toISOString():null;
+let validReceipt=null;
+function build(){return {schemaVersion:'toolradar.publication-receipt.v1',platform:$('#platform').value,releasePackageId:RELEASE_PACKAGE_ID,sourceCaseId:SOURCE_CASE_ID,mediaSha256:MEDIA_SHA256,platformVideoId:$('#videoId').value.trim(),canonicalUrl:$('#url').value.trim(),publishedAt:iso($('#publishedAt').value),capturedAt:iso($('#capturedAt').value),captureMethod:$('#method').value,evidenceUrl:$('#evidence').value.trim()||null,operatorConfirmed:$('#confirmed').checked};}
+function validate(r){const errors=[];if(!r.platformVideoId)errors.push('必须填写平台视频 ID');if(!/^https:\/\//.test(r.canonicalUrl))errors.push('必须填写 HTTPS 公共链接');if(!r.publishedAt)errors.push('必须填写实际发布时间');if(!r.capturedAt)errors.push('必须填写证据捕获时间');if(r.publishedAt&&r.capturedAt&&Date.parse(r.capturedAt)<Date.parse(r.publishedAt))errors.push('证据捕获时间不能早于发布时间');if(!r.operatorConfirmed)errors.push('必须人工确认同一条真实发布');return errors;}
+$('#validate').onclick=()=>{const r=build(),errors=validate(r);validReceipt=errors.length?null:r;$('#result').textContent=errors.length?'BLOCKED\n- '+errors.join('\n- '):'VALID REAL PUBLICATION RECEIPT\n'+JSON.stringify(r,null,2);$('#state').textContent=errors.length?'回执未通过':'真实回执可导出';$('#state').className='status '+(errors.length?'blocked':'ok');$('#download').disabled=!!errors;};
+$('#download').onclick=()=>{if(!validReceipt)return;const blob=new Blob([JSON.stringify(validReceipt,null,2)+'\n'],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`${validReceipt.platform}-publication-receipt.json`;a.click();URL.revokeObjectURL(a.href);};
+</script>
+</main></body></html>
