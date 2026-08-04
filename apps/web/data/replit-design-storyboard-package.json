@@ -1,0 +1,176 @@
+{
+  "schemaVersion": "toolradar.storyboard-package.v1",
+  "packageId": "video-case:aw_nlbkzvyy:storyboard:v1",
+  "generatedAt": "2026-08-04T09:30:00.000Z",
+  "sourceCaseId": "video-case:aw_nlbkzvyy",
+  "status": "STORYBOARD_AND_ASSET_MANIFEST_READY_FOR_REVIEW",
+  "format": "9:16 portrait",
+  "timelineDurationSeconds": 89,
+  "storyboard": {
+    "schemaVersion": "toolradar.storyboard.v1",
+    "shots": [
+      {
+        "shotId": "shot:01",
+        "order": 1,
+        "startSecond": 0,
+        "endSecond": 10,
+        "durationSeconds": 10,
+        "narrationRole": "hook",
+        "narrationText": "Replit Design，真的能把一句中文需求变成可用界面吗？我们做了一次独立实测。",
+        "visualType": "generated_title_card",
+        "visualInstruction": "使用自有品牌模板，显示工具名、核心问题和‘独立实测’标记；不得使用来源视频画面。",
+        "onScreenText": "Replit Design\n3分钟出设计，能直接上线吗？",
+        "evidenceRefs": ["design-result"],
+        "requiredAssetIds": ["asset:title-card", "asset:voiceover", "asset:subtitles"],
+        "transitionOut": "cut"
+      },
+      {
+        "shotId": "shot:02",
+        "order": 2,
+        "startSecond": 10,
+        "endSecond": 24,
+        "durationSeconds": 14,
+        "narrationRole": "why_now",
+        "narrationText": "它进入选题，不是因为“看起来很火”，而是官方视频在6.455小时新增1500次播放；这只代表关注增长，不能证明产品已经普及。",
+        "visualType": "generated_evidence_card",
+        "visualInstruction": "从本仓库增长快照生成简洁数据卡，显示6.455小时和新增1500播放，并同时显示‘不等于产品采用’。",
+        "onScreenText": "6.455小时 +1500播放\n关注增长 ≠ 产品普及",
+        "evidenceRefs": ["momentum-1"],
+        "requiredAssetIds": ["asset:momentum-card", "asset:voiceover", "asset:subtitles"],
+        "transitionOut": "cut"
+      },
+      {
+        "shotId": "shot:03",
+        "order": 3,
+        "startSecond": 24,
+        "endSecond": 32,
+        "durationSeconds": 8,
+        "narrationRole": "test_method",
+        "narrationText": "我们用固定需求，在隔离环境测试，不接真实账号、数据库、支付或生产文件。",
+        "visualType": "owned_screen_recording",
+        "visualInstruction": "录制自有测试浏览器：固定中文需求、隔离账号、无数据库/支付/生产文件；敏感区域必须打码。",
+        "onScreenText": "固定任务 · 隔离环境 · 无敏感数据",
+        "evidenceRefs": ["test-method"],
+        "requiredAssetIds": ["asset:test-recording", "asset:voiceover", "asset:subtitles"],
+        "transitionOut": "cut"
+      },
+      {
+        "shotId": "shot:04",
+        "order": 4,
+        "startSecond": 32,
+        "endSecond": 42,
+        "durationSeconds": 10,
+        "narrationRole": "verified_result",
+        "narrationText": "约3分钟内生成了桌面和390px移动设计稿，并可继续进行可视化修改。设计探索这一关，通过。",
+        "visualType": "owned_screen_recording",
+        "visualInstruction": "使用本次测试的自有录屏，展示桌面和390px移动设计稿，以及一次可视化修改；不使用官方演示素材。",
+        "onScreenText": "约3分钟\n桌面 + 390px设计稿",
+        "evidenceRefs": ["design-result"],
+        "requiredAssetIds": ["asset:test-recording", "asset:result-callout", "asset:voiceover", "asset:subtitles"],
+        "transitionOut": "cut"
+      },
+      {
+        "shotId": "shot:05",
+        "order": 5,
+        "startSecond": 42,
+        "endSecond": 65,
+        "durationSeconds": 23,
+        "narrationRole": "limitation",
+        "narrationText": "切换到Build后仍显示Nothing to preview yet，没有证据证明已生成可运行页面。所以目前没有证据证明它能直接生成并交付生产页面；本次测试没有证明导出、部署、长期维护和复杂交互能力。",
+        "visualType": "owned_screen_recording",
+        "visualInstruction": "展示自有测试中Build阶段无可预览内容的画面，并加醒目的‘生产交付未证明’结论卡。",
+        "onScreenText": "Build：无可预览成品\n生产交付未证明",
+        "evidenceRefs": ["build-limit"],
+        "requiredAssetIds": ["asset:build-limit-recording", "asset:limit-callout", "asset:voiceover", "asset:subtitles"],
+        "transitionOut": "cut"
+      },
+      {
+        "shotId": "shot:06",
+        "order": 6,
+        "startSecond": 65,
+        "endSecond": 83,
+        "durationSeconds": 18,
+        "narrationRole": "verdict",
+        "narrationText": "我的结论是：Replit Design适合快速设计探索，但当前证据不足以证明它能直接交付生产页面。它适合快速出草图、对齐想法，不应把设计稿直接当成上线代码。",
+        "visualType": "generated_comparison_card",
+        "visualInstruction": "左右对比：适合‘快速出草图/对齐想法’，不适合‘直接当上线代码’。",
+        "onScreenText": "适合：设计探索\n不应：直接当上线代码",
+        "evidenceRefs": ["design-result", "build-limit"],
+        "requiredAssetIds": ["asset:verdict-card", "asset:voiceover", "asset:subtitles"],
+        "transitionOut": "cut"
+      },
+      {
+        "shotId": "shot:07",
+        "order": 7,
+        "startSecond": 83,
+        "endSecond": 89,
+        "durationSeconds": 6,
+        "narrationRole": "cta",
+        "narrationText": "下一条，我们继续测修改、导出和交付。你想看它和谁对比？",
+        "visualType": "generated_end_card",
+        "visualInstruction": "自有品牌结束卡，提出下一次修改/导出/交付测试和对比问题。",
+        "onScreenText": "下一步测：修改 · 导出 · 交付\n你想看它和谁对比？",
+        "evidenceRefs": [],
+        "requiredAssetIds": ["asset:end-card", "asset:voiceover", "asset:subtitles"],
+        "transitionOut": "none"
+      }
+    ]
+  },
+  "assetManifest": {
+    "schemaVersion": "toolradar.asset-manifest.v1",
+    "assets": [
+      {"assetId":"asset:title-card","kind":"graphic","ownership":"owned_generated","state":"ready_to_generate","sourceRef":"script:aw_nlbkzvyy:v1","required":true},
+      {"assetId":"asset:momentum-card","kind":"graphic","ownership":"owned_generated","state":"ready_to_generate","sourceRef":"momentum-1","required":true},
+      {"assetId":"asset:test-recording","kind":"screen_recording","ownership":"owned_recording","state":"human_capture_required","sourceRef":"test-method","required":true},
+      {"assetId":"asset:result-callout","kind":"graphic","ownership":"owned_generated","state":"ready_to_generate","sourceRef":"design-result","required":true},
+      {"assetId":"asset:build-limit-recording","kind":"screen_recording","ownership":"owned_recording","state":"human_capture_required","sourceRef":"build-limit","required":true},
+      {"assetId":"asset:limit-callout","kind":"graphic","ownership":"owned_generated","state":"ready_to_generate","sourceRef":"build-limit","required":true},
+      {"assetId":"asset:verdict-card","kind":"graphic","ownership":"owned_generated","state":"ready_to_generate","sourceRef":"script:aw_nlbkzvyy:v1","required":true},
+      {"assetId":"asset:end-card","kind":"graphic","ownership":"owned_generated","state":"ready_to_generate","sourceRef":"script:aw_nlbkzvyy:v1","required":true},
+      {"assetId":"asset:voiceover","kind":"voiceover","ownership":"owned_generated","state":"ready_for_tts","sourceRef":"script:aw_nlbkzvyy:v1","required":true},
+      {"assetId":"asset:subtitles","kind":"subtitle","ownership":"owned_generated","state":"ready_to_generate","sourceRef":"script:aw_nlbkzvyy:v1","required":true},
+      {"assetId":"asset:music-bed","kind":"music","ownership":"licensed_or_original_only","state":"optional","sourceRef":null,"required":false}
+    ],
+    "captureTasks": [
+      {
+        "taskId": "capture:design-flow",
+        "assetId": "asset:test-recording",
+        "humanBoundary": "Replit authentication must be completed by a human in a normal browser",
+        "steps": [
+          "Open the existing isolated Replit test project",
+          "Confirm no personal or production data is visible",
+          "Submit the canonical Chinese prompt once",
+          "Record the first complete desktop result",
+          "Switch to the 390px view and record the mobile result",
+          "Perform one harmless visual edit and record the change"
+        ],
+        "redactionRequired": true
+      },
+      {
+        "taskId": "capture:build-limit",
+        "assetId": "asset:build-limit-recording",
+        "humanBoundary": "Use only the existing test project and do not deploy or purchase anything",
+        "steps": [
+          "Switch from Design to Build",
+          "Record the visible no-preview state",
+          "Do not infer code generation or deployment success"
+        ],
+        "redactionRequired": true
+      }
+    ]
+  },
+  "gates": {
+    "humanStoryboardReviewRequired": true,
+    "humanCaptureRequired": true,
+    "renderAllowed": false,
+    "publicationAllowed": false
+  },
+  "nextMilestone": "OWNED_ASSET_CAPTURE_AND_RENDER",
+  "policy": {
+    "sourceVideoDownloadAllowed": false,
+    "sourceVideoReuseAllowed": false,
+    "thirdPartyFootageAllowed": false,
+    "licensedMusicOnly": true,
+    "automaticPublishingAllowed": false
+  }
+}
