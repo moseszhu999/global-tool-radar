@@ -40,6 +40,10 @@ function metricValue(snapshot, name) {
   return value;
 }
 
+function normalizeNumber(value) {
+  return Number(value.toFixed(12));
+}
+
 export function validatePublicationReceipt(receipt) {
   requireObject(receipt, "publicationReceipt");
   requireString(receipt.platform, "publicationReceipt.platform");
@@ -81,12 +85,12 @@ function delta(first, last, name) {
   const from = first.metrics[name];
   const to = last.metrics[name];
   if (from === null || to === null) return { from, to, absolute: null, relative: null };
-  const absolute = to - from;
+  const absolute = normalizeNumber(to - from);
   return {
     from,
     to,
     absolute,
-    relative: from === 0 ? null : absolute / from,
+    relative: from === 0 ? null : normalizeNumber(absolute / from),
   };
 }
 
