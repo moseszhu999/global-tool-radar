@@ -1,0 +1,72 @@
+name: render-preview
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/render-preview.yml"
+      - "apps/web/data/replit-design-storyboard-package.json"
+      - "apps/worker/src/build-render-preview-package.mjs"
+      - "apps/worker/src/render-preview-video.mjs"
+      - "packages/render-preview/**"
+      - "package.json"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/render-preview.yml"
+      - "apps/web/data/replit-design-storyboard-package.json"
+      - "apps/worker/src/build-render-preview-package.mjs"
+      - "apps/worker/src/render-preview-video.mjs"
+      - "packages/render-preview/**"
+      - "package.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  render-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install deterministic media runtime
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg espeak-ng librsvg2-bin fonts-noto-cjk
+      - run: npm install --ignore-scripts
+      - name: Build source-bound render package
+        run: npm run production:render-package:replit
+      - name: Render 9:16 MP4 preview
+        run: npm run production:render-preview:replit
+      - name: Verify render receipt
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFile } from "node:fs/promises";
+          const receipt = JSON.parse(await readFile("build/replit-design-render-receipt.json", "utf8"));
+          if (receipt.publicationAllowed !== false || receipt.finalRender !== false) {
+            throw new Error("preview publication boundary failed");
+          }
+          if (receipt.placeholderSlideIds.length !== 3) {
+            throw new Error("expected three visible placeholder slides");
+          }
+          if (Math.abs(receipt.actualDurationSeconds - receipt.targetDurationSeconds) > 0.75) {
+            throw new Error(`duration mismatch: ${receipt.actualDurationSeconds}`);
+          }
+          if (receipt.width !== 1080 || receipt.height !== 1920) {
+            throw new Error("9:16 output dimensions are invalid");
+          }
+          console.log(receipt);
+          NODE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: toolradar-replit-design-render-preview
+          retention-days: 14
+          if-no-files-found: error
+          path: |
+            build/replit-design-preview.mp4
+            build/replit-design-preview.srt
+            build/replit-design-render-preview-package.json
+            build/replit-design-render-receipt.json
