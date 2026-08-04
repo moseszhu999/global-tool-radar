@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ToolRadar 真实指标快照工作台</title>
+<style>
+:root{color-scheme:dark;--bg:#07111f;--panel:#0d1b2a;--line:#29435e;--text:#edf5ff;--muted:#9fb2c7;--ok:#74e0ad;--bad:#ff9a9a;--accent:#78b7ff}*{box-sizing:border-box}body{margin:0;background:linear-gradient(135deg,#07111f,#0b1d31);color:var(--text);font:16px/1.55 system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif}main{max-width:1080px;margin:auto;padding:32px 20px 70px}h1{margin:0 0 6px;font-size:32px}.sub{color:var(--muted)}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin:24px 0}.card,fieldset{background:rgba(13,27,42,.94);border:1px solid var(--line);border-radius:15px;padding:18px}fieldset{margin:18px 0}legend{padding:0 8px;font-weight:700}label{display:block;margin:12px 0 5px;color:var(--muted)}input,select,textarea{width:100%;border:1px solid #3b5d7d;background:#071522;color:var(--text);border-radius:9px;padding:10px 12px;font:inherit}textarea{min-height:150px}button{border:0;border-radius:9px;padding:11px 16px;margin:8px 8px 0 0;background:#1769aa;color:#fff;font-weight:700;cursor:pointer}button.secondary{background:#28435e}.status{font-size:22px;font-weight:800}.ok{color:var(--ok)}.blocked{color:var(--bad)}code{word-break:break-all;background:#06101c;padding:2px 6px;border-radius:5px}pre{white-space:pre-wrap;word-break:break-word;background:#06101c;border:1px solid var(--line);border-radius:12px;padding:15px}.truth{border-left:4px solid var(--bad);padding:12px 16px;background:#18151c;border-radius:8px}.check{display:flex;gap:10px;align-items:flex-start}.check input{width:auto;margin-top:5px}.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}</style>
+</head>
+<body><main>
+<h1>真实指标快照工作台</h1>
+<div class="sub">只在真实发布完成并取得平台回执后填写。所有数据仅在当前页面内处理，由操作者主动下载。</div>
+<div class="grid">
+ <div class="card"><div class="sub">来源案例</div><strong>video-case:aw_nlbkzvyy</strong></div>
+ <div class="card"><div class="sub">媒体 SHA-256</div><code id="digest">13a72f8139040d15956c1cbc74d45f0193a7eb9269bbeec2e3a6292cddf87f1c</code></div>
+ <div class="card"><div class="sub">当前状态</div><div id="state" class="status blocked">等待真实发布回执</div></div>
+</div>
+<div class="truth"><strong>真值边界：</strong>本页面不会登录平台、调用平台 API、保存凭证、推断缺失指标，也不会把空值替换成零。</div>
+<fieldset><legend>1. 导入真实发布回执</legend>
+<label>publication-receipt JSON</label><textarea id="receipt" placeholder="粘贴由真实发布回执工作台导出的 JSON"></textarea>
+<button id="validateReceipt">校验发布回执</button>
+<pre id="receiptResult">尚未导入。</pre>
+</fieldset>
+<fieldset disabled id="metricsFieldset"><legend>2. 填写真实平台指标</legend>
+<label>指标捕获时间</label><input id="capturedAt" type="datetime-local">
+<label>捕获方式</label><select id="method"><option value="platform_ui">平台页面人工核对</option><option value="manual_verified_export">人工核对的平台导出</option><option value="platform_api">已授权平台 API</option></select>
+<label>证据链接（可选）</label><input id="evidence" type="url" placeholder="https://...">
+<div class="metric-grid">
+ <div><label>播放量</label><input id="views" type="number" min="0" step="1" placeholder="留空表示未知"></div>
+ <div><label>点赞</label><input id="likes" type="number" min="0" step="1" placeholder="留空表示未知"></div>
+ <div><label>评论</label><input id="comments" type="number" min="0" step="1" placeholder="留空表示未知"></div>
+ <div><label>收藏</label><input id="favorites" type="number" min="0" step="1" placeholder="留空表示未知"></div>
+ <div><label>分享</label><input id="shares" type="number" min="0" step="1" placeholder="留空表示未知"></div>
+ <div><label>新增关注</label><input id="follows" type="number" min="0" step="1" placeholder="留空表示未知"></div>
+ <div><label>平均观看秒数</label><input id="averageWatchSeconds" type="number" min="0" step="0.001" placeholder="留空表示未知"></div>
+ <div><label>完播率（0–1）</label><input id="completionRate" type="number" min="0" max="1" step="0.0001" placeholder="留空表示未知"></div>
+</div>
+<div class="check"><input id="confirmed" type="checkbox"><label for="confirmed">我已核对这些指标来自同一条真实发布，未知值保持为空，未做估算或补造。</label></div>
+<button id="validateSnapshot">校验指标快照</button><button id="download" class="secondary" disabled>下载 JSON 快照</button>
+</fieldset>
+<h2>快照结果</h2><pre id="snapshotResult">尚未校验。</pre>
+<script>
+const SOURCE_CASE_ID='video-case:aw_nlbkzvyy';
+const MEDIA_SHA256=document.querySelector('#digest').textContent;
+const $=s=>document.querySelector(s);
+const iso=v=>v?new Date(v).toISOString():null;
+const nullableNumber=id=>{const v=$(id).value.trim();return v===''?null:Number(v)};
+let validReceipt=null,validSnapshot=null;
+function validateReceipt(r){const errors=[];if(!r||r.schemaVersion!=='toolradar.publication-receipt.v1')errors.push('回执 schemaVersion 不正确');if(!['douyin','bilibili'].includes(r?.platform))errors.push('平台必须是 douyin 或 bilibili');if(r?.sourceCaseId!==SOURCE_CASE_ID)errors.push('来源案例不匹配');if(r?.mediaSha256!==MEDIA_SHA256)errors.push('媒体 SHA-256 不匹配');if(!r?.platformVideoId)errors.push('缺少平台视频 ID');if(!/^https:\/\//.test(r?.canonicalUrl||''))errors.push('缺少 HTTPS 公共链接');if(!r?.publishedAt||Number.isNaN(Date.parse(r.publishedAt)))errors.push('发布时间无效');if(r?.operatorConfirmed!==true)errors.push('发布回执缺少人工确认');return errors;}
+$('#validateReceipt').onclick=()=>{let r;try{r=JSON.parse($('#receipt').value)}catch{r=null}const errors=validateReceipt(r);validReceipt=errors.length?null:r;$('#receiptResult').textContent=errors.length?'BLOCKED\n- '+errors.join('\n- '):'VALID REAL PUBLICATION RECEIPT\n'+JSON.stringify(r,null,2);$('#metricsFieldset').disabled=!!errors;$('#state').textContent=errors.length?'等待有效发布回执':'可填写真实指标';$('#state').className='status '+(errors.length?'blocked':'ok');};
+function buildSnapshot(){return {schemaVersion:'toolradar.platform-analytics-snapshot.v1',platform:validReceipt.platform,sourceCaseId:SOURCE_CASE_ID,publicationReceipt:{platformVideoId:validReceipt.platformVideoId,canonicalUrl:validReceipt.canonicalUrl,publishedAt:validReceipt.publishedAt,mediaSha256:MEDIA_SHA256},capturedAt:iso($('#capturedAt').value),captureMethod:$('#method').value,evidenceUrl:$('#evidence').value.trim()||null,metrics:{views:nullableNumber('#views'),likes:nullableNumber('#likes'),comments:nullableNumber('#comments'),favorites:nullableNumber('#favorites'),shares:nullableNumber('#shares'),follows:nullableNumber('#follows'),averageWatchSeconds:nullableNumber('#averageWatchSeconds'),completionRate:nullableNumber('#completionRate')},operatorConfirmed:$('#confirmed').checked};}
+function validateSnapshot(s){const errors=[];if(!s.capturedAt)errors.push('必须填写指标捕获时间');if(s.capturedAt&&Date.parse(s.capturedAt)<Date.parse(validReceipt.publishedAt))errors.push('指标捕获时间不能早于发布时间');for(const [k,v] of Object.entries(s.metrics)){if(v===null)continue;if(!Number.isFinite(v)||v<0)errors.push(`${k} 必须为非负数字或空值`);if(['views','likes','comments','favorites','shares','follows'].includes(k)&&!Number.isInteger(v))errors.push(`${k} 必须为整数`)}if(s.metrics.completionRate!==null&&(s.metrics.completionRate<0||s.metrics.completionRate>1))errors.push('completionRate 必须在 0–1 之间');if(!s.operatorConfirmed)errors.push('必须人工确认指标来自同一条真实发布');if(Object.values(s.metrics).every(v=>v===null))errors.push('至少填写一个真实指标');return errors;}
+$('#validateSnapshot').onclick=()=>{if(!validReceipt)return;const s=buildSnapshot(),errors=validateSnapshot(s);validSnapshot=errors.length?null:s;$('#snapshotResult').textContent=errors.length?'BLOCKED\n- '+errors.join('\n- '):'VALID REAL ANALYTICS SNAPSHOT\n'+JSON.stringify(s,null,2);$('#download').disabled=!!errors;$('#state').textContent=errors.length?'指标快照未通过':'真实指标快照可导出';$('#state').className='status '+(errors.length?'blocked':'ok');};
+$('#download').onclick=()=>{if(!validSnapshot)return;const blob=new Blob([JSON.stringify(validSnapshot,null,2)+'\n'],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`${validSnapshot.platform}-analytics-snapshot.json`;a.click();URL.revokeObjectURL(a.href);};
+</script>
+</main></body></html>
