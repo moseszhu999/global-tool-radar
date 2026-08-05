@@ -1,0 +1,9 @@
+{
+  "name": "@toolradar/publication-analytics-observation-binding",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node --check src/index.mjs && node --check test/index.test.mjs",
+    "test": "node --test test/index.test.mjs"
+  }
+}
