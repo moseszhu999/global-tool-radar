@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ToolRadar M9 自有素材交接工作台</title>
+<style>
+body{margin:0;background:#07111f;color:#eef6ff;font:16px/1.6 system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif}main{max-width:960px;margin:auto;padding:32px 20px 60px}.card{background:#0d1b2a;border:1px solid #29435e;border-radius:14px;padding:18px;margin:14px 0}label{display:block;margin:10px 0 4px}input,button{font:inherit}input[type=text]{width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:1px solid #41617f;background:#07111f;color:#fff}button{padding:11px 16px;border:0;border-radius:9px;background:#1769aa;color:#fff;font-weight:700;cursor:pointer}button:disabled{opacity:.45;cursor:not-allowed}.muted{color:#9fb2c7}.ok{color:#74e0ad}.bad{color:#ff9a9a}pre{white-space:pre-wrap;word-break:break-all;background:#06101c;padding:14px;border-radius:10px}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:700px){.row{grid-template-columns:1fr}}
+</style>
+</head>
+<body><main>
+<h1>M9 自有素材交接工作台</h1>
+<p class="muted">所有文件只在浏览器本地读取并计算 SHA-256；不会上传、联网或保存凭证。</p>
+<div class="card">
+<label>项目 ID</label><input id="projectId" type="text" value="replit-design">
+<label>素材所有者 / 提交人</label><input id="owner" type="text" placeholder="填写真实姓名或责任人标识">
+</div>
+<div id="shots"></div>
+<div class="card">
+<h2>最终配音</h2>
+<input id="voice" type="file" accept="audio/*">
+<label><input id="voiceApproved" type="checkbox"> 已人工批准最终配音</label>
+<label><input id="voiceOwned" type="checkbox"> 配音为自有或已获得授权</label>
+</div>
+<button id="generate">生成本地接收回执</button>
+<button id="download" disabled>下载 JSON</button>
+<p id="status" class="muted"></p><pre id="output">尚未生成</pre>
+<script type="module">
+const REQUIRED_SHOTS=[
+  ["replit_prompt_to_build","Replit：提示词到构建"],
+  ["replit_live_preview","Replit：实时预览"],
+  ["replit_iteration_result","Replit：迭代结果"]
+];
+const shotsRoot=document.querySelector('#shots');
+for(const [id,label] of REQUIRED_SHOTS){shotsRoot.insertAdjacentHTML('beforeend',`<div class="card"><h2>${label}</h2><input id="${id}" type="file" accept="video/*"><label><input id="${id}_owned" type="checkbox"> 此录屏由提交人拥有或已获授权</label></div>`)}
+const hex=buffer=>[...new Uint8Array(buffer)].map(x=>x.toString(16).padStart(2,'0')).join('');
+async function digest(file){return hex(await crypto.subtle.digest('SHA-256',await file.arrayBuffer()))}
+async function mediaDuration(file){return new Promise((resolve,reject)=>{const el=document.createElement(file.type.startsWith('audio/')?'audio':'video');el.preload='metadata';el.onloadedmetadata=()=>{URL.revokeObjectURL(el.src);resolve(Number(el.duration.toFixed(3)))};el.onerror=()=>reject(new Error(`无法读取媒体时长：${file.name}`));el.src=URL.createObjectURL(file)})}
+let lastReceipt=null;
+async function build(){
+ const status=document.querySelector('#status');status.textContent='正在本地计算 SHA-256…';status.className='muted';
+ try{
+  const projectId=document.querySelector('#projectId').value.trim();const owner=document.querySelector('#owner').value.trim();
+  if(!projectId||!owner) throw new Error('项目 ID 和提交人不能为空');
+  const clips=[];
+  for(const [shotId] of REQUIRED_SHOTS){const file=document.querySelector(`#${shotId}`).files[0];if(!file) throw new Error(`缺少文件：${shotId}`);clips.push({shotId,localFilename:file.name,sha256:await digest(file),durationSeconds:await mediaDuration(file),ownedBySubmitter:document.querySelector(`#${shotId}_owned`).checked})}
+  const voiceFile=document.querySelector('#voice').files[0];if(!voiceFile) throw new Error('缺少最终配音文件');
+  const voice={localFilename:voiceFile.name,sha256:await digest(voiceFile),durationSeconds:await mediaDuration(voiceFile),approved:document.querySelector('#voiceApproved').checked,ownedOrLicensed:document.querySelector('#voiceOwned').checked};
+  const blockers=[];if(clips.some(x=>!x.ownedBySubmitter))blockers.push('OWNED_SCREEN_RECORDINGS_REQUIRED');if(!voice.approved||!voice.ownedOrLicensed)blockers.push('FINAL_VOICE_APPROVAL_REQUIRED');
+  lastReceipt={schemaVersion:'toolradar.owned-media-intake-receipt.v1',receiptId:`${projectId}:owned-media-intake:v1`,projectId,capturedAt:new Date().toISOString(),owner,clips,voice,missingShotIds:[],blockers,decision:blockers.length?'BLOCKED':'READY_FOR_FINAL_RENDER',finalRenderAllowed:blockers.length===0,publicationAllowed:false,nextAction:blockers.length?'SUPPLY_OWNED_MEDIA':'RENDER_FINAL_MEDIA'};
+  document.querySelector('#output').textContent=JSON.stringify(lastReceipt,null,2);document.querySelector('#download').disabled=false;status.textContent=blockers.length?'回执已生成，但仍有授权或批准阻塞。':'回执已生成，可交给最终渲染流程。';status.className=blockers.length?'bad':'ok';
+ }catch(error){lastReceipt=null;document.querySelector('#download').disabled=true;status.textContent=error.message;status.className='bad'}
+}
+document.querySelector('#generate').addEventListener('click',build);
+document.querySelector('#download').addEventListener('click',()=>{if(!lastReceipt)return;const blob=new Blob([JSON.stringify(lastReceipt,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`${lastReceipt.projectId}-owned-media-intake-receipt.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)});
+</script>
+</main></body></html>
