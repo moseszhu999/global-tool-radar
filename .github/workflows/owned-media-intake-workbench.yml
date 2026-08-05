@@ -1,0 +1,21 @@
+name: owned-media-intake-workbench
+
+on:
+  pull_request:
+    paths:
+      - 'apps/owned-media-intake-workbench/**'
+      - '.github/workflows/owned-media-intake-workbench.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test apps/owned-media-intake-workbench/test/contract.test.mjs
