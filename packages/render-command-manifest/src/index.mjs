@@ -7,7 +7,9 @@ function assertSafeToken(value, label) {
 }
 
 function quote(value) {
-  assertSafeToken(value, "command token");
+  if (typeof value !== "string" || value.length === 0) {
+    throw new TypeError("command argument must be a non-empty string");
+  }
   return `'${value.replaceAll("'", "'\\''")}'`;
 }
 
