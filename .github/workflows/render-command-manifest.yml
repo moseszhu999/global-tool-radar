@@ -1,0 +1,24 @@
+name: render-command-manifest
+
+on:
+  pull_request:
+    paths:
+      - "packages/render-command-manifest/**"
+      - ".github/workflows/render-command-manifest.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Syntax check
+        run: node --check packages/render-command-manifest/src/index.mjs
+      - name: Contract tests
+        run: node --test packages/render-command-manifest/test/render-command-manifest.test.mjs
