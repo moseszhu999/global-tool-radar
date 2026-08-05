@@ -1,0 +1,13 @@
+{
+  "name": "@toolradar/publication-bounded-feedback-summary",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node --check src/index.mjs && node --test test/index.test.mjs",
+    "test": "node --test test/index.test.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
