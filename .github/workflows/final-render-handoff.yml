@@ -1,0 +1,22 @@
+name: final-render-handoff
+
+on:
+  pull_request:
+    paths:
+      - 'packages/final-render-handoff/**'
+      - '.github/workflows/final-render-handoff.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check packages/final-render-handoff/src/index.mjs
+      - run: node --test packages/final-render-handoff/test/final-render-handoff.test.mjs
