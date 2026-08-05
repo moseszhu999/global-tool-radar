@@ -1,0 +1,24 @@
+name: final-render-evidence-intake
+
+on:
+  pull_request:
+    paths:
+      - 'packages/final-render-evidence-intake/**'
+      - '.github/workflows/final-render-evidence-intake.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax check
+        run: node --check packages/final-render-evidence-intake/src/index.mjs
+      - name: Contract tests
+        run: node --test packages/final-render-evidence-intake/test/final-render-evidence-intake.test.mjs
