@@ -1,0 +1,29 @@
+name: final-render-preflight
+
+on:
+  pull_request:
+    paths:
+      - "packages/final-render-preflight/**"
+      - ".github/workflows/final-render-preflight.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "packages/final-render-preflight/**"
+      - ".github/workflows/final-render-preflight.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Syntax check
+        run: node --check packages/final-render-preflight/src/index.mjs
+      - name: Contract tests
+        run: node --test packages/final-render-preflight/test/final-render-preflight.test.mjs
