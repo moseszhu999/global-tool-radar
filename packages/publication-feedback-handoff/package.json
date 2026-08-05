@@ -1,0 +1,8 @@
+{
+  "name": "@toolradar/publication-feedback-handoff",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node --check src/index.mjs && node --test test/index.test.mjs"
+  }
+}
