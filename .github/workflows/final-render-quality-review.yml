@@ -1,0 +1,24 @@
+name: final-render-quality-review
+
+on:
+  pull_request:
+    paths:
+      - 'packages/final-render-quality-review/**'
+      - '.github/workflows/final-render-quality-review.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax check
+        run: node --check packages/final-render-quality-review/src/index.mjs
+      - name: Contract tests
+        run: node --test packages/final-render-quality-review/test/final-render-quality-review.test.mjs
