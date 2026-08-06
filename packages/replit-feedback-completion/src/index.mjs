@@ -26,25 +26,24 @@ const stableStringify = (value) => {
 };
 
 const digest = (value) => createHash('sha256').update(stableStringify(value)).digest('hex');
+const withDigest = (core, field) => Object.freeze({...core, [field]: digest(core)});
 
 const requiredText = (value, field) => {
   if (typeof value !== 'string' || value.trim() === '') throw new TypeError(`${field} must be non-empty`);
   return value.trim();
 };
 
-const normalizeTimestamp = (value, field) => {
+const timestamp = (value, field) => {
   const date = new Date(requiredText(value, field));
   if (Number.isNaN(date.getTime())) throw new TypeError(`${field} must be a valid timestamp`);
   return date.toISOString();
 };
 
-const buildReceipt = (core) => Object.freeze({...core, receiptDigest: digest(core)});
-
 const assertPublishedProject = (project) => {
   validateVideoProject(project);
-  if (project.stage !== 'PUBLISHED') throw new Error('feedback completion requires PUBLISHED');
-  if (project.status !== 'ACTIVE') throw new Error('feedback completion requires an ACTIVE project');
-  if (project.nextEvent !== 'ATTACH_FEEDBACK') throw new Error('feedback completion requires ATTACH_FEEDBACK');
+  if (project.stage !== 'PUBLISHED' || project.status !== 'ACTIVE' || project.nextEvent !== 'ATTACH_FEEDBACK') {
+    throw new Error('feedback completion requires PUBLISHED / ACTIVE / ATTACH_FEEDBACK');
+  }
 };
 
 const latestPublicationArtifact = (project) => [...project.artifacts]
@@ -52,23 +51,14 @@ const latestPublicationArtifact = (project) => [...project.artifacts]
   .find((artifact) => artifact.type === 'bound_publication_receipt'
     && artifact.status === 'PUBLICATION_CONFIRMED');
 
-const assertPublicationBinding = (project, boundPublicationReceipt) => {
+const assertPublicationBinding = (project, receipt) => {
   assertPublishedProject(project);
-  validateBoundPublicationReceipt(boundPublicationReceipt);
+  validateBoundPublicationReceipt(receipt);
   const artifact = latestPublicationArtifact(project);
   if (!artifact) throw new Error('bound publication artifact is missing');
-  if (artifact.digest !== boundPublicationReceipt.receiptDigest) {
-    throw new Error('bound publication receipt digest mismatch');
-  }
-  const pairs = [
-    ['platform', boundPublicationReceipt.platform],
-    ['platformVideoId', boundPublicationReceipt.platformVideoId],
-    ['publicUrl', boundPublicationReceipt.publicUrl],
-    ['uploadHandoffDigest', boundPublicationReceipt.uploadHandoffDigest],
-    ['finalVideoSha256', boundPublicationReceipt.finalVideoSha256],
-  ];
-  for (const [field, value] of pairs) {
-    if (artifact.claims?.[field] !== value) throw new Error(`publication artifact ${field} mismatch`);
+  if (artifact.digest !== receipt.receiptDigest) throw new Error('bound publication receipt digest mismatch');
+  for (const field of ['platform', 'platformVideoId', 'publicUrl', 'uploadHandoffDigest', 'finalVideoSha256']) {
+    if (artifact.claims?.[field] !== receipt[field]) throw new Error(`publication artifact ${field} mismatch`);
   }
   if (artifact.claims?.publicationConfirmed !== true || artifact.claims?.analyticsIntakeAllowed !== true) {
     throw new Error('publication artifact does not allow analytics intake');
@@ -99,7 +89,6 @@ export const createAnalyticsObservationTemplate = ({
   preparedAt = new Date().toISOString(),
 } = {}) => {
   assertPublicationBinding(project, boundPublicationReceipt);
-  const metrics = Object.fromEntries(METRIC_FIELDS.map((field) => [field, null]));
   const core = {
     schemaVersion: 'toolradar.analytics-observation-template.v1',
     projectId: project.projectId,
@@ -108,7 +97,7 @@ export const createAnalyticsObservationTemplate = ({
     platform: boundPublicationReceipt.platform,
     platformVideoId: boundPublicationReceipt.platformVideoId,
     preparedBy: requiredText(preparedBy, 'preparedBy'),
-    preparedAt: normalizeTimestamp(preparedAt, 'preparedAt'),
+    preparedAt: timestamp(preparedAt, 'preparedAt'),
     analyticsObservation: {
       platform: boundPublicationReceipt.platform,
       publicationReceiptDigest: boundPublicationReceipt.receiptDigest,
@@ -117,7 +106,7 @@ export const createAnalyticsObservationTemplate = ({
       source: 'platform-ui-manual',
       operator: null,
       operatorConfirmedMetrics: false,
-      metrics,
+      metrics: Object.fromEntries(METRIC_FIELDS.map((field) => [field, null])),
     },
     requiredEvidence: [
       'observedAt',
@@ -129,7 +118,7 @@ export const createAnalyticsObservationTemplate = ({
     analyticsObserved: false,
     feedbackCompletionAllowed: false,
   };
-  return Object.freeze({...core, templateDigest: digest(core)});
+  return withDigest(core, 'templateDigest');
 };
 
 export const validateAnalyticsObservationTemplate = (template) => {
@@ -139,43 +128,26 @@ export const validateAnalyticsObservationTemplate = (template) => {
   if (!SHA256.test(template.templateDigest ?? '') || digest(templateCore(template)) !== template.templateDigest) {
     throw new Error('analytics observation template digest mismatch');
   }
-  if (!SHA256.test(template.sourceProjectDigest ?? '')
-    || !SHA256.test(template.publicationReceiptDigest ?? '')) {
+  if (!SHA256.test(template.sourceProjectDigest ?? '') || !SHA256.test(template.publicationReceiptDigest ?? '')) {
     throw new Error('analytics observation template evidence digest is invalid');
   }
-  if (template.analyticsObservation?.platform !== template.platform
-    || template.analyticsObservation?.publicationReceiptDigest !== template.publicationReceiptDigest
-    || template.analyticsObservation?.platformVideoId !== template.platformVideoId
-    || template.analyticsObservation?.source !== 'platform-ui-manual') {
+  const draft = template.analyticsObservation;
+  if (draft?.platform !== template.platform
+    || draft?.publicationReceiptDigest !== template.publicationReceiptDigest
+    || draft?.platformVideoId !== template.platformVideoId
+    || draft?.source !== 'platform-ui-manual') {
     throw new Error('analytics observation template binding is invalid');
   }
-  if (template.analyticsObservation?.operatorConfirmedMetrics !== false
+  if (draft?.operatorConfirmedMetrics !== false
     || template.analyticsObserved !== false
     || template.feedbackCompletionAllowed !== false) {
-    throw new Error('analytics observation template cannot claim observed metrics or feedback completion');
+    throw new Error('analytics observation template cannot claim metrics or completion');
   }
   for (const field of METRIC_FIELDS) {
-    if (template.analyticsObservation?.metrics?.[field] !== null) {
-      throw new Error('analytics observation template must not contain metric values');
-    }
+    if (draft?.metrics?.[field] !== null) throw new Error('analytics observation template must be metric-empty');
   }
   return true;
 };
-
-const intakeCore = (value) => ({
-  schemaVersion: value.schemaVersion,
-  status: value.status,
-  truthBoundary: value.truthBoundary,
-  projectId: value.projectId,
-  sourceProjectDigest: value.sourceProjectDigest,
-  templateDigest: value.templateDigest,
-  publicationReceiptDigest: value.publicationReceiptDigest,
-  boundObservation: value.boundObservation,
-  errors: value.errors,
-  projectUnchanged: value.projectUnchanged,
-  analyticsObserved: value.analyticsObserved,
-  feedbackCompletionAllowed: value.feedbackCompletionAllowed,
-});
 
 export const bindProjectAnalyticsObservation = ({
   project,
@@ -203,14 +175,12 @@ export const bindProjectAnalyticsObservation = ({
   let boundObservation = null;
   if (errors.length === 0) {
     try {
-      boundObservation = bindPublicationAnalyticsObservation({
-        boundPublicationReceipt,
-        analyticsObservation,
-      });
-      if (boundObservation.status === 'ANALYTICS_OBSERVATION_BOUND') {
-        validateBoundPublicationAnalyticsObservation(boundObservation);
+      const candidate = bindPublicationAnalyticsObservation({boundPublicationReceipt, analyticsObservation});
+      if (candidate.status === 'ANALYTICS_OBSERVATION_BOUND') {
+        validateBoundPublicationAnalyticsObservation(candidate);
+        boundObservation = candidate;
       } else {
-        errors.push(...boundObservation.reasons.map((reason) => `observation:${reason}`));
+        errors.push(...candidate.reasons.map((reason) => `observation:${reason}`));
       }
     } catch (error) {
       errors.push(`observation:${error instanceof Error ? error.message : String(error)}`);
@@ -227,13 +197,13 @@ export const bindProjectAnalyticsObservation = ({
     sourceProjectDigest: project?.projectDigest ?? null,
     templateDigest: template?.templateDigest ?? null,
     publicationReceiptDigest: boundPublicationReceipt?.receiptDigest ?? null,
-    boundObservation: errors.length === 0 ? boundObservation : null,
+    boundObservation,
     errors: Object.freeze([...new Set(errors)]),
     projectUnchanged: true,
     analyticsObserved: errors.length === 0,
     feedbackCompletionAllowed: false,
   };
-  return Object.freeze({...core, intakeDigest: digest(core)});
+  return withDigest(core, 'intakeDigest');
 };
 
 export const validateProjectAnalyticsObservationIntake = (intake) => {
@@ -241,7 +211,7 @@ export const validateProjectAnalyticsObservationIntake = (intake) => {
     throw new TypeError('unsupported project analytics observation intake');
   }
   const {intakeDigest, ...core} = intake;
-  if (!SHA256.test(intakeDigest ?? '') || digest(intakeCore(core)) !== intakeDigest) {
+  if (!SHA256.test(intakeDigest ?? '') || digest(core) !== intakeDigest) {
     throw new Error('project analytics observation intake digest mismatch');
   }
   if (intake.projectUnchanged !== true || intake.feedbackCompletionAllowed !== false) {
@@ -296,7 +266,7 @@ export const completeProjectFeedback = ({
 } = {}) => {
   assertPublicationBinding(project, boundPublicationReceipt);
   const normalizedActor = requiredText(actor, 'actor');
-  const normalizedOccurredAt = normalizeTimestamp(occurredAt, 'occurredAt');
+  const normalizedOccurredAt = timestamp(occurredAt, 'occurredAt');
   if (!Array.isArray(boundObservations) || boundObservations.length < 2) {
     throw new Error('at least two bound analytics observations are required');
   }
@@ -331,7 +301,6 @@ export const completeProjectFeedback = ({
     artifact: feedbackArtifact(feedbackSummary),
   });
   validateVideoProject(updatedProject);
-  const summary = summarizeVideoProject(updatedProject);
   const core = {
     schemaVersion: 'toolradar.feedback-completion.v1',
     status: 'FEEDBACK_READY',
@@ -344,14 +313,14 @@ export const completeProjectFeedback = ({
     appliedEvent: eventId,
     updatedProject,
     updatedProjectDigest: updatedProject.projectDigest,
-    summary,
+    summary: summarizeVideoProject(updatedProject),
     nextLifecycleEvent: updatedProject.nextEvent,
     feedbackSummaryReady: true,
     causalClaimsAllowed: false,
     recommendationClaimsAllowed: false,
     platformApiVerified: false,
   };
-  return buildReceipt(core);
+  return withDigest(core, 'receiptDigest');
 };
 
 export const validateFeedbackCompletionReceipt = (receipt) => {
@@ -366,7 +335,7 @@ export const validateFeedbackCompletionReceipt = (receipt) => {
   validateBoundedPublicationFeedbackSummary(receipt.feedbackSummary);
   if (receipt.status !== 'FEEDBACK_READY'
     || receipt.updatedProject?.stage !== 'FEEDBACK_READY'
-    || receipt.updatedProject?.status !== 'ACTIVE'
+    || receipt.updatedProject?.status !== 'COMPLETED'
     || receipt.nextLifecycleEvent !== null) {
     throw new Error('feedback-ready lifecycle boundary is invalid');
   }
