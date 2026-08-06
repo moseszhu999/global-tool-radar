@@ -1,0 +1,27 @@
+name: final-video-quality-review-pack
+
+on:
+  pull_request:
+    paths:
+      - 'packages/final-video-quality-review-pack/**'
+      - '.github/workflows/final-video-quality-review-pack.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax check
+        run: npm run check
+        working-directory: packages/final-video-quality-review-pack
+      - name: Contract tests
+        run: npm test
+        working-directory: packages/final-video-quality-review-pack
