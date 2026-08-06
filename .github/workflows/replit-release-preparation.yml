@@ -4,8 +4,14 @@ on:
   pull_request:
     paths:
       - 'packages/replit-release-preparation/**'
+      - 'packages/platform-upload-handoff/**'
+      - 'apps/worker/src/prepare-replit-release.mjs'
       - '.github/workflows/replit-release-preparation.yml'
   workflow_dispatch:
+
+concurrency:
+  group: replit-release-preparation-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -13,12 +19,19 @@ permissions:
 jobs:
   contract:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Syntax
-        run: npm --prefix packages/replit-release-preparation run check
-      - name: Contracts
+      - name: Package and worker syntax
+        run: |
+          npm --prefix packages/replit-release-preparation run check
+          node --check apps/worker/src/prepare-replit-release.mjs
+      - name: Project-bound release preparation contracts
         run: npm --prefix packages/replit-release-preparation test
+      - name: Platform upload handoff regression
+        run: node --test packages/platform-upload-handoff/test/platform-upload-handoff.test.mjs
+      - name: Video Project lifecycle regression
+        run: npm --prefix packages/video-project-lifecycle test
