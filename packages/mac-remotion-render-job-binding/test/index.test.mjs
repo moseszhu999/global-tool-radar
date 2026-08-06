@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {buildMacRemotionRenderJob, validateMacRemotionRenderJobBinding} from '../src/index.mjs';
+import {
+  buildMacRemotionRenderIntent,
+  materializeMacRemotionRunnerRequest,
+  validateMacRemotionRenderIntent,
+  validateMacRemotionRunnerRequest,
+} from '../src/index.mjs';
 
 const gate = (overrides = {}) => ({
   version: 1,
@@ -17,37 +22,64 @@ const gate = (overrides = {}) => ({
   ...overrides,
 });
 
-test('builds an exact gate-bound runner job request', () => {
-  const binding = buildMacRemotionRenderJob({gate: gate()});
+test('builds a gate-bound render intent without guessing the runner API body', () => {
+  const binding = buildMacRemotionRenderIntent({gate: gate()});
   assert.equal(binding.finalRenderAllowed, true);
-  assert.equal(binding.jobRequest.compositionId, 'ToolRadarReplitPortrait');
-  assert.equal(binding.jobRequest.inputProps.finalRenderGateDigest, 'a'.repeat(64));
-  assert.equal(binding.jobRequest.evidence.assetDigests.length, 3);
-  assert.equal(validateMacRemotionRenderJobBinding(binding), true);
+  assert.equal(binding.renderIntent.compositionId, 'ToolRadarReplitPortrait');
+  assert.equal(binding.renderIntent.evidence.gateDigest, 'a'.repeat(64));
+  assert.equal(binding.renderIntent.evidence.assetDigests.length, 3);
+  assert.equal(validateMacRemotionRenderIntent(binding), true);
+  assert.equal('jobRequest' in binding, false);
 });
 
-test('blocks a runner job when the final render gate is not authorized', () => {
-  const binding = buildMacRemotionRenderJob({gate: gate({finalRenderAllowed: false})});
+test('blocks a render intent when the final render gate is not authorized', () => {
+  const binding = buildMacRemotionRenderIntent({gate: gate({finalRenderAllowed: false})});
   assert.equal(binding.finalRenderAllowed, false);
-  assert.equal(binding.jobRequest, null);
+  assert.equal(binding.renderIntent, null);
   assert.deepEqual(binding.errors, ['render_gate_not_allowed']);
-  assert.equal(validateMacRemotionRenderJobBinding(binding), true);
+  assert.equal(validateMacRemotionRenderIntent(binding), true);
 });
 
-test('blocks incomplete asset evidence', () => {
-  const binding = buildMacRemotionRenderJob({gate: gate({assets: gate().assets.slice(0, 2)})});
-  assert.equal(binding.jobRequest, null);
-  assert.ok(binding.errors.includes('render_gate_assets_invalid'));
+test('blocks incomplete or invalid asset evidence', () => {
+  const incomplete = buildMacRemotionRenderIntent({gate: gate({assets: gate().assets.slice(0, 2)})});
+  assert.equal(incomplete.renderIntent, null);
+  assert.ok(incomplete.errors.includes('render_gate_assets_invalid'));
+
+  const invalid = buildMacRemotionRenderIntent({gate: gate({assets: [
+    ...gate().assets.slice(0, 2),
+    {...gate().assets[2], actualSha256: 'not-a-digest'},
+  ]})});
+  assert.ok(invalid.errors.includes('asset_2_digest_invalid'));
 });
 
-test('binding digest changes when the authorized output path changes', () => {
-  const first = buildMacRemotionRenderJob({gate: gate()});
-  const second = buildMacRemotionRenderJob({gate: gate({outputPath: 'out/other.mp4'})});
+test('materializes the deployed runner request only through an explicit adapter', () => {
+  const binding = buildMacRemotionRenderIntent({gate: gate()});
+  const envelope = materializeMacRemotionRunnerRequest({
+    binding,
+    mapRequest: (intent) => ({
+      compositionId: intent.compositionId,
+      outputPath: intent.outputPath,
+      inputProps: {finalRenderGateDigest: intent.evidence.gateDigest},
+    }),
+  });
+  assert.equal(envelope.requestBody.compositionId, 'ToolRadarReplitPortrait');
+  assert.equal(validateMacRemotionRunnerRequest(envelope), true);
+});
+
+test('rejects adapters that inject credentials into the request artifact', () => {
+  const binding = buildMacRemotionRenderIntent({gate: gate()});
+  assert.throws(() => materializeMacRemotionRunnerRequest({
+    binding,
+    mapRequest: () => ({compositionId: 'x', actionToken: 'secret'}),
+  }), /secret fields/);
+});
+
+test('digests change on path changes and reject request tampering', () => {
+  const first = buildMacRemotionRenderIntent({gate: gate()});
+  const second = buildMacRemotionRenderIntent({gate: gate({outputPath: 'out/other.mp4'})});
   assert.notEqual(first.bindingDigest, second.bindingDigest);
-});
 
-test('validator rejects a tampered runner request', () => {
-  const binding = buildMacRemotionRenderJob({gate: gate()});
-  const tampered = {...binding, jobRequest: {...binding.jobRequest, outputPath: 'out/tampered.mp4'}};
-  assert.throws(() => validateMacRemotionRenderJobBinding(tampered), /binding digest mismatch/);
+  const envelope = materializeMacRemotionRunnerRequest({binding: first, mapRequest: (intent) => ({outputPath: intent.outputPath})});
+  const tampered = {...envelope, requestBody: {outputPath: 'out/tampered.mp4'}};
+  assert.throws(() => validateMacRemotionRunnerRequest(tampered), /digest mismatch/);
 });
