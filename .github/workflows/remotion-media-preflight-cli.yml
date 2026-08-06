@@ -1,0 +1,27 @@
+name: remotion-media-preflight-cli
+
+on:
+  pull_request:
+    paths:
+      - 'packages/remotion-media-preflight/src/cli.mjs'
+      - 'packages/remotion-media-preflight/test/cli.test.mjs'
+      - '.github/workflows/remotion-media-preflight-cli.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax check
+        run: node --check packages/remotion-media-preflight/src/cli.mjs
+      - name: Contract tests
+        working-directory: packages/remotion-media-preflight
+        run: node --test test/index.test.mjs test/cli.test.mjs
