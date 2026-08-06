@@ -20,4 +20,12 @@ jobs:
       - run: npm install --ignore-scripts
       - run: npm run check
       - run: npm test
+      - name: Publication confirmation syntax and contracts
+        run: |
+          npm --prefix packages/replit-publication-confirmation run check
+          node --check apps/worker/src/confirm-replit-publication.mjs
+          npm --prefix packages/replit-publication-confirmation test
+          node --test packages/platform-publication-receipt-binding/test/platform-publication-receipt-binding.test.mjs
+          npm --prefix packages/replit-release-preparation test
+          npm --prefix packages/video-project-lifecycle test
       - run: npm run demo
