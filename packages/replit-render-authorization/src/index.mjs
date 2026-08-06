@@ -99,7 +99,7 @@ export const authorizeReplitRender = async ({
       nextAction: 'REPAIR_MEDIA_OR_PREFLIGHT_EVIDENCE',
       renderExecutionAllowed: false,
       runnerSubmissionReady: false,
-      errors: gateErrors,
+      errors: [...new Set([...(finalRenderGate.errors ?? []), ...gateErrors])],
     });
   }
 
