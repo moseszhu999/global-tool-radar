@@ -138,6 +138,7 @@ export function validateSharedMacRunnerReceipt(receipt) {
   if (!SHA256.test(receiptDigest ?? '') || digest(core) !== receiptDigest) throw new Error('shared MacRunner receipt digest mismatch');
   if (receipt.service !== 'MacRunner') throw new Error('shared MacRunner service identity mismatch');
   if (receipt.health?.reachable !== true) throw new Error('shared MacRunner was not reachable');
+  if (receipt.health?.ok !== true) throw new Error('shared MacRunner health is not ok');
   const operationKeys = new Set((receipt.operations ?? []).map((item) => `${item.method} ${item.path}`));
   for (const operation of REQUIRED_OPERATIONS) {
     const key = `${operation.method.toUpperCase()} ${operation.path}`;
