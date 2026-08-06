@@ -30,4 +30,4 @@ jobs:
       - name: Platform upload handoff regression
         run: node --test packages/platform-upload-handoff/test/platform-upload-handoff.test.mjs
       - name: Video Project lifecycle regression
-        run: node --test packages/video-project-lifecycle/test/*.test.mjs
+        run: npm --prefix packages/video-project-lifecycle test
