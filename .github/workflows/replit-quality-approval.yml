@@ -1,0 +1,37 @@
+name: replit-quality-approval
+
+on:
+  pull_request:
+    paths:
+      - 'packages/replit-quality-approval/**'
+      - 'packages/final-video-quality-review-pack/**'
+      - 'packages/final-render-quality-review/**'
+      - 'packages/video-project-lifecycle/**'
+      - 'apps/worker/src/review-replit-quality.mjs'
+      - '.github/workflows/replit-quality-approval.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Package and worker syntax
+        run: |
+          npm --prefix packages/replit-quality-approval run check
+          node --check apps/worker/src/review-replit-quality.mjs
+      - name: Project-bound quality approval contracts
+        run: npm --prefix packages/replit-quality-approval test
+      - name: Ten-check adapter regression
+        run: npm --prefix packages/final-video-quality-review-pack test
+      - name: Official M10 gate regression
+        run: node --test packages/final-render-quality-review/test/final-render-quality-review.test.mjs
+      - name: Video Project lifecycle regression
+        run: npm --prefix packages/video-project-lifecycle test
