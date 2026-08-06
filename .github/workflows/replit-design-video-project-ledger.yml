@@ -8,6 +8,10 @@ on:
       - 'apps/worker/src/build-replit-design-video-project-ledger.mjs'
       - 'apps/web/data/replit-design-production-case.json'
       - 'apps/web/data/replit-design-storyboard-package.json'
+      - 'apps/web/data/replit-design-video-project-ledger.json'
+      - 'apps/web/video-projects.html'
+      - 'apps/web/video-projects.mjs'
+      - 'apps/web/video-projects.css'
       - '.github/workflows/replit-design-video-project-ledger.yml'
   workflow_dispatch:
 
@@ -30,18 +34,21 @@ jobs:
         env:
           TOOLRADAR_VIDEO_PROJECT_OUTPUT: artifacts/replit-design-video-project-ledger.json
         run: node apps/worker/src/build-replit-design-video-project-ledger.mjs
-      - name: Verify truthful current state
+      - name: Verify truthful state and checked-in snapshot
         run: |
           node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
           import {readFile} from 'node:fs/promises';
           import {validateVideoProject} from './packages/video-project-lifecycle/src/index.mjs';
-          const ledger = JSON.parse(await readFile('artifacts/replit-design-video-project-ledger.json', 'utf8'));
-          validateVideoProject(ledger.project);
-          if (ledger.project.stage !== 'STORYBOARD_READY') throw new Error('unexpected project stage');
-          if (ledger.project.status !== 'BLOCKED') throw new Error('project must remain blocked');
-          if (ledger.project.nextEvent !== 'RESUME_PROJECT') throw new Error('unexpected next event');
-          if (!ledger.project.blockedReason.includes('asset:voiceover')) throw new Error('voiceover blocker missing');
-          if (ledger.project.artifacts.length !== 3) throw new Error('unexpected artifact count');
+          const generated = JSON.parse(await readFile('artifacts/replit-design-video-project-ledger.json', 'utf8'));
+          const snapshot = JSON.parse(await readFile('apps/web/data/replit-design-video-project-ledger.json', 'utf8'));
+          validateVideoProject(generated.project);
+          assert.deepEqual(snapshot, generated, 'checked-in project snapshot drifted from canonical reconstruction');
+          if (generated.project.stage !== 'STORYBOARD_READY') throw new Error('unexpected project stage');
+          if (generated.project.status !== 'BLOCKED') throw new Error('project must remain blocked');
+          if (generated.project.nextEvent !== 'RESUME_PROJECT') throw new Error('unexpected next event');
+          if (!generated.project.blockedReason.includes('asset:voiceover')) throw new Error('voiceover blocker missing');
+          if (generated.project.artifacts.length !== 3) throw new Error('unexpected artifact count');
           NODE
       - uses: actions/upload-artifact@v4
         with:
