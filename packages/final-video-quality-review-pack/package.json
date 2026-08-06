@@ -1,0 +1,13 @@
+{
+  "name": "@toolradar/final-video-quality-review-pack",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node --check src/index.mjs && node --check test/index.test.mjs",
+    "test": "node --test test/index.test.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
