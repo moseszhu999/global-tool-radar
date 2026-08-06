@@ -1,0 +1,25 @@
+name: video-closure-operator-pack
+
+on:
+  pull_request:
+    paths:
+      - 'packages/video-closure-operator-pack/**'
+      - '.github/workflows/video-closure-operator-pack.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Package syntax
+        run: npm --prefix packages/video-closure-operator-pack run check
+      - name: Human closure pack contracts
+        run: npm --prefix packages/video-closure-operator-pack test
