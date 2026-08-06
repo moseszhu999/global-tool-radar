@@ -1,0 +1,31 @@
+name: remotion-final-composition
+
+on:
+  pull_request:
+    paths:
+      - 'apps/remotion-video/**'
+      - '.github/workflows/remotion-final-composition.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/remotion-video
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/remotion-video/package-lock.json
+      - name: Install exact dependencies
+        run: npm install --package-lock-only && npm ci
+      - name: Verify contracts
+        run: npm run check
+      - name: Bundle and enumerate compositions
+        run: npx remotion compositions src/index.ts
