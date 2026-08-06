@@ -1,0 +1,28 @@
+name: mac-remotion-render-orchestration
+
+on:
+  pull_request:
+    paths:
+      - 'packages/mac-remotion-render-orchestration/**'
+      - 'packages/mac-remotion-runner-client/**'
+      - 'apps/worker/src/run-mac-remotion-render.mjs'
+      - '.github/workflows/mac-remotion-render-orchestration.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Package syntax
+        run: npm --prefix packages/mac-remotion-render-orchestration run check
+      - name: Package contract tests
+        run: npm --prefix packages/mac-remotion-render-orchestration test
+      - name: Worker syntax
+        run: node --check apps/worker/src/run-mac-remotion-render.mjs
