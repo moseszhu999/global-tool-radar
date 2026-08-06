@@ -21,6 +21,7 @@ const writeJson = async (path, value) => {
 const ledgerInput = resolve(process.env.VIDEO_PROJECT_LEDGER_INPUT?.trim() || 'apps/web/data/replit-design-video-project-ledger.json');
 const ledgerOutput = resolve(process.env.VIDEO_PROJECT_LEDGER_OUTPUT?.trim() || 'artifacts/replit-design-assets-verified-ledger.json');
 const receiptOutput = resolve(process.env.OWNED_MEDIA_INTAKE_RECEIPT_OUTPUT?.trim() || 'artifacts/replit-owned-media-intake-receipt.json');
+const preflightOutput = resolve(process.env.REMOTION_PREFLIGHT_OUTPUT?.trim() || 'artifacts/remotion-media-preflight.json');
 
 try {
   const ledger = JSON.parse(await readFile(ledgerInput, 'utf8'));
@@ -39,6 +40,7 @@ try {
   });
   validateOwnedMediaIntakeReceipt(receipt);
   await writeJson(receiptOutput, receipt);
+  await writeJson(preflightOutput, receipt.preflight);
 
   if (receipt.status === 'ASSETS_VERIFIED') {
     await writeJson(ledgerOutput, {
@@ -58,6 +60,7 @@ try {
     truthBoundary: receipt.truthBoundary,
     projectId: receipt.projectId,
     receiptOutput,
+    preflightOutput,
     ledgerOutput: receipt.status === 'ASSETS_VERIFIED' ? ledgerOutput : null,
     projectStage: receipt.summary.stage,
     projectStatus: receipt.summary.status,
