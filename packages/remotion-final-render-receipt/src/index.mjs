@@ -13,6 +13,7 @@ const stableStringify = (value) => {
 };
 
 const digest = (value) => createHash('sha256').update(value).digest('hex');
+const SHA256 = /^[a-f0-9]{64}$/;
 
 const sha256File = (path) => new Promise((resolveDigest, reject) => {
   const hash = createHash('sha256');
@@ -30,6 +31,44 @@ const normalizeProbe = (probe) => ({
   codec: String(probe?.codec ?? '').toLowerCase(),
   audioCodec: String(probe?.audioCodec ?? '').toLowerCase(),
 });
+
+export const buildFinalRenderReceiptCanonical = (receipt) => ({
+  version: receipt?.version ?? null,
+  gateDigest: receipt?.gateDigest ?? null,
+  videoPath: receipt?.videoPath ?? null,
+  sizeBytes: receipt?.sizeBytes ?? null,
+  videoSha256: receipt?.videoSha256 ?? null,
+  probe: receipt?.probe ?? null,
+  renderProfile: receipt?.renderProfile ?? null,
+  finalVideoVerified: receipt?.finalVideoVerified === true,
+});
+
+export const computeFinalRenderReceiptDigest = (receipt) => digest(stableStringify(buildFinalRenderReceiptCanonical(receipt)));
+
+export const validateFinalRenderReceipt = (receipt) => {
+  const errors = [];
+  if (receipt?.version !== 1) errors.push('unsupported_final_render_receipt_version');
+  if (receipt?.finalVideoVerified !== true) errors.push('final_video_not_verified');
+  if (receipt?.truthBoundary !== 'final_video_file_verified') errors.push('final_video_truth_boundary_invalid');
+  if (receipt?.gateDigestVerified !== true) errors.push('final_video_gate_digest_not_verified');
+  if (!SHA256.test(receipt?.gateDigest ?? '')) errors.push('final_video_gate_digest_invalid');
+  if (typeof receipt?.videoPath !== 'string' || receipt.videoPath.trim() === '') errors.push('final_video_path_invalid');
+  if (!Number.isInteger(receipt?.sizeBytes) || receipt.sizeBytes <= 0) errors.push('final_video_size_invalid');
+  if (!SHA256.test(receipt?.videoSha256 ?? '')) errors.push('final_video_sha256_invalid');
+  if (!receipt?.probe || typeof receipt.probe !== 'object') errors.push('final_video_probe_invalid');
+  if (!receipt?.renderProfile || typeof receipt.renderProfile !== 'object') errors.push('final_video_render_profile_invalid');
+  if (!Array.isArray(receipt?.errors)) errors.push('final_video_errors_invalid');
+  else if (receipt.errors.length > 0) errors.push('final_video_contains_verification_errors');
+  if (!SHA256.test(receipt?.receiptDigest ?? '')) errors.push('final_video_receipt_digest_invalid');
+  else {
+    try {
+      if (computeFinalRenderReceiptDigest(receipt) !== receipt.receiptDigest) errors.push('final_video_receipt_digest_mismatch');
+    } catch {
+      errors.push('final_video_receipt_canonical_invalid');
+    }
+  }
+  return Object.freeze(errors);
+};
 
 export const buildFinalRenderReceipt = async ({gateReceiptPath, videoPath, probeVideo}) => {
   if (typeof probeVideo !== 'function') throw new TypeError('probeVideo must be a function');
