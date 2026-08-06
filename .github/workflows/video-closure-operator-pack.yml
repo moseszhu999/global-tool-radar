@@ -2,6 +2,7 @@ name: video-closure-operator-pack
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - 'packages/video-closure-operator-pack/**'
       - '.github/workflows/video-closure-operator-pack.yml'
