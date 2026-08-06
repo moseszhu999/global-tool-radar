@@ -1,0 +1,39 @@
+name: replit-publication-confirmation
+
+on:
+  pull_request:
+    paths:
+      - 'packages/replit-publication-confirmation/**'
+      - 'packages/platform-publication-receipt-binding/**'
+      - 'apps/worker/src/confirm-replit-publication.mjs'
+      - '.github/workflows/replit-publication-confirmation.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: replit-publication-confirmation-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: macos-15
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Package and worker syntax
+        run: |
+          npm --prefix packages/replit-publication-confirmation run check
+          node --check apps/worker/src/confirm-replit-publication.mjs
+      - name: Project publication confirmation contracts
+        run: npm --prefix packages/replit-publication-confirmation test
+      - name: Bound publication receipt regression
+        run: node --test packages/platform-publication-receipt-binding/test/platform-publication-receipt-binding.test.mjs
+      - name: Release preparation regression
+        run: npm --prefix packages/replit-release-preparation test
+      - name: Video Project lifecycle regression
+        run: npm --prefix packages/video-project-lifecycle test
