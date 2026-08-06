@@ -1,10 +1,13 @@
 {
   "name": "@toolradar/replit-release-preparation",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "scripts": {
-    "check": "node --check src/index.mjs",
+    "check": "node --check src/index.mjs && node --check src/cli.mjs",
     "test": "node --test test/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }
