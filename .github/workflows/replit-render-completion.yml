@@ -1,0 +1,42 @@
+name: replit-render-completion
+
+on:
+  pull_request:
+    paths:
+      - 'packages/replit-render-completion/**'
+      - 'packages/replit-render-authorization/**'
+      - 'packages/replit-owned-media-intake/**'
+      - 'packages/remotion-final-render-receipt/**'
+      - 'packages/remotion-final-render-gate/**'
+      - 'packages/mac-remotion-render-job-binding/**'
+      - 'packages/mac-remotion-render-orchestration/**'
+      - 'packages/video-project-lifecycle/**'
+      - 'apps/worker/src/complete-replit-render.mjs'
+      - 'apps/web/data/replit-design-video-project-ledger.json'
+      - '.github/workflows/replit-render-completion.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Package and worker syntax
+        run: |
+          npm --prefix packages/replit-render-completion run check
+          node --check apps/worker/src/complete-replit-render.mjs
+      - name: Request-run-file completion contracts
+        run: npm --prefix packages/replit-render-completion test
+      - name: Hardened final-video receipt regression
+        run: npm --prefix packages/remotion-final-render-receipt test
+      - name: Runner orchestration regression
+        run: npm --prefix packages/mac-remotion-render-orchestration test
+      - name: Video Project lifecycle regression
+        run: npm --prefix packages/video-project-lifecycle test
