@@ -1,0 +1,24 @@
+name: video-project-lifecycle
+
+on:
+  pull_request:
+    paths:
+      - 'packages/video-project-lifecycle/**'
+      - '.github/workflows/video-project-lifecycle.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Package syntax
+        run: npm --prefix packages/video-project-lifecycle run check
+      - name: Package contract tests
+        run: npm --prefix packages/video-project-lifecycle test
