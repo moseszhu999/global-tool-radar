@@ -1,0 +1,25 @@
+{
+  "name": "@toolradar/remotion-video",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "studio": "remotion studio src/index.ts --no-open",
+    "render:preview": "remotion render src/index.ts ToolRadarReplitPortrait out/toolradar-replit-preview.mp4 --props=props/preview.json",
+    "render:final": "remotion render src/index.ts ToolRadarReplitPortrait out/toolradar-replit-final.mp4 --props=props/final.json",
+    "check": "node --test test/contracts.test.mjs"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.506",
+    "@remotion/media": "4.0.506",
+    "@remotion/renderer": "4.0.506",
+    "react": "19.1.1",
+    "react-dom": "19.1.1",
+    "remotion": "4.0.506",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@types/react": "19.1.9",
+    "@types/react-dom": "19.1.7",
+    "typescript": "5.9.2"
+  }
+}
