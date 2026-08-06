@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 
 const SUPPORTED_PLATFORMS = new Set(['douyin', 'bilibili']);
 const METRIC_FIELDS = ['views', 'likes', 'comments', 'shares', 'favorites', 'followersGained'];
+const SHA256 = /^[a-f0-9]{64}$/;
 
 function stableStringify(value) {
   if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
@@ -23,6 +24,19 @@ function requiredText(value, field) {
 function nonNegativeInteger(value, field) {
   if (!Number.isInteger(value) || value < 0) throw new TypeError(`${field} must be a non-negative integer`);
   return value;
+}
+
+function observationCore(value) {
+  return {
+    schema: value.schema,
+    platform: value.platform,
+    publicationReceiptDigest: value.publicationReceiptDigest,
+    platformVideoId: value.platformVideoId,
+    observedAt: value.observedAt,
+    source: value.source,
+    operator: value.operator,
+    metrics: value.metrics,
+  };
 }
 
 export function bindPublicationAnalyticsObservation(input) {
@@ -95,3 +109,34 @@ export function bindPublicationAnalyticsObservation(input) {
     metricsAreSelfReportedFromPlatformUi: true,
   };
 }
+
+export function validateBoundPublicationAnalyticsObservation(observation) {
+  if (!observation || typeof observation !== 'object' || Array.isArray(observation)) {
+    throw new TypeError('observation must be an object');
+  }
+  if (observation.schema !== 'toolradar.bound-publication-analytics-observation.v1') {
+    throw new Error('unsupported bound analytics observation schema');
+  }
+  if (observation.status !== 'ANALYTICS_OBSERVATION_BOUND') throw new Error('analytics observation is not bound');
+  if (!SUPPORTED_PLATFORMS.has(observation.platform)) throw new Error('analytics observation platform is invalid');
+  if (!SHA256.test(observation.publicationReceiptDigest ?? '')) throw new Error('publication receipt digest is invalid');
+  requiredText(observation.platformVideoId, 'observation.platformVideoId');
+  requiredText(observation.operator, 'observation.operator');
+  const observedAt = new Date(requiredText(observation.observedAt, 'observation.observedAt'));
+  if (Number.isNaN(observedAt.getTime())) throw new Error('analytics observation timestamp is invalid');
+  if (observation.source !== 'platform-ui-manual') throw new Error('analytics observation source is invalid');
+  for (const field of METRIC_FIELDS) nonNegativeInteger(observation.metrics?.[field], `observation.metrics.${field}`);
+  if (!SHA256.test(observation.observationDigest ?? '')
+    || digest(observationCore(observation)) !== observation.observationDigest) {
+    throw new Error('analytics observation digest mismatch');
+  }
+  if (observation.analyticsObserved !== true
+    || observation.feedbackReportAllowed !== true
+    || observation.platformApiVerified !== false
+    || observation.metricsAreSelfReportedFromPlatformUi !== true) {
+    throw new Error('analytics observation truth boundary is invalid');
+  }
+  return true;
+}
+
+export {METRIC_FIELDS};
