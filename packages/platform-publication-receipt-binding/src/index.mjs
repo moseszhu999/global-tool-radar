@@ -1,6 +1,8 @@
 import { createHash } from 'node:crypto';
+import {validatePlatformUploadHandoff} from '../../platform-upload-handoff/src/index.mjs';
 
 const SUPPORTED_PLATFORMS = new Set(['douyin', 'bilibili']);
+const SHA256 = /^[a-f0-9]{64}$/i;
 
 function stableStringify(value) {
   if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
@@ -20,7 +22,7 @@ function requiredText(value, field) {
 }
 
 function isSha256(value) {
-  return /^[a-f0-9]{64}$/i.test(value);
+  return SHA256.test(value ?? '');
 }
 
 function isHttpsUrl(value) {
@@ -31,14 +33,30 @@ function isHttpsUrl(value) {
   }
 }
 
+function boundCore(value) {
+  return {
+    schema: value.schema,
+    platform: value.platform,
+    uploadHandoffDigest: value.uploadHandoffDigest,
+    finalVideoSha256: value.finalVideoSha256,
+    platformVideoId: value.platformVideoId,
+    publicUrl: value.publicUrl,
+    publishedAt: value.publishedAt,
+    capturedAt: value.capturedAt,
+    operator: value.operator,
+  };
+}
+
 export function bindPlatformPublicationReceipt(input) {
   if (!input || typeof input !== 'object') throw new TypeError('input is required');
 
   const handoff = input.uploadHandoff;
-  if (!handoff || handoff.status !== 'READY_FOR_HUMAN_PLATFORM_UPLOAD') {
+  try {
+    validatePlatformUploadHandoff(handoff);
+  } catch {
     return {
       status: 'BLOCKED',
-      reasons: ['upload handoff is not ready'],
+      reasons: ['upload handoff is not ready or valid'],
       publicationConfirmed: false,
       analyticsIntakeAllowed: false,
     };
@@ -105,4 +123,35 @@ export function bindPlatformPublicationReceipt(input) {
     platformApiVerified: false,
     metricsObserved: false,
   };
+}
+
+export function validateBoundPublicationReceipt(receipt) {
+  if (!receipt || typeof receipt !== 'object' || Array.isArray(receipt)) {
+    throw new TypeError('receipt must be an object');
+  }
+  if (receipt.schema !== 'toolradar.bound-publication-receipt.v1') {
+    throw new Error('unsupported bound publication receipt schema');
+  }
+  if (receipt.status !== 'PUBLICATION_CONFIRMED') throw new Error('publication is not confirmed');
+  if (!SUPPORTED_PLATFORMS.has(receipt.platform)) throw new Error('publication platform is invalid');
+  if (!isSha256(receipt.uploadHandoffDigest)) throw new Error('upload handoff digest is invalid');
+  if (!isSha256(receipt.finalVideoSha256)) throw new Error('final video digest is invalid');
+  if (!isHttpsUrl(receipt.publicUrl)) throw new Error('public URL must be HTTPS');
+  requiredText(receipt.platformVideoId, 'receipt.platformVideoId');
+  requiredText(receipt.operator, 'receipt.operator');
+  const publishedAt = new Date(requiredText(receipt.publishedAt, 'receipt.publishedAt'));
+  const capturedAt = new Date(requiredText(receipt.capturedAt, 'receipt.capturedAt'));
+  if (Number.isNaN(publishedAt.getTime()) || Number.isNaN(capturedAt.getTime()) || capturedAt < publishedAt) {
+    throw new Error('publication timestamps are invalid');
+  }
+  if (!isSha256(receipt.receiptDigest) || digest(boundCore(receipt)) !== receipt.receiptDigest) {
+    throw new Error('bound publication receipt digest mismatch');
+  }
+  if (receipt.publicationConfirmed !== true
+    || receipt.analyticsIntakeAllowed !== true
+    || receipt.platformApiVerified !== false
+    || receipt.metricsObserved !== false) {
+    throw new Error('bound publication receipt truth boundary is invalid');
+  }
+  return true;
 }
