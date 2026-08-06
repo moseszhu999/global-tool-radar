@@ -1,0 +1,63 @@
+name: replit-owned-media-intake
+
+on:
+  pull_request:
+    paths:
+      - 'packages/replit-owned-media-intake/**'
+      - 'packages/remotion-media-preflight/**'
+      - 'packages/video-project-lifecycle/**'
+      - 'apps/worker/src/intake-replit-owned-media.mjs'
+      - 'apps/web/data/replit-design-video-project-ledger.json'
+      - '.github/workflows/replit-owned-media-intake.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Package and worker syntax
+        run: |
+          npm --prefix packages/replit-owned-media-intake run check
+          node --check apps/worker/src/intake-replit-owned-media.mjs
+      - name: Contract tests
+        run: npm --prefix packages/replit-owned-media-intake test
+      - name: End-to-end CLI contract fixture
+        run: |
+          mkdir -p /tmp/toolradar-owned-media artifacts
+          printf 'contract design recording' > /tmp/toolradar-owned-media/design.mp4
+          printf 'contract build limit recording' > /tmp/toolradar-owned-media/build-limit.mp4
+          printf 'contract approved voiceover' > /tmp/toolradar-owned-media/voiceover.wav
+          TOOLRADAR_OPERATOR=ci-contract-operator \
+          TOOLRADAR_OCCURRED_AT=2026-08-06T13:30:00.000Z \
+          REMOTION_DESIGN_RECORDING=/tmp/toolradar-owned-media/design.mp4 \
+          REMOTION_BUILD_LIMIT_RECORDING=/tmp/toolradar-owned-media/build-limit.mp4 \
+          REMOTION_VOICEOVER=/tmp/toolradar-owned-media/voiceover.wav \
+          REMOTION_DESIGN_RECORDING_VERIFIED=true \
+          REMOTION_BUILD_LIMIT_RECORDING_VERIFIED=true \
+          REMOTION_VOICEOVER_VERIFIED=true \
+          VIDEO_PROJECT_LEDGER_OUTPUT=artifacts/contract-assets-verified-ledger.json \
+          OWNED_MEDIA_INTAKE_RECEIPT_OUTPUT=artifacts/contract-owned-media-intake-receipt.json \
+          node apps/worker/src/intake-replit-owned-media.mjs
+      - name: Verify lifecycle and truth boundary
+        run: |
+          node --input-type=module <<'NODE'
+          import {readFile} from 'node:fs/promises';
+          import {validateVideoProject} from './packages/video-project-lifecycle/src/index.mjs';
+          import {validateOwnedMediaIntakeReceipt} from './packages/replit-owned-media-intake/src/index.mjs';
+          const receipt = JSON.parse(await readFile('artifacts/contract-owned-media-intake-receipt.json', 'utf8'));
+          const ledger = JSON.parse(await readFile('artifacts/contract-assets-verified-ledger.json', 'utf8'));
+          validateOwnedMediaIntakeReceipt(receipt);
+          validateVideoProject(ledger.project);
+          if (receipt.status !== 'ASSETS_VERIFIED') throw new Error('intake did not verify assets');
+          if (ledger.project.stage !== 'ASSETS_VERIFIED') throw new Error('project stage did not advance');
+          if (ledger.project.nextEvent !== 'AUTHORIZE_RENDER') throw new Error('unexpected next event');
+          if (receipt.renderExecutionAllowed !== false) throw new Error('asset intake must not authorize render execution');
+          if (JSON.stringify(receipt).match(/authorization|action_token|password|cookie/i)) throw new Error('receipt contains secret-like fields');
+          NODE
