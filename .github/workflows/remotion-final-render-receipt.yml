@@ -1,0 +1,18 @@
+name: remotion-final-render-receipt
+on:
+  pull_request:
+    paths:
+      - packages/remotion-final-render-receipt/**
+      - .github/workflows/remotion-final-render-receipt.yml
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm --prefix packages/remotion-final-render-receipt run check
+      - run: npm --prefix packages/remotion-final-render-receipt test
