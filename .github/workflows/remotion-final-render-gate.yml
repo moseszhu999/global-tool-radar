@@ -1,0 +1,24 @@
+name: remotion-final-render-gate
+
+on:
+  pull_request:
+    paths:
+      - 'packages/remotion-final-render-gate/**'
+      - '.github/workflows/remotion-final-render-gate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax check
+        run: npm --prefix packages/remotion-final-render-gate run check
+      - name: Contract tests
+        run: npm --prefix packages/remotion-final-render-gate test
