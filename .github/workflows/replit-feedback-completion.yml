@@ -20,7 +20,7 @@ permissions:
 
 jobs:
   contract:
-    runs-on: macos-15
+    runs-on: windows-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
