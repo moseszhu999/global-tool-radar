@@ -1,0 +1,32 @@
+name: final-video-quality-review-pack
+
+on:
+  pull_request:
+    paths:
+      - 'packages/final-video-quality-review-pack/**'
+      - 'packages/final-render-quality-review/**'
+      - '.github/workflows/final-video-quality-review-pack.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Adapter syntax check
+        run: npm run check
+        working-directory: packages/final-video-quality-review-pack
+      - name: Granular-to-official adapter tests
+        run: npm test
+        working-directory: packages/final-video-quality-review-pack
+      - name: Official M10 quality gate regression
+        run: |
+          node --check packages/final-render-quality-review/src/index.mjs
+          node --test packages/final-render-quality-review/test/final-render-quality-review.test.mjs
