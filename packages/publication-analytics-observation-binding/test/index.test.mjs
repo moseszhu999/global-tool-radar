@@ -1,6 +1,9 @@
-import test from 'node:test';
 import assert from 'node:assert/strict';
-import { bindPublicationAnalyticsObservation } from '../src/index.mjs';
+import test from 'node:test';
+import {
+  bindPublicationAnalyticsObservation,
+  validateBoundPublicationAnalyticsObservation,
+} from '../src/index.mjs';
 
 const receipt = {
   status: 'PUBLICATION_CONFIRMED', analyticsIntakeAllowed: true,
@@ -15,8 +18,9 @@ const observation = {
   metrics: { views: 100, likes: 10, comments: 2, shares: 1, favorites: 3, followersGained: 1 },
 };
 
-test('binds a human-confirmed analytics observation to the exact publication receipt', () => {
-  const result = bindPublicationAnalyticsObservation({ boundPublicationReceipt: receipt, analyticsObservation: observation });
+test('binds and validates a human-confirmed analytics observation', () => {
+  const result = bindPublicationAnalyticsObservation({boundPublicationReceipt: receipt, analyticsObservation: observation});
+  assert.equal(validateBoundPublicationAnalyticsObservation(result), true);
   assert.equal(result.status, 'ANALYTICS_OBSERVATION_BOUND');
   assert.equal(result.analyticsObserved, true);
   assert.equal(result.feedbackReportAllowed, true);
@@ -26,7 +30,7 @@ test('binds a human-confirmed analytics observation to the exact publication rec
 });
 
 test('blocks when publication receipt is not confirmed', () => {
-  const result = bindPublicationAnalyticsObservation({ boundPublicationReceipt: { status: 'BLOCKED' }, analyticsObservation: observation });
+  const result = bindPublicationAnalyticsObservation({boundPublicationReceipt: {status: 'BLOCKED'}, analyticsObservation: observation});
   assert.equal(result.status, 'BLOCKED');
   assert.equal(result.analyticsObserved, false);
 });
@@ -34,7 +38,7 @@ test('blocks when publication receipt is not confirmed', () => {
 test('blocks a digest mismatch without inventing metrics', () => {
   const result = bindPublicationAnalyticsObservation({
     boundPublicationReceipt: receipt,
-    analyticsObservation: { ...observation, publicationReceiptDigest: 'b'.repeat(64) },
+    analyticsObservation: {...observation, publicationReceiptDigest: 'b'.repeat(64)},
   });
   assert.equal(result.status, 'BLOCKED');
   assert.deepEqual(result.reasons, ['publication receipt digest mismatch']);
@@ -43,12 +47,20 @@ test('blocks a digest mismatch without inventing metrics', () => {
 test('rejects negative or fractional metric values', () => {
   assert.throws(() => bindPublicationAnalyticsObservation({
     boundPublicationReceipt: receipt,
-    analyticsObservation: { ...observation, metrics: { ...observation.metrics, views: -1 } },
+    analyticsObservation: {...observation, metrics: {...observation.metrics, views: -1}},
   }), /non-negative integer/);
 });
 
 test('is deterministic for identical evidence', () => {
-  const first = bindPublicationAnalyticsObservation({ boundPublicationReceipt: receipt, analyticsObservation: observation });
-  const second = bindPublicationAnalyticsObservation({ boundPublicationReceipt: receipt, analyticsObservation: observation });
+  const first = bindPublicationAnalyticsObservation({boundPublicationReceipt: receipt, analyticsObservation: observation});
+  const second = bindPublicationAnalyticsObservation({boundPublicationReceipt: receipt, analyticsObservation: observation});
   assert.equal(first.observationDigest, second.observationDigest);
+});
+
+test('rejects a tampered bound observation', () => {
+  const result = bindPublicationAnalyticsObservation({boundPublicationReceipt: receipt, analyticsObservation: observation});
+  assert.throws(
+    () => validateBoundPublicationAnalyticsObservation({...result, metrics: {...result.metrics, views: 101}}),
+    /digest mismatch/,
+  );
 });
