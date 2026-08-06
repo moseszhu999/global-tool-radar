@@ -1,10 +1,100 @@
 import {createHash} from 'node:crypto';
+import {createReadStream} from 'node:fs';
 import {readFile, stat} from 'node:fs/promises';
 import {resolve} from 'node:path';
 
-const sha256 = async (path) => createHash('sha256').update(await readFile(path)).digest('hex');
+const stableStringify = (value) => {
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`).join(',')}}`;
+  }
+  return JSON.stringify(value);
+};
 
-export const buildFinalRenderGate = async ({receiptPath, appDir = 'apps/remotion-video', outputPath = 'out/toolradar-replit-final.mp4'}) => {
+const digest = (value) => createHash('sha256').update(value).digest('hex');
+
+const sha256File = (path) => new Promise((resolveDigest, reject) => {
+  const hash = createHash('sha256');
+  const stream = createReadStream(path);
+  stream.on('error', reject);
+  stream.on('data', (chunk) => hash.update(chunk));
+  stream.on('end', () => resolveDigest(hash.digest('hex')));
+});
+
+const requiredText = (value, field) => {
+  if (typeof value !== 'string' || value.trim() === '') throw new TypeError(`${field} must be non-empty`);
+  return value.trim();
+};
+
+const normalizeCodecs = (value, fallback, field) => {
+  const codecs = value ?? fallback;
+  if (!Array.isArray(codecs) || codecs.length === 0) throw new TypeError(`${field} must be a non-empty array`);
+  return [...new Set(codecs.map((codec) => requiredText(codec, `${field}[]`).toLowerCase()))].sort();
+};
+
+export const normalizeFinalRenderProfile = (profile = {}) => {
+  const normalized = {
+    width: Number(profile.width ?? 1080),
+    height: Number(profile.height ?? 1920),
+    durationSeconds: Number(profile.durationSeconds ?? 89),
+    durationToleranceSeconds: Number(profile.durationToleranceSeconds ?? 0.5),
+    fps: Number(profile.fps ?? 30),
+    fpsTolerance: Number(profile.fpsTolerance ?? 0.01),
+    allowedVideoCodecs: normalizeCodecs(profile.allowedVideoCodecs, ['h264'], 'renderProfile.allowedVideoCodecs'),
+    allowedAudioCodecs: normalizeCodecs(profile.allowedAudioCodecs, ['aac'], 'renderProfile.allowedAudioCodecs'),
+  };
+
+  for (const field of ['width', 'height', 'durationSeconds', 'fps']) {
+    if (!Number.isFinite(normalized[field]) || normalized[field] <= 0) throw new TypeError(`renderProfile.${field} must be positive`);
+  }
+  for (const field of ['durationToleranceSeconds', 'fpsTolerance']) {
+    if (!Number.isFinite(normalized[field]) || normalized[field] < 0) throw new TypeError(`renderProfile.${field} must be non-negative`);
+  }
+  return Object.freeze(normalized);
+};
+
+export const buildFinalRenderGateCanonical = (gate) => ({
+  version: 1,
+  receiptDigest: gate?.receiptDigest ?? null,
+  assets: Array.isArray(gate?.assets)
+    ? gate.assets.map(({role, actualSizeBytes, actualSha256}) => ({role, actualSizeBytes, actualSha256}))
+    : [],
+  finalRenderAllowed: gate?.finalRenderAllowed === true,
+  command: gate?.command ?? null,
+  outputPath: gate?.outputPath ?? null,
+  renderProfile: normalizeFinalRenderProfile(gate?.renderProfile),
+});
+
+export const computeFinalRenderGateDigest = (gate) => digest(stableStringify(buildFinalRenderGateCanonical(gate)));
+
+export const validateFinalRenderGateReceipt = (gate) => {
+  const errors = [];
+  if (gate?.version !== 1) errors.push('unsupported_gate_receipt_version');
+  if (gate?.finalRenderAllowed !== true) errors.push('render_gate_not_allowed');
+  if (gate?.truthBoundary !== 'render_execution_authorized') errors.push('render_gate_truth_boundary_invalid');
+  if (typeof gate?.outputPath !== 'string' || gate.outputPath.trim() === '') errors.push('render_gate_output_path_missing');
+  if (!Array.isArray(gate?.assets) || gate.assets.length !== 3) errors.push('render_gate_asset_set_invalid');
+  if (typeof gate?.gateDigest !== 'string' || !/^[a-f0-9]{64}$/.test(gate.gateDigest)) {
+    errors.push('render_gate_digest_invalid');
+  } else {
+    try {
+      if (computeFinalRenderGateDigest(gate) !== gate.gateDigest) errors.push('render_gate_digest_mismatch');
+    } catch {
+      errors.push('render_gate_profile_invalid');
+    }
+  }
+  return Object.freeze(errors);
+};
+
+export const buildFinalRenderGate = async ({
+  receiptPath,
+  appDir = 'apps/remotion-video',
+  outputPath = 'out/toolradar-replit-final.mp4',
+  renderProfile,
+}) => {
+  const normalizedAppDir = requiredText(appDir, 'appDir');
+  const normalizedOutputPath = requiredText(outputPath, 'outputPath');
+  const normalizedRenderProfile = normalizeFinalRenderProfile(renderProfile);
   const absoluteReceipt = resolve(receiptPath);
   const receipt = JSON.parse(await readFile(absoluteReceipt, 'utf8'));
   const errors = [];
@@ -26,7 +116,7 @@ export const buildFinalRenderGate = async ({receiptPath, appDir = 'apps/remotion
         if (!info.isFile()) assetErrors.push('not_a_file');
         else {
           actualSizeBytes = info.size;
-          actualSha256 = await sha256(path);
+          actualSha256 = await sha256File(path);
           if (asset.ready !== true) assetErrors.push('asset_not_ready');
           if (asset.verified !== true) assetErrors.push('asset_not_verified');
           if (asset.sizeBytes !== actualSizeBytes) assetErrors.push('size_changed_after_preflight');
@@ -42,18 +132,21 @@ export const buildFinalRenderGate = async ({receiptPath, appDir = 'apps/remotion
   }
 
   const finalRenderAllowed = errors.length === 0;
-  const command = `npm --prefix ${appDir} run render:final -- --output=${outputPath}`;
-  const canonical = JSON.stringify({version: 1, receiptDigest: receipt?.receiptDigest ?? null, assets: assets.map(({role, actualSizeBytes, actualSha256}) => ({role, actualSizeBytes, actualSha256})), finalRenderAllowed, command});
-
-  return {
+  const command = finalRenderAllowed
+    ? `npm --prefix ${normalizedAppDir} run render:final -- --output=${normalizedOutputPath}`
+    : null;
+  const gate = {
     version: 1,
     receiptPath,
     receiptDigest: receipt?.receiptDigest ?? null,
     finalRenderAllowed,
     truthBoundary: finalRenderAllowed ? 'render_execution_authorized' : 'render_execution_blocked',
-    command: finalRenderAllowed ? command : null,
+    command,
+    outputPath: normalizedOutputPath,
+    renderProfile: normalizedRenderProfile,
     assets,
     errors,
-    gateDigest: createHash('sha256').update(canonical).digest('hex'),
   };
+
+  return Object.freeze({...gate, gateDigest: computeFinalRenderGateDigest(gate)});
 };
