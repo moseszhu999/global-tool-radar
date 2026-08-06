@@ -9,6 +9,10 @@ on:
       - '.github/workflows/replit-release-preparation.yml'
   workflow_dispatch:
 
+concurrency:
+  group: replit-release-preparation-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
