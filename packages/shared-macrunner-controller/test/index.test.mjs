@@ -42,6 +42,15 @@ test('probes the shared MacRunner contract without executing an action', async (
   assert.equal(receipt.truthBoundary, 'contract_discovery_only_no_execute_download_render_or_inference');
 });
 
+test('fails closed when the shared MacRunner health response is not ok', async () => {
+  await assert.rejects(() => probeSharedMacRunner({
+    observedAt: '2026-08-07T00:00:00.000Z',
+    fetchImpl: async (url) => url.endsWith('/health')
+      ? jsonResponse({ok: false, status: 'degraded'})
+      : jsonResponse(openapi),
+  }).then((receipt) => validateSharedMacRunnerReceipt(receipt)), /health is not ok/);
+});
+
 test('fails closed when a required shared operation is absent', async () => {
   const broken = structuredClone(openapi);
   delete broken.paths['/execute'];
