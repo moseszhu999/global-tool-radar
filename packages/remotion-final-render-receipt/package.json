@@ -1,0 +1,1 @@
+{"name":"@toolradar/remotion-final-render-receipt","private":true,"version":"1.0.0","type":"module","scripts":{"check":"node --check src/index.mjs","test":"node --test test/index.test.mjs"}}
