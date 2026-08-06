@@ -5,7 +5,10 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import test from 'node:test';
 import {buildFinalRenderGate} from '../../remotion-final-render-gate/src/index.mjs';
-import {buildFinalRenderReceipt} from '../src/index.mjs';
+import {
+  buildFinalRenderReceipt,
+  validateFinalRenderReceipt,
+} from '../src/index.mjs';
 import {parseFfprobeJson} from '../src/ffprobe.mjs';
 
 const digest = (value) => createHash('sha256').update(value).digest('hex');
@@ -40,6 +43,7 @@ test('verifies only the exact gate-bound final video with matching media facts',
   assert.equal(receipt.truthBoundary, 'final_video_file_verified');
   assert.deepEqual(receipt.errors, []);
   assert.match(receipt.videoSha256, /^[a-f0-9]{64}$/);
+  assert.deepEqual(validateFinalRenderReceipt(receipt), []);
 });
 
 test('blocks a different video path even when its media facts match', async () => {
@@ -49,6 +53,7 @@ test('blocks a different video path even when its media facts match', async () =
   const receipt = await buildFinalRenderReceipt({gateReceiptPath: fixture.gateReceiptPath, videoPath: otherPath, probeVideo: validProbe});
   assert.equal(receipt.finalVideoVerified, false);
   assert.ok(receipt.errors.includes('video_path_not_bound_to_gate'));
+  assert.ok(validateFinalRenderReceipt(receipt).includes('final_video_not_verified'));
 });
 
 test('blocks a mutated gate receipt', async () => {
@@ -91,6 +96,15 @@ test('produces a deterministic receipt digest for identical evidence', async () 
   const first = await buildFinalRenderReceipt({...fixture, probeVideo: validProbe});
   const second = await buildFinalRenderReceipt({...fixture, probeVideo: validProbe});
   assert.equal(first.receiptDigest, second.receiptDigest);
+});
+
+test('validator rejects tampered final video evidence', async () => {
+  const fixture = await makeFixture();
+  const receipt = await buildFinalRenderReceipt({...fixture, probeVideo: validProbe});
+  const tamperedSha = {...receipt, videoSha256: 'f'.repeat(64)};
+  assert.ok(validateFinalRenderReceipt(tamperedSha).includes('final_video_receipt_digest_mismatch'));
+  const tamperedBoundary = {...receipt, truthBoundary: 'final_video_verification_blocked'};
+  assert.ok(validateFinalRenderReceipt(tamperedBoundary).includes('final_video_truth_boundary_invalid'));
 });
 
 test('parses ffprobe JSON into normalized media facts', () => {
