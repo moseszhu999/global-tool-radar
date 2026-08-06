@@ -45,7 +45,7 @@ const makeRenderCompletedProject = () => {
     createdAt: '2026-08-06T09:59:00.000Z',
   });
   const events = [
-    {type: 'SELECT_CANDIDATE'},
+    {type: 'SELECT_CANDIDATE', reason: 'selected for the quality approval contract fixture'},
     {type: 'ATTACH_RESEARCH', artifact: artifact('topic_brief', sha('1'))},
     {type: 'ATTACH_SCRIPT', artifact: artifact('production_case', sha('2'))},
     {type: 'ATTACH_STORYBOARD', artifact: artifact('storyboard_package', sha('3'))},
