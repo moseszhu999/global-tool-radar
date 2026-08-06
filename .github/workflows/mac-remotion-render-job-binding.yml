@@ -1,0 +1,24 @@
+name: mac-remotion-render-job-binding
+
+on:
+  pull_request:
+    paths:
+      - 'packages/mac-remotion-render-job-binding/**'
+      - '.github/workflows/mac-remotion-render-job-binding.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Package syntax
+        run: npm --prefix packages/mac-remotion-render-job-binding run check
+      - name: Package contract tests
+        run: npm --prefix packages/mac-remotion-render-job-binding test
