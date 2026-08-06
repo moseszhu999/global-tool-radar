@@ -28,4 +28,12 @@ jobs:
           node --test packages/platform-publication-receipt-binding/test/platform-publication-receipt-binding.test.mjs
           npm --prefix packages/replit-release-preparation test
           npm --prefix packages/video-project-lifecycle test
+      - name: Feedback completion syntax and contracts
+        run: |
+          npm --prefix packages/replit-feedback-completion run check
+          node --check apps/worker/src/complete-replit-feedback.mjs
+          npm --prefix packages/replit-feedback-completion test
+          node --test packages/publication-analytics-observation-binding/test/index.test.mjs
+          node --test packages/publication-analytics-observation-series/test/*.test.mjs
+          node --test packages/publication-bounded-feedback-summary/test/*.test.mjs
       - run: npm run demo

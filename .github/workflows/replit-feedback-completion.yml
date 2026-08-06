@@ -1,0 +1,47 @@
+name: replit-feedback-completion
+
+on:
+  pull_request:
+    paths:
+      - 'packages/replit-feedback-completion/**'
+      - 'packages/publication-analytics-observation-binding/**'
+      - 'packages/publication-analytics-observation-series/**'
+      - 'packages/publication-bounded-feedback-summary/**'
+      - 'apps/worker/src/complete-replit-feedback.mjs'
+      - '.github/workflows/replit-feedback-completion.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: replit-feedback-completion-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Package and worker syntax
+        run: |
+          npm --prefix packages/replit-feedback-completion run check
+          node --check apps/worker/src/complete-replit-feedback.mjs
+          node --check packages/publication-analytics-observation-series/src/validate.mjs
+          node --check packages/publication-bounded-feedback-summary/src/validate.mjs
+      - name: Project feedback completion contracts
+        run: npm --prefix packages/replit-feedback-completion test
+      - name: Observation binding regression
+        run: node --test packages/publication-analytics-observation-binding/test/index.test.mjs
+      - name: Observation series regression
+        run: node --test packages/publication-analytics-observation-series/test/*.test.mjs
+      - name: Bounded feedback summary regression
+        run: node --test packages/publication-bounded-feedback-summary/test/*.test.mjs
+      - name: Publication and lifecycle regression
+        run: |
+          npm --prefix packages/replit-publication-confirmation test
+          npm --prefix packages/video-project-lifecycle test

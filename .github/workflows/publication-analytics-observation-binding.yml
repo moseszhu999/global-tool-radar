@@ -7,6 +7,10 @@ on:
       - '.github/workflows/publication-analytics-observation-binding.yml'
   workflow_dispatch:
 
+concurrency:
+  group: publication-analytics-observation-binding-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
