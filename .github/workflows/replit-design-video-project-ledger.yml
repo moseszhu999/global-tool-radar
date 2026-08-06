@@ -1,0 +1,51 @@
+name: replit-design-video-project-ledger
+
+on:
+  pull_request:
+    paths:
+      - 'packages/replit-design-video-project/**'
+      - 'packages/video-project-lifecycle/**'
+      - 'apps/worker/src/build-replit-design-video-project-ledger.mjs'
+      - 'apps/web/data/replit-design-production-case.json'
+      - 'apps/web/data/replit-design-storyboard-package.json'
+      - '.github/workflows/replit-design-video-project-ledger.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-ledger:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Package syntax
+        run: npm --prefix packages/replit-design-video-project run check
+      - name: Package contract tests
+        run: npm --prefix packages/replit-design-video-project test
+      - name: Generate canonical project ledger
+        env:
+          TOOLRADAR_VIDEO_PROJECT_OUTPUT: artifacts/replit-design-video-project-ledger.json
+        run: node apps/worker/src/build-replit-design-video-project-ledger.mjs
+      - name: Verify truthful current state
+        run: |
+          node --input-type=module <<'NODE'
+          import {readFile} from 'node:fs/promises';
+          import {validateVideoProject} from './packages/video-project-lifecycle/src/index.mjs';
+          const ledger = JSON.parse(await readFile('artifacts/replit-design-video-project-ledger.json', 'utf8'));
+          validateVideoProject(ledger.project);
+          if (ledger.project.stage !== 'STORYBOARD_READY') throw new Error('unexpected project stage');
+          if (ledger.project.status !== 'BLOCKED') throw new Error('project must remain blocked');
+          if (ledger.project.nextEvent !== 'RESUME_PROJECT') throw new Error('unexpected next event');
+          if (!ledger.project.blockedReason.includes('asset:voiceover')) throw new Error('voiceover blocker missing');
+          if (ledger.project.artifacts.length !== 3) throw new Error('unexpected artifact count');
+          NODE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: toolradar-replit-design-video-project-ledger
+          path: artifacts/replit-design-video-project-ledger.json
+          if-no-files-found: error
+          retention-days: 30
