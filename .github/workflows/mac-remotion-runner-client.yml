@@ -1,0 +1,24 @@
+name: mac-remotion-runner-client
+
+on:
+  pull_request:
+    paths:
+      - 'packages/mac-remotion-runner-client/**'
+      - '.github/workflows/mac-remotion-runner-client.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax check
+        run: npm --prefix packages/mac-remotion-runner-client run check
+      - name: Contract tests
+        run: npm --prefix packages/mac-remotion-runner-client test
