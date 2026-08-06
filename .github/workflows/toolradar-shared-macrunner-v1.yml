@@ -1,0 +1,173 @@
+name: ToolRadar Shared MacRunner v1
+
+on:
+  workflow_dispatch:
+    inputs:
+      exact_head:
+        description: Exact ToolRadar commit SHA to validate
+        required: true
+        type: string
+      profile:
+        description: Bounded validation profile
+        required: true
+        default: closure-operator-pack
+        type: choice
+        options:
+          - closure-operator-pack
+          - m9-render-readiness
+          - macrunner-contract
+      run_deepseek:
+        description: Run optional local DeepSeek advisory review
+        required: true
+        default: false
+        type: boolean
+      deepseek_model:
+        description: Existing local Ollama DeepSeek model name; required only when run_deepseek=true
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: toolradar-shared-macrunner-${{ inputs.profile }}-${{ inputs.exact_head }}
+  cancel-in-progress: false
+
+jobs:
+  exact-head:
+    name: ${{ inputs.profile }} / ${{ inputs.exact_head }}
+    runs-on:
+      - self-hosted
+      - macOS
+      - macmini
+      - arm64
+    timeout-minutes: 60
+    env:
+      CI: "true"
+      TOOLRADAR_EXACT_HEAD: ${{ inputs.exact_head }}
+      TOOLRADAR_PROFILE: ${{ inputs.profile }}
+      TOOLRADAR_RUN_DEEPSEEK: ${{ inputs.run_deepseek }}
+      TOOLRADAR_DEEPSEEK_MODEL: ${{ inputs.deepseek_model }}
+      TOOLRADAR_MACRUNNER_BASE_URL: http://127.0.0.1:8765
+    steps:
+      - name: Validate owner and request shape
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_ACTOR" = "$GITHUB_REPOSITORY_OWNER"
+          [[ "$TOOLRADAR_EXACT_HEAD" =~ ^[0-9a-f]{40}$ ]]
+          case "$TOOLRADAR_PROFILE" in
+            closure-operator-pack|m9-render-readiness|macrunner-contract) ;;
+            *) exit 1 ;;
+          esac
+          if test "$TOOLRADAR_RUN_DEEPSEEK" = "true"; then
+            test -n "$TOOLRADAR_DEEPSEEK_MODEL"
+          fi
+
+      - name: Checkout exact same-repository head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.exact_head }}
+          fetch-depth: 0
+          persist-credentials: false
+          clean: true
+
+      - name: Prove exact head and same-repository branch ownership
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TOOLRADAR_EXACT_HEAD"
+          git fetch origin '+refs/heads/*:refs/remotes/origin/*'
+          git branch -r --contains "$TOOLRADAR_EXACT_HEAD" | grep -E '^  origin/' >/dev/null
+          test -z "$(git status --porcelain)"
+
+      - name: Reject production capabilities
+        shell: bash
+        run: |
+          set -euo pipefail
+          env | cut -d= -f1 | grep -E '(^|_)(PRODUCTION|PROD|SERVICE_ROLE|BILLING|PAYMENT|STRIPE)(_|$)' && exit 1 || true
+
+      - name: Require Node 22
+        shell: bash
+        run: node -e 'const major=Number(process.versions.node.split(".")[0]); if (major !== 22) process.exit(1)'
+
+      - name: Shared MacRunner controller contracts
+        shell: bash
+        run: |
+          npm --prefix packages/shared-macrunner-controller run check
+          npm --prefix packages/shared-macrunner-controller test
+
+      - name: Probe shared MacRunner health and OpenAPI contract
+        shell: bash
+        run: |
+          node packages/shared-macrunner-controller/src/cli.mjs probe \
+            --base-url "$TOOLRADAR_MACRUNNER_BASE_URL" \
+            --output "$RUNNER_TEMP/toolradar-shared-macrunner-contract.json"
+          cat "$RUNNER_TEMP/toolradar-shared-macrunner-contract.json"
+
+      - name: Validate closure operator pack
+        if: ${{ inputs.profile == 'closure-operator-pack' }}
+        shell: bash
+        run: |
+          npm --prefix packages/video-closure-operator-pack run check
+          npm --prefix packages/video-closure-operator-pack test
+
+      - name: Validate M9 render readiness chain
+        if: ${{ inputs.profile == 'm9-render-readiness' }}
+        shell: bash
+        run: |
+          npm --prefix packages/mac-remotion-runner-client run check
+          npm --prefix packages/mac-remotion-runner-client test
+          npm --prefix packages/mac-remotion-render-job-binding run check
+          npm --prefix packages/mac-remotion-render-job-binding test
+          npm --prefix packages/mac-remotion-render-orchestration run check
+          npm --prefix packages/mac-remotion-render-orchestration test
+
+      - name: Prepare local DeepSeek advisory prompt
+        if: ${{ inputs.run_deepseek }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v ollama >/dev/null
+          ollama show "$TOOLRADAR_DEEPSEEK_MODEL" >/dev/null
+          node packages/shared-macrunner-controller/src/cli.mjs prompt \
+            --exact-head "$TOOLRADAR_EXACT_HEAD" \
+            --profile "$TOOLRADAR_PROFILE" \
+            --output "$RUNNER_TEMP/toolradar-deepseek-prompt.txt"
+
+      - name: Run local DeepSeek advisory only
+        if: ${{ inputs.run_deepseek }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          started_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          ollama run "$TOOLRADAR_DEEPSEEK_MODEL" < "$RUNNER_TEMP/toolradar-deepseek-prompt.txt" > "$RUNNER_TEMP/toolradar-deepseek-output.txt"
+          completed_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          node packages/shared-macrunner-controller/src/cli.mjs deepseek-receipt \
+            --exact-head "$TOOLRADAR_EXACT_HEAD" \
+            --profile "$TOOLRADAR_PROFILE" \
+            --model "$TOOLRADAR_DEEPSEEK_MODEL" \
+            --model-output "$RUNNER_TEMP/toolradar-deepseek-output.txt" \
+            --started-at "$started_at" \
+            --completed-at "$completed_at" \
+            --output "$RUNNER_TEMP/toolradar-deepseek-advisory-receipt.json"
+          cat "$RUNNER_TEMP/toolradar-deepseek-advisory-receipt.json"
+
+      - name: Final exact-head and clean-tree proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TOOLRADAR_EXACT_HEAD"
+          test -z "$(git status --porcelain)"
+
+      - name: Cleanup persistent MacRunner workspace
+        if: always()
+        shell: bash
+        run: |
+          rm -f "$RUNNER_TEMP/toolradar-shared-macrunner-contract.json" \
+                "$RUNNER_TEMP/toolradar-deepseek-prompt.txt" \
+                "$RUNNER_TEMP/toolradar-deepseek-output.txt" \
+                "$RUNNER_TEMP/toolradar-deepseek-advisory-receipt.json" || true
+          git reset --hard HEAD || true
+          git clean -ffdx || true
