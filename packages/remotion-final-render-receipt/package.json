@@ -1,1 +1,11 @@
-{"name":"@toolradar/remotion-final-render-receipt","private":true,"version":"1.0.0","type":"module","scripts":{"check":"node --check src/index.mjs","test":"node --test test/index.test.mjs"}}
+{
+  "name": "@toolradar/remotion-final-render-receipt",
+  "private": true,
+  "version": "1.1.0",
+  "type": "module",
+  "scripts": {
+    "check": "node --check src/index.mjs && node --check src/ffprobe.mjs && node --check src/cli.mjs",
+    "test": "node --test test/*.test.mjs",
+    "receipt": "node src/cli.mjs"
+  }
+}
