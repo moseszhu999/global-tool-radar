@@ -4,13 +4,13 @@ import {Audio} from '@remotion/media';
 import type {ToolRadarVideoProps} from './root';
 
 const scenes = [
-  {from: 0, duration: 300, kind: 'title', eyebrow: 'TOOLRADAR · 自有演示', title: '一句需求 → 一套界面', body: '不测第三方工具，直接展示一条可完全控制的 AI 设计工作流'},
-  {from: 300, duration: 360, kind: 'brief', eyebrow: '01 · 定义任务', title: '先把需求写清楚', body: '工具雷达首页 · 搜索 · 分类 · 趋势 · 收藏'},
-  {from: 660, duration: 420, kind: 'wireframe', eyebrow: '02 · 生成结构', title: '先结构，再装饰', body: '导航、搜索、筛选和内容卡片先建立信息层级'},
-  {from: 1080, duration: 420, kind: 'tokens', eyebrow: '03 · 建立视觉系统', title: '颜色、字号、间距统一', body: '设计 token 让后续修改不靠逐个像素修补'},
-  {from: 1500, duration: 420, kind: 'phone', eyebrow: '04 · 移动适配', title: '同一结构自动收敛到 390px', body: '信息优先级不变，布局改成单列和底部操作'},
-  {from: 1920, duration: 450, kind: 'iterate', eyebrow: '05 · 快速迭代', title: '改一句要求，全局一起变', body: '强调趋势、降低卡片密度、把主要操作变得更清楚'},
-  {from: 2370, duration: 300, kind: 'verdict', eyebrow: '结论', title: 'AI 加速的是探索，不是免审上线', body: '从需求到可视原型可以更快；生产交付仍然要经过工程和人工质检'},
+  {from: 0, duration: 424, kind: 'title', eyebrow: 'TOOLRADAR · 自有演示', title: '一句需求 → 一套界面', body: '不测第三方工具，直接展示一条可完全控制的 AI 设计工作流'},
+  {from: 424, duration: 463, kind: 'brief', eyebrow: '01 · 定义任务', title: '先把需求写清楚', body: '工具雷达首页 · 搜索 · 分类 · 趋势 · 收藏'},
+  {from: 887, duration: 451, kind: 'wireframe', eyebrow: '02 · 生成结构', title: '先结构，再装饰', body: '导航、搜索、筛选和内容卡片先建立信息层级'},
+  {from: 1338, duration: 411, kind: 'tokens', eyebrow: '03 · 建立视觉系统', title: '颜色、字号、间距统一', body: '设计 token 让后续修改不靠逐个像素修补'},
+  {from: 1749, duration: 367, kind: 'phone', eyebrow: '04 · 移动适配', title: '同一结构自动收敛到 390px', body: '信息优先级不变，布局改成单列和底部操作'},
+  {from: 2116, duration: 508, kind: 'iterate', eyebrow: '05 · 快速迭代', title: '改一句要求，全局一起变', body: '强调趋势、降低卡片密度、把主要操作变得更清楚'},
+  {from: 2624, duration: 455, kind: 'verdict', eyebrow: '结论', title: 'AI 加速的是探索，不是免审上线', body: '从需求到可视原型可以更快；生产交付仍然要经过工程和人工质检'},
 ] as const;
 
 const palette = {
