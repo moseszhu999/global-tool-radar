@@ -1,0 +1,25 @@
+name: m9-runner-final-video-binding
+
+on:
+  pull_request:
+    paths:
+      - 'packages/m9-runner-final-video-binding/**'
+      - '.github/workflows/m9-runner-final-video-binding.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax
+        run: npm --prefix packages/m9-runner-final-video-binding run check
+      - name: Truth-boundary tests
+        run: npm --prefix packages/m9-runner-final-video-binding test
