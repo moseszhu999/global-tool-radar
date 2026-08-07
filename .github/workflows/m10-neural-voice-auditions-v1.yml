@@ -1,0 +1,192 @@
+name: M10 Neural Mandarin Voice Auditions v1
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+    paths:
+      - .github/workflows/m10-neural-voice-auditions-v1.yml
+
+permissions:
+  contents: read
+
+jobs:
+  audition:
+    name: Generate natural neural Mandarin audition tracks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      TOOLRADAR_SOURCE_HEAD: 1a32260cb6bd84542d3a3f306e915e0ab003c36d
+      INTER_SHOT_PAUSE_SECONDS: '0.10'
+    steps:
+      - name: Validate temporary carrier
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = "moseszhu999/global-tool-radar"
+          test "$GITHUB_HEAD_REF" = "ci/m10-neural-voice-auditions-v1"
+
+      - name: Checkout exact ToolRadar source
+        uses: actions/checkout@v4
+        with:
+          repository: moseszhu999/global-tool-radar
+          ref: 1a32260cb6bd84542d3a3f306e915e0ab003c36d
+          path: source
+          fetch-depth: 1
+          persist-credentials: false
+          clean: true
+
+      - name: Prepare neural TTS runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v ffmpeg >/dev/null
+          command -v ffprobe >/dev/null
+          python3 -m pip install --disable-pip-version-check --no-input edge-tts
+          python3 - <<'PY'
+          import importlib.metadata
+          print('edge_tts_version=' + importlib.metadata.version('edge-tts'))
+          PY
+          edge-tts --list-voices > "$RUNNER_TEMP/edge-voices.txt"
+          grep -F 'zh-CN-XiaoxiaoNeural' "$RUNNER_TEMP/edge-voices.txt" >/dev/null
+          grep -F 'zh-CN-YunyangNeural' "$RUNNER_TEMP/edge-voices.txt" >/dev/null
+
+      - name: Extract the seven approved narration shots
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_dir="$GITHUB_WORKSPACE/source"
+          test "$(git -C "$source_dir" rev-parse HEAD)" = "$TOOLRADAR_SOURCE_HEAD"
+          work="$RUNNER_TEMP/toolradar-neural-voice-v1"
+          mkdir -p "$work"
+          SOURCE_DIR="$source_dir" WORK="$work" node --input-type=module <<'NODE'
+          import {readFile, writeFile} from 'node:fs/promises';
+          import {join} from 'node:path';
+          const pkg = JSON.parse(await readFile(join(process.env.SOURCE_DIR, 'apps/web/data/ai-design-workflow-storyboard-package.json'), 'utf8'));
+          const shots = pkg?.storyboard?.shots ?? [];
+          if (shots.length !== 7) throw new Error(`expected 7 storyboard shots, got ${shots.length}`);
+          if ((pkg?.assetManifest?.captureTasks ?? []).length !== 0) throw new Error('unexpected capture task dependency');
+          for (let i = 0; i < shots.length; i += 1) {
+            const text = String(shots[i]?.narrationText ?? '').trim();
+            if (!text) throw new Error(`empty narration for shot ${i + 1}`);
+            if (/replit/i.test(text)) throw new Error(`third-party product reference in shot ${i + 1}`);
+            const id = String(i + 1).padStart(2, '0');
+            await writeFile(join(process.env.WORK, `shot-${id}.txt`), `${text}\n`, 'utf8');
+          }
+          NODE
+
+      - name: Generate two independent neural voice candidates
+        shell: bash
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/toolradar-neural-voice-v1"
+          ffmpeg -hide_banner -loglevel error -y -f lavfi -i 'anullsrc=r=48000:cl=mono' -t "$INTER_SHOT_PAUSE_SECONDS" -c:a pcm_s16le "$work/pause.wav"
+
+          build_candidate() {
+            slug="$1"
+            voice="$2"
+            rate="$3"
+            : > "$work/${slug}-segments.tsv"
+            : > "$work/${slug}-concat.txt"
+            for n in 01 02 03 04 05 06 07; do
+              text="$(cat "$work/shot-$n.txt")"
+              edge-tts --voice "$voice" --rate "$rate" --text "$text" --write-media "$work/${slug}-shot-$n.mp3"
+              ffmpeg -hide_banner -loglevel error -y -i "$work/${slug}-shot-$n.mp3" -ar 48000 -ac 1 -c:a pcm_s16le "$work/${slug}-shot-$n.wav"
+              duration="$(ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 "$work/${slug}-shot-$n.wav")"
+              node -e 'const d=Number(process.argv[1]); if(!(d>3 && d<30)){console.error(`implausible segment duration ${d}`); process.exit(1)}' "$duration"
+              printf '%s\t%s\n' "$n" "$duration" >> "$work/${slug}-segments.tsv"
+              printf "file '%s'\n" "$work/${slug}-shot-$n.wav" >> "$work/${slug}-concat.txt"
+              if [ "$n" != '07' ]; then printf "file '%s'\n" "$work/pause.wav" >> "$work/${slug}-concat.txt"; fi
+            done
+            ffmpeg -hide_banner -loglevel error -y -f concat -safe 0 -i "$work/${slug}-concat.txt" -c:a pcm_s16le "$work/${slug}-raw.wav"
+            ffmpeg -hide_banner -loglevel error -y -i "$work/${slug}-raw.wav" -af 'loudnorm=I=-16:LRA=7:TP=-1.5' -ar 48000 -ac 1 -c:a pcm_s16le "$work/toolradar-${slug}-v1.wav"
+            ffmpeg -hide_banner -loglevel error -y -i "$work/toolradar-${slug}-v1.wav" -c:a aac -b:a 192k "$work/toolradar-${slug}-v1.m4a"
+            duration="$(ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 "$work/toolradar-${slug}-v1.wav")"
+            node -e 'const d=Number(process.argv[1]); if(!(d>60 && d<130)){console.error(`implausible candidate duration ${d}`); process.exit(1)}' "$duration"
+            ffmpeg -hide_banner -nostats -i "$work/toolradar-${slug}-v1.wav" -af 'silencedetect=noise=-45dB:d=0.35' -f null - 2> "$work/${slug}-silence-detect.txt" || true
+            ffmpeg -hide_banner -nostats -i "$work/toolradar-${slug}-v1.wav" -af 'loudnorm=I=-16:LRA=7:TP=-1.5:print_format=json' -f null - 2> "$work/${slug}-loudness.txt" || true
+            echo "$slug total_duration=$duration"
+            echo "$slug wav_sha256=$(sha256sum "$work/toolradar-${slug}-v1.wav" | awk '{print $1}')"
+            echo "$slug m4a_sha256=$(sha256sum "$work/toolradar-${slug}-v1.m4a" | awk '{print $1}')"
+          }
+
+          build_candidate 'xiaoxiao' 'zh-CN-XiaoxiaoNeural' '-2%'
+          build_candidate 'yunyang' 'zh-CN-YunyangNeural' '-2%'
+
+      - name: Emit fail-closed audition receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/toolradar-neural-voice-v1"
+          WORK="$work" node --input-type=module <<'NODE'
+          import {readFile, writeFile, stat} from 'node:fs/promises';
+          import {createHash} from 'node:crypto';
+          import {execFileSync} from 'node:child_process';
+          import {join} from 'node:path';
+          const sha = async (p) => createHash('sha256').update(await readFile(p)).digest('hex');
+          const parseSegments = async (slug) => (await readFile(join(process.env.WORK, `${slug}-segments.tsv`), 'utf8')).trim().split('\n').map((line) => {
+            const [shot, duration] = line.split('\t');
+            return {shot: Number(shot), durationSeconds: Number(duration)};
+          });
+          const silenceSummary = async (slug) => {
+            const text = await readFile(join(process.env.WORK, `${slug}-silence-detect.txt`), 'utf8');
+            const durations = [...text.matchAll(/silence_duration: ([0-9.]+)/g)].map((m) => Number(m[1]));
+            return {intervalsAtLeast350ms: durations.length, maximumSilenceSeconds: durations.length ? Math.max(...durations) : 0};
+          };
+          const candidate = async (slug, voice) => {
+            const wav = join(process.env.WORK, `toolradar-${slug}-v1.wav`);
+            const m4a = join(process.env.WORK, `toolradar-${slug}-v1.m4a`);
+            const duration = Number(execFileSync('ffprobe', ['-v','error','-show_entries','format=duration','-of','default=nw=1:nk=1', wav], {encoding:'utf8'}).trim());
+            return {
+              slug,
+              engine: 'edge-tts',
+              voice,
+              rate: '-2%',
+              synthesisMode: 'seven_independent_shots',
+              globalTimeStretchApplied: false,
+              atempoApplied: false,
+              fixed89SecondTargetApplied: false,
+              interShotPauseSeconds: Number(process.env.INTER_SHOT_PAUSE_SECONDS),
+              segments: await parseSegments(slug),
+              durationSeconds: duration,
+              silenceDiagnostic: await silenceSummary(slug),
+              wavSha256: await sha(wav),
+              wavBytes: (await stat(wav)).size,
+              m4aSha256: await sha(m4a),
+              m4aBytes: (await stat(m4a)).size,
+            };
+          };
+          const receipt = {
+            schemaVersion: 'toolradar.m10-neural-voice-auditions.v1',
+            exactToolRadarSourceHead: process.env.TOOLRADAR_SOURCE_HEAD,
+            serviceBoundary: 'Microsoft neural speech service accessed through edge-tts; no account login or publication action',
+            candidates: [
+              await candidate('xiaoxiao', 'zh-CN-XiaoxiaoNeural'),
+              await candidate('yunyang', 'zh-CN-YunyangNeural'),
+            ],
+            humanAudioApproved: false,
+            fullVideoRerendered: false,
+            publicationAllowed: false,
+            publicationPerformed: false,
+            truthBoundary: 'real neural audition audio exists; human listening decision pending',
+          };
+          await writeFile(join(process.env.WORK, 'toolradar-m10-neural-voice-auditions-v1-receipt.json'), `${JSON.stringify(receipt, null, 2)}\n`);
+          console.log(JSON.stringify(receipt, null, 2));
+          NODE
+
+      - name: Upload human-audition artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: toolradar-m10-neural-voice-auditions-v1
+          path: |
+            ${{ runner.temp }}/toolradar-neural-voice-v1/toolradar-xiaoxiao-v1.wav
+            ${{ runner.temp }}/toolradar-neural-voice-v1/toolradar-xiaoxiao-v1.m4a
+            ${{ runner.temp }}/toolradar-neural-voice-v1/toolradar-yunyang-v1.wav
+            ${{ runner.temp }}/toolradar-neural-voice-v1/toolradar-yunyang-v1.m4a
+            ${{ runner.temp }}/toolradar-neural-voice-v1/toolradar-m10-neural-voice-auditions-v1-receipt.json
+            ${{ runner.temp }}/toolradar-neural-voice-v1/*-segments.tsv
+            ${{ runner.temp }}/toolradar-neural-voice-v1/*-silence-detect.txt
+            ${{ runner.temp }}/toolradar-neural-voice-v1/*-loudness.txt
+          if-no-files-found: error
+          retention-days: 30
