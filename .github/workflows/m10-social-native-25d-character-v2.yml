@@ -1,0 +1,292 @@
+name: M10 Social Native 2.5D Character v2
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - apps/remotion-video/src/social-native-25d-character-v2.tsx
+      - .github/workflows/m10-social-native-25d-character-v2.yml
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    name: Render 2.5D character social candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      EXPECTED_FRAMES: '900'
+      EXPECTED_FPS: '30'
+      EXPECTED_WIDTH: '1080'
+      EXPECTED_HEIGHT: '1920'
+      VOICE: zh-CN-XiaoxiaoNeural
+      VOICE_RATE: '+10%'
+    steps:
+      - name: Validate candidate carrier
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = "moseszhu999/global-tool-radar"
+          test "$GITHUB_HEAD_REF" = "feat/social-native-25d-character-v2"
+
+      - name: Checkout exact candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Prove exact candidate head
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          test -z "$(git status --porcelain)"
+
+      - name: Install media, CJK font, and neural TTS tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg fontconfig fonts-noto-cjk python3-pip
+          sudo fc-cache -f
+          fc-match 'Noto Sans CJK SC' | tee "$RUNNER_TEMP/cjk-font-match.txt"
+          grep -F 'NotoSansCJK' "$RUNNER_TEMP/cjk-font-match.txt" >/dev/null
+          python3 -m pip install --user --disable-pip-version-check edge-tts
+          python3 -m edge_tts --help >/dev/null
+
+      - name: Generate bounded-retry narration and procedural SFX
+        shell: bash
+        run: |
+          set -euo pipefail
+          dir="$GITHUB_WORKSPACE/apps/remotion-video/public/assets/social-native-25d-v2"
+          mkdir -p "$dir"
+
+          texts=(
+            '这页面丑到我都不想点。三刀，救回来。'
+            '问题就三个：信息太挤，颜色太吵，按钮太多。'
+            '第一刀，砍信息。没用的卡片，直接扫出去。'
+            '第二刀，砍颜色。七种颜色，收成三套。'
+            '第三刀，只留一个主按钮。别让用户猜。'
+            '看前后。左边像仓库，右边终于像产品。'
+            'AI不替你审美，但能让你试错更快。你选哪边？'
+          )
+          names=(01-hook 02-problem 03-cut-info 04-cut-color 05-one-cta 06-reveal 07-payoff)
+
+          : > "$RUNNER_TEMP/voice-timings.tsv"
+          for i in "${!texts[@]}"; do
+            mp3="$RUNNER_TEMP/${names[$i]}.mp3"
+            wav="$dir/${names[$i]}.wav"
+            rm -f "$mp3"
+            ok=0
+            for attempt in 1 2 3; do
+              if python3 -m edge_tts --voice "$VOICE" --rate "$VOICE_RATE" --text "${texts[$i]}" --write-media "$mp3"; then
+                if test -s "$mp3"; then ok=1; break; fi
+              fi
+              rm -f "$mp3"
+              sleep $((attempt * 2))
+            done
+            if test "$ok" -ne 1; then
+              echo "edge-tts failed after 3 bounded attempts for ${names[$i]}" >&2
+              exit 1
+            fi
+            ffmpeg -hide_banner -loglevel error -y -i "$mp3" -ar 48000 -ac 2 -c:a pcm_s16le "$wav"
+            sha="$(sha256sum "$wav" | awk '{print $1}')"
+            python3 - "$wav" "${names[$i]}" "$sha" >> "$RUNNER_TEMP/voice-timings.tsv" <<'PY'
+          import array, math, sys, wave
+          path, name, sha = sys.argv[1:4]
+          with wave.open(path, 'rb') as w:
+              rate = w.getframerate()
+              channels = w.getnchannels()
+              nframes = w.getnframes()
+              raw = w.readframes(nframes)
+          samples = array.array('h')
+          samples.frombytes(raw)
+          window = max(1, int(rate * 0.02))
+          threshold = 180.0
+          active = []
+          mono_count = nframes
+          for start in range(0, mono_count, window):
+              end = min(mono_count, start + window)
+              acc = 0.0
+              count = 0
+              for f in range(start, end):
+                  for ch in range(channels):
+                      v = samples[f * channels + ch]
+                      acc += v * v
+                      count += 1
+              rms = math.sqrt(acc / max(1, count))
+              if rms >= threshold:
+                  active.append((start, end))
+          if not active:
+              raise SystemExit(f'no audible speech detected in {name}')
+          speech_start = active[0][0] / rate
+          speech_end = active[-1][1] / rate
+          duration = nframes / rate
+          if not (0 <= speech_start < speech_end <= duration + 1e-6):
+              raise SystemExit(f'invalid timing for {name}')
+          print(f'{name}\t{duration:.6f}\t{speech_start:.6f}\t{speech_end:.6f}\t{sha}')
+          PY
+          done
+          cat "$RUNNER_TEMP/voice-timings.tsv"
+
+          ffmpeg -hide_banner -loglevel error -y -f lavfi -i 'sine=frequency=85:sample_rate=48000:duration=0.28' -af 'afade=t=out:st=0.05:d=0.23,volume=0.75' -ac 2 -c:a pcm_s16le "$dir/impact.wav"
+          ffmpeg -hide_banner -loglevel error -y -f lavfi -i 'anoisesrc=color=pink:sample_rate=48000:duration=0.38' -af 'highpass=f=500,lowpass=f=6500,afade=t=in:st=0:d=0.03,afade=t=out:st=0.14:d=0.24,volume=0.22' -ac 2 -c:a pcm_s16le "$dir/whoosh.wav"
+          ffmpeg -hide_banner -loglevel error -y -f lavfi -i 'sine=frequency=1050:sample_rate=48000:duration=0.10' -af 'afade=t=out:st=0.02:d=0.08,volume=0.28' -ac 2 -c:a pcm_s16le "$dir/click.wav"
+
+      - name: Validate spoken content fits authored 2.5D slots
+        shell: bash
+        run: |
+          set -euo pipefail
+          slot_frames=(118 132 145 145 118 112 130)
+          i=0
+          total_frames=0
+          while IFS=$'\t' read -r name duration speech_start speech_end sha; do
+            frames="${slot_frames[$i]}"
+            total_frames=$((total_frames + frames))
+            slot_seconds="$(node -e 'console.log(Number(process.argv[1])/Number(process.argv[2]))' "$frames" "$EXPECTED_FPS")"
+            printf '%s raw=%ss speech=%s..%ss slot=%ss frames=%s sha=%s\n' "$name" "$duration" "$speech_start" "$speech_end" "$slot_seconds" "$frames" "$sha"
+            node -e 'const end=Number(process.argv[1]); const slot=Number(process.argv[2]); if (!(end + 0.10 < slot)) { console.error(`spoken content exceeds slot: end=${end}s slot=${slot}s`); process.exit(1); }' "$speech_end" "$slot_seconds"
+            i=$((i+1))
+          done < "$RUNNER_TEMP/voice-timings.tsv"
+          test "$i" -eq 7
+          test "$total_frames" -eq "$EXPECTED_FRAMES"
+
+      - name: Install Remotion dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd apps/remotion-video
+          npm install --no-audit --no-fund
+          npx remotion browser ensure
+
+      - name: Create isolated 2.5D entrypoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > apps/remotion-video/src/social-native-25d-entry.tsx <<'TSX'
+          import React from 'react';
+          import {Composition, registerRoot} from 'remotion';
+          import {SOCIAL_NATIVE_25D_FPS, SOCIAL_NATIVE_25D_FRAMES, ToolRadarSocialNative25DCharacterV2} from './social-native-25d-character-v2';
+
+          const Root: React.FC = () => (
+            <Composition
+              id="ToolRadarSocialNative25DCharacterV2"
+              component={ToolRadarSocialNative25DCharacterV2}
+              durationInFrames={SOCIAL_NATIVE_25D_FRAMES}
+              fps={SOCIAL_NATIVE_25D_FPS}
+              width={1080}
+              height={1920}
+            />
+          );
+          registerRoot(Root);
+          TSX
+
+      - name: Bundle and verify 2.5D composition
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd apps/remotion-video
+          npx remotion compositions src/social-native-25d-entry.tsx | tee "$RUNNER_TEMP/25d-compositions.txt"
+          grep -F 'ToolRadarSocialNative25DCharacterV2' "$RUNNER_TEMP/25d-compositions.txt" >/dev/null
+          grep -F "$EXPECTED_FRAMES" "$RUNNER_TEMP/25d-compositions.txt" >/dev/null
+
+      - name: Render 2.5D character candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd apps/remotion-video
+          mkdir -p out
+          npx remotion render src/social-native-25d-entry.tsx ToolRadarSocialNative25DCharacterV2 out/toolradar-social-native-25d-character-v2.mp4 --codec=h264 --crf=18
+          test -s out/toolradar-social-native-25d-character-v2.mp4
+
+      - name: Run M10 technical and pacing preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          video="$GITHUB_WORKSPACE/apps/remotion-video/out/toolradar-social-native-25d-character-v2.mp4"
+          ffprobe -v error -show_streams -show_format -of json "$video" > "$RUNNER_TEMP/25d-ffprobe.json"
+          ffprobe -v error -count_frames -select_streams v:0 -show_entries stream=nb_read_frames -of default=nw=1:nk=1 "$video" > "$RUNNER_TEMP/25d-frame-count.txt"
+          ffmpeg -hide_banner -nostats -i "$video" -vf 'blackdetect=d=0.35:pix_th=0.10' -an -f null - 2> "$RUNNER_TEMP/25d-blackdetect.txt" || true
+          ffmpeg -hide_banner -nostats -i "$video" -af 'silencedetect=noise=-45dB:d=0.75' -vn -f null - 2> "$RUNNER_TEMP/25d-silencedetect.txt" || true
+          ffmpeg -hide_banner -loglevel error -y -i "$video" -vf 'fps=1/3.75,scale=270:480,tile=2x4:padding=8:margin=8' -frames:v 1 "$RUNNER_TEMP/25d-contact-sheet.jpg"
+
+          VIDEO="$video" PR_HEAD="${{ github.event.pull_request.head.sha }}" node --input-type=module <<'NODE'
+          import {readFile, writeFile, stat} from 'node:fs/promises';
+          import {createHash} from 'node:crypto';
+          const probe = JSON.parse(await readFile(process.env.RUNNER_TEMP + '/25d-ffprobe.json', 'utf8'));
+          const videoStream = probe.streams.find((s) => s.codec_type === 'video');
+          const audioStream = probe.streams.find((s) => s.codec_type === 'audio');
+          if (!videoStream || !audioStream) throw new Error('candidate requires video and audio streams');
+          if (Number(videoStream.width) !== Number(process.env.EXPECTED_WIDTH) || Number(videoStream.height) !== Number(process.env.EXPECTED_HEIGHT)) throw new Error('unexpected dimensions');
+          const frames = Number((await readFile(process.env.RUNNER_TEMP + '/25d-frame-count.txt', 'utf8')).trim());
+          if (frames !== Number(process.env.EXPECTED_FRAMES)) throw new Error(`unexpected frame count ${frames}`);
+          const videoDuration = frames / Number(process.env.EXPECTED_FPS);
+          const containerDuration = Number(probe.format?.duration);
+          if (!(containerDuration >= videoDuration && containerDuration < videoDuration + 0.15)) throw new Error(`unexpected container duration ${containerDuration}`);
+          const bytes = await readFile(process.env.VIDEO);
+          const receipt = {
+            schemaVersion: 'toolradar.m10.social-native-25d-character.v2',
+            exactCandidateHead: process.env.PR_HEAD,
+            format: '9:16 portrait',
+            visualMode: '2.5D character + perspective UI props + depth/parallax',
+            narrativePattern: 'hard hook -> conflict -> physicalized three cuts -> before/after -> question',
+            selectedVoice: process.env.VOICE,
+            voiceRate: process.env.VOICE_RATE,
+            narrationTimeStretchApplied: false,
+            proceduralSfxIncluded: ['impact','whoosh','click'],
+            thirdPartyVisualAssetsUsed: false,
+            outputFilename: 'toolradar-social-native-25d-character-v2.mp4',
+            outputSha256: createHash('sha256').update(bytes).digest('hex'),
+            outputBytes: (await stat(process.env.VIDEO)).size,
+            frames,
+            fps: Number(process.env.EXPECTED_FPS),
+            durationSeconds: videoDuration,
+            containerDurationSeconds: containerDuration,
+            width: Number(videoStream.width),
+            height: Number(videoStream.height),
+            technicalMediaIntegrityPassed: true,
+            socialPacingSilenceGatePassed: true,
+            socialPlatformBusinessFitApprovedByHuman: false,
+            humanWatchedFullCandidate: false,
+            publicationAllowed: false,
+            publicationPerformed: false,
+            analyticsObserved: false
+          };
+          await writeFile(process.env.RUNNER_TEMP + '/25d-receipt.json', JSON.stringify(receipt, null, 2) + '\n');
+          console.log(JSON.stringify(receipt, null, 2));
+          NODE
+
+          if grep -F 'black_start:' "$RUNNER_TEMP/25d-blackdetect.txt" >/dev/null; then
+            echo 'Detected black interval >=0.35s' >&2
+            cat "$RUNNER_TEMP/25d-blackdetect.txt" >&2
+            exit 1
+          fi
+          if grep -F 'silence_start:' "$RUNNER_TEMP/25d-silencedetect.txt" >/dev/null; then
+            echo 'Detected silence interval >=0.75s; social pacing gate failed' >&2
+            cat "$RUNNER_TEMP/25d-silencedetect.txt" >&2
+            exit 1
+          fi
+
+      - name: Upload 2.5D candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: toolradar-social-native-25d-character-v2
+          path: |
+            apps/remotion-video/out/toolradar-social-native-25d-character-v2.mp4
+            ${{ runner.temp }}/25d-contact-sheet.jpg
+            ${{ runner.temp }}/25d-receipt.json
+            ${{ runner.temp }}/25d-ffprobe.json
+            ${{ runner.temp }}/25d-frame-count.txt
+            ${{ runner.temp }}/25d-blackdetect.txt
+            ${{ runner.temp }}/25d-silencedetect.txt
+            ${{ runner.temp }}/voice-timings.tsv
+            ${{ runner.temp }}/cjk-font-match.txt
+          if-no-files-found: error
+          retention-days: 14
