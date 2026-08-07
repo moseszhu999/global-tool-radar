@@ -1,0 +1,33 @@
+name: shared-media-render-contract-v1
+
+on:
+  pull_request:
+    paths:
+      - 'packages/shared-media-render-contract/**'
+      - 'docs/architecture/shared-media-render-contract-v1.md'
+      - '.github/workflows/shared-media-render-contract-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax check
+        run: npm --prefix packages/shared-media-render-contract run check
+      - name: Contract tests
+        run: npm --prefix packages/shared-media-render-contract test
+      - name: Stable boundary guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -R -n -E "from ['\"]remotion|@remotion|child_process|exec\(|spawn\(" packages/shared-media-render-contract/src; then
+            echo 'Contract package must not embed a render engine or process runner.' >&2
+            exit 1
+          fi
