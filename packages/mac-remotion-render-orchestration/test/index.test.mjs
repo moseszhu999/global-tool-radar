@@ -27,8 +27,38 @@ test('runs health, submission, polling and completed-result handoff', async () =
   assert.equal(receipt.jobId, 'job-123');
   assert.equal(receipt.realSubmissionPerformed, true);
   assert.equal(receipt.finalVideoClaimAllowed, true);
+  assert.deepEqual(receipt.finalVideoEvidence, {source: 'result.outputPath', locator: '/tmp/final.mp4'});
   assert.match(receipt.downloadUrl, /job-123\/download$/);
   assert.equal(validateMacRemotionRenderReceipt(receipt), true);
+});
+
+test('does not claim a final video from completed status alone', async () => {
+  const receipt = await runMacRemotionRender({
+    client: clientFixture({
+      pollRenderJob: async () => ({jobId: 'job-123', status: 'completed'}),
+      getRenderResult: async () => ({jobId: 'job-123', status: 'completed'}),
+    }),
+    jobRequest: {compositionId: 'ToolRadarReplitPortrait'},
+    now: clock(),
+  });
+  assert.equal(receipt.status, 'COMPLETED');
+  assert.equal(receipt.realSubmissionPerformed, true);
+  assert.equal(receipt.finalVideoEvidence, null);
+  assert.equal(receipt.finalVideoClaimAllowed, false);
+  assert.equal(validateMacRemotionRenderReceipt(receipt), true);
+});
+
+test('accepts runner-returned media evidence from the terminal status snapshot', async () => {
+  const receipt = await runMacRemotionRender({
+    client: clientFixture({
+      pollRenderJob: async () => ({jobId: 'job-123', status: 'completed', outputPath: '/tmp/status-final.mp4'}),
+      getRenderResult: async () => ({jobId: 'job-123', status: 'completed'}),
+    }),
+    jobRequest: {compositionId: 'ToolRadarReplitPortrait'},
+    now: clock(),
+  });
+  assert.deepEqual(receipt.finalVideoEvidence, {source: 'statusSnapshot.outputPath', locator: '/tmp/status-final.mp4'});
+  assert.equal(receipt.finalVideoClaimAllowed, true);
 });
 
 test('blocks before submission when runner health is not true', async () => {
@@ -46,6 +76,7 @@ test('blocks before submission when runner health is not true', async () => {
   assert.equal(receipt.jobId, null);
   assert.equal(receipt.realSubmissionPerformed, false);
   assert.equal(receipt.finalVideoClaimAllowed, false);
+  assert.equal(receipt.finalVideoEvidence, null);
   assert.equal(validateMacRemotionRenderReceipt(receipt), true);
 });
 
