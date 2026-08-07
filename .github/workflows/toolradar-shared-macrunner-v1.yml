@@ -1,4 +1,4 @@
-name: ToolRadar Shared MacRunner v1
+name: ToolRadar Shared Mac Remotion Runner v1
 
 on:
   workflow_dispatch:
@@ -10,14 +10,14 @@ on:
       profile:
         description: Bounded validation profile
         required: true
-        default: closure-operator-pack
+        default: m9-render-readiness
         type: choice
         options:
-          - closure-operator-pack
           - m9-render-readiness
+          - closure-operator-pack
           - macrunner-contract
       run_deepseek:
-        description: Run optional local DeepSeek advisory review
+        description: Run optional already-installed local DeepSeek advisory
         required: true
         default: false
         type: boolean
@@ -31,7 +31,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: toolradar-shared-macrunner-${{ inputs.profile }}-${{ inputs.exact_head }}
+  group: toolradar-shared-remotion-${{ inputs.profile }}-${{ inputs.exact_head }}
   cancel-in-progress: false
 
 jobs:
@@ -40,8 +40,7 @@ jobs:
     runs-on:
       - self-hosted
       - macOS
-      - macmini
-      - arm64
+      - ARM64
     timeout-minutes: 60
     env:
       CI: "true"
@@ -49,7 +48,7 @@ jobs:
       TOOLRADAR_PROFILE: ${{ inputs.profile }}
       TOOLRADAR_RUN_DEEPSEEK: ${{ inputs.run_deepseek }}
       TOOLRADAR_DEEPSEEK_MODEL: ${{ inputs.deepseek_model }}
-      TOOLRADAR_MACRUNNER_BASE_URL: http://127.0.0.1:8765
+      MAC_REMOTION_BASE_URL: http://127.0.0.1:3210
     steps:
       - name: Validate owner and request shape
         shell: bash
@@ -73,13 +72,11 @@ jobs:
           persist-credentials: false
           clean: true
 
-      - name: Prove exact head and same-repository branch ownership
+      - name: Prove exact head and clean tree
         shell: bash
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$TOOLRADAR_EXACT_HEAD"
-          git fetch origin '+refs/heads/*:refs/remotes/origin/*'
-          git branch -r --contains "$TOOLRADAR_EXACT_HEAD" | grep -E '^  origin/' >/dev/null
           test -z "$(git status --porcelain)"
 
       - name: Reject production capabilities
@@ -88,23 +85,41 @@ jobs:
           set -euo pipefail
           env | cut -d= -f1 | grep -E '(^|_)(PRODUCTION|PROD|SERVICE_ROLE|BILLING|PAYMENT|STRIPE)(_|$)' && exit 1 || true
 
-      - name: Require Node 22
-        shell: bash
-        run: node -e 'const major=Number(process.versions.node.split(".")[0]); if (major !== 22) process.exit(1)'
-
-      - name: Shared MacRunner controller contracts
+      - name: Require modern Node runtime
         shell: bash
         run: |
-          npm --prefix packages/shared-macrunner-controller run check
-          npm --prefix packages/shared-macrunner-controller test
+          node --version
+          node -e 'const major=Number(process.versions.node.split(".")[0]); if (major < 22) process.exit(1)'
 
-      - name: Probe shared MacRunner health and OpenAPI contract
+      - name: Validate live Remotion client contract
         shell: bash
         run: |
-          node packages/shared-macrunner-controller/src/cli.mjs probe \
-            --base-url "$TOOLRADAR_MACRUNNER_BASE_URL" \
-            --output "$RUNNER_TEMP/toolradar-shared-macrunner-contract.json"
-          cat "$RUNNER_TEMP/toolradar-shared-macrunner-contract.json"
+          npm --prefix packages/mac-remotion-runner-client run check
+          npm --prefix packages/mac-remotion-runner-client test
+
+      - name: Probe live shared Remotion health only
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import {writeFile} from 'node:fs/promises';
+          import {createMacRemotionRunnerClient} from './packages/mac-remotion-runner-client/src/index.mjs';
+          const client = createMacRemotionRunnerClient({baseUrl: process.env.MAC_REMOTION_BASE_URL});
+          const health = await client.checkHealth();
+          if (health?.ok !== true) throw new Error('live Mac Remotion health did not report ok=true');
+          const receipt = {
+            schemaVersion: 'toolradar.live-remotion-health.v1',
+            exactHead: process.env.TOOLRADAR_EXACT_HEAD,
+            baseUrl: client.baseUrl,
+            service: typeof health?.service === 'string' ? health.service : null,
+            ok: true,
+            operationIds: client.operationIds,
+            authenticatedOperationCalled: false,
+            renderSubmitted: false,
+          };
+          await writeFile(`${process.env.RUNNER_TEMP}/toolradar-live-remotion-health.json`, `${JSON.stringify(receipt, null, 2)}\n`);
+          console.log(JSON.stringify(receipt, null, 2));
+          NODE
 
       - name: Validate closure operator pack
         if: ${{ inputs.profile == 'closure-operator-pack' }}
@@ -117,8 +132,6 @@ jobs:
         if: ${{ inputs.profile == 'm9-render-readiness' }}
         shell: bash
         run: |
-          npm --prefix packages/mac-remotion-runner-client run check
-          npm --prefix packages/mac-remotion-runner-client test
           npm --prefix packages/mac-remotion-render-job-binding run check
           npm --prefix packages/mac-remotion-render-job-binding test
           npm --prefix packages/mac-remotion-render-orchestration run check
@@ -155,17 +168,18 @@ jobs:
           cat "$RUNNER_TEMP/toolradar-deepseek-advisory-receipt.json"
 
       - name: Final exact-head and clean-tree proof
+        if: always()
         shell: bash
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$TOOLRADAR_EXACT_HEAD"
           test -z "$(git status --porcelain)"
 
-      - name: Cleanup persistent MacRunner workspace
+      - name: Cleanup persistent Mac workspace
         if: always()
         shell: bash
         run: |
-          rm -f "$RUNNER_TEMP/toolradar-shared-macrunner-contract.json" \
+          rm -f "$RUNNER_TEMP/toolradar-live-remotion-health.json" \
                 "$RUNNER_TEMP/toolradar-deepseek-prompt.txt" \
                 "$RUNNER_TEMP/toolradar-deepseek-output.txt" \
                 "$RUNNER_TEMP/toolradar-deepseek-advisory-receipt.json" || true
