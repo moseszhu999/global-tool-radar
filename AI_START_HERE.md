@@ -78,23 +78,28 @@ v2 曾真实发现 scene 4→5 `0.77375s` 长静音，超过 `0.75s` social paci
 最近核验 exact candidate：
 
 ```text
-head: 251e49fba80cd1e1b1274b7563a51dfa56277ccf
+head: 6288c9723428a449505c73e2399273860d2f0b29
 workflow: M10 Social Native 2.5D Character v3
-run/job: 31177464501 / 92862559618
+run/job: 31178102893 / 92864635407
 artifact: toolradar-social-native-25d-character-v3
-artifact id: 8993462487
-artifact digest: sha256:7eaa329cbce7b0fa9540a099453d26e229d4a7419cf62a2f2ddb88f08372a7ed
+artifact id: 8993722523
+artifact digest: sha256:a7ab6ef01cb23d4d489c1151a51f08be22ad3e4e3d254564690317ded3b4fbf2
 MP4: toolradar-social-native-25d-character-v3.mp4
-MP4 SHA-256: 71cafe38e9cb10028fd19e0520df67e350aff3f63988971cf234e52aa7598e9f
-bytes: 24,511,322
+MP4 SHA-256: 92e4c5af234a75c8e9da4aa2d67d9faa70af65b62b11713a0a273acec57d2c63
+bytes: 24,039,696
 1080x1920 · 30fps · 884 frames
 video timeline: 29.466667s
-container/audio: 29.525333s
+container/audio: 29.600000s
 voice: zh-CN-XiaoxiaoNeural +10%
 narrationTimeStretchApplied=false
 authoredDeadAirCutBakedIntoTimeline=true
 proceduralMusicIncluded=true
 procedural SFX: impact / whoosh / click / sparkle
+finalMixLoudnessNormalized=true
+loudness target: -16 LUFS
+true-peak target: -1.5 dBTP
+measured integrated loudness: -15.66 LUFS
+measured true peak: -2.22 dBTP
 thirdPartyVisualAssetsUsed=false
 ```
 
@@ -106,28 +111,27 @@ v3 相比 v2 的真实升级：
 - 前景/中景/后景、遮挡、透视和飞出镜头的卡片更明显；
 - 原创程序化 116 BPM 轻电子 BGM；
 - impact / whoosh / click / sparkle 四层 SFX；
-- 16 帧节奏修复直接 baked into 884-frame authored timeline。
+- 16 帧节奏修复直接 baked into 884-frame authored timeline；
+- 最终混音从早期 `-19.71 LUFS / -6.37 dBTP` 提升并标准化到当前实测 `-15.66 LUFS / -2.22 dBTP`，只重编码音轨，不重编码 H.264 视频流。
 
 技术/节奏检查：
 
 ```text
-ci: 31177464459 SUCCESS
-remotion-final-composition: 31177464462 SUCCESS
-publication-feedback-report: 31177464469 SUCCESS
-M10 Social Native 2.5D Character v3: 31177464501 SUCCESS
+ci: 31178102885 SUCCESS
+remotion-final-composition: 31178102971 SUCCESS
+publication-feedback-report: 31178102895 SUCCESS
+M10 Social Native 2.5D Character v3: 31178102893 SUCCESS
 black >=0.35s: 0
 silence >=0.75s @ -45dB: 0
 technicalMediaIntegrityPassed=true
 socialPacingSilenceGatePassed=true
-measured integrated loudness: -19.71 LUFS
-measured true peak: -6.37 dBTP
 ```
 
-代表帧第一次复核时真实发现：`三个问题`、`看前后`、`AI 不替你审美` 三处未显式设色，浏览器默认黑色导致深背景可读性差。该 artifact 不作为当前候选。source 随后在 exact head `251e49f...` 修为根容器继承浅色文字，重新 render 后代表帧已复核，三处均清楚可见。
+代表帧第一次复核时真实发现：`三个问题`、`看前后`、`AI 不替你审美` 三处未显式设色，浏览器默认黑色导致深背景可读性差。该 artifact 不作为当前候选。source 随后修为根容器继承浅色文字，重新 render 后代表帧已复核，三处均清楚可见。
 
 ## 7. 当前真实性状态 / M10 边界
 
-即使 v3 technical CI 全绿、代表帧已复核，也仍然不能宣称真人 M10 通过：
+即使 v3 technical CI 全绿、代表帧已复核、响度已标准化，也仍然不能宣称真人 M10 通过：
 
 ```text
 humanWatchedFullCandidate=false
