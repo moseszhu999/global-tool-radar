@@ -1,9 +1,9 @@
 const DEFAULT_OPERATIONS = Object.freeze({
   checkHealth: Object.freeze({method: 'GET', path: '/health', auth: false}),
-  submitRenderJob: Object.freeze({method: 'POST', path: '/v1/jobs', auth: true}),
+  submitRenderJob: Object.freeze({method: 'POST', path: '/v1/render', auth: true}),
   getRenderJobStatus: Object.freeze({method: 'GET', path: '/v1/jobs/{jobId}', auth: true}),
   getRenderJobLog: Object.freeze({method: 'GET', path: '/v1/jobs/{jobId}/log', auth: true}),
-  getRenderResult: Object.freeze({method: 'GET', path: '/v1/jobs/{jobId}/result', auth: true}),
+  getRenderResult: Object.freeze({method: 'GET', path: '/v1/jobs/{jobId}', auth: true}),
   cancelRenderJob: Object.freeze({method: 'POST', path: '/v1/jobs/{jobId}/cancel', auth: true}),
 });
 
