@@ -68,8 +68,8 @@ jobs:
           const fade = "  const opacity = interpolate(frame, [0, 14, scene.duration - 14, scene.duration], [0, 1, 1, 0], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});\n";
           const fadedReturn = "  return <div style={{position: 'absolute', inset: 0, opacity}}><Shell eyebrow={scene.eyebrow} title={scene.title} body={scene.body}>{panel}</Shell></div>;";
           const solidReturn = "  return <div style={{position: 'absolute', inset: 0}}><Shell eyebrow={scene.eyebrow} title={scene.title} body={scene.body}>{panel}</Shell></div>;";
-          if ((text.match(new RegExp(fade.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&'), 'g')) || []).length !== 1) throw new Error('expected exactly one full-frame fade expression');
-          if ((text.match(new RegExp(fadedReturn.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&'), 'g')) || []).length !== 1) throw new Error('expected exactly one faded scene return');
+          if (text.split(fade).length !== 2) throw new Error('expected exactly one full-frame fade expression');
+          if (text.split(fadedReturn).length !== 2) throw new Error('expected exactly one faded scene return');
           text = text.replace(fade, '').replace(fadedReturn, solidReturn);
           await writeFile(file, text);
           NODE
