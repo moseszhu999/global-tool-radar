@@ -144,7 +144,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          slot_frames=(118 132 145 145 118 112 130)
+          slot_frames=(118 132 138 139 118 123 132)
           i=0
           total_frames=0
           while IFS=$'\t' read -r name duration speech_start speech_end sha; do
