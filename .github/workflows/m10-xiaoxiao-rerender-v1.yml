@@ -157,23 +157,43 @@ jobs:
           const audioStream = probe.streams.find((s) => s.codec_type === 'audio');
           if (!videoStream || !audioStream) throw new Error('replacement MP4 must contain both video and audio streams');
           if (Number(videoStream.width) !== Number(process.env.EXPECTED_WIDTH) || Number(videoStream.height) !== Number(process.env.EXPECTED_HEIGHT)) throw new Error('unexpected replacement dimensions');
-          const duration = Number(probe.format?.duration);
-          if (!(duration > 102.62 && duration < 102.66)) throw new Error(`unexpected replacement duration ${duration}`);
-          const data = await readFile(process.env.VIDEO);
-          const sha256 = createHash('sha256').update(data).digest('hex');
           const frames = Number((await readFile(process.env.RUNNER_TEMP + '/xiaoxiao-frame-count.txt', 'utf8')).trim());
           if (frames !== Number(process.env.EXPECTED_FRAMES)) throw new Error(`unexpected replacement frame count ${frames}`);
+          const fps = Number(process.env.EXPECTED_FPS);
+          const expectedVideoDuration = frames / fps;
+          const videoDuration = Number(videoStream.duration);
+          const audioDuration = Number(audioStream.duration);
+          const approvedAudioDuration = Number((await readFile(process.env.RUNNER_TEMP + '/approved-audio-duration.txt', 'utf8')).trim());
+          const formatDuration = Number(probe.format?.duration);
+          const oneFramePlusProbeTolerance = (1 / fps) + 0.002;
+          if (Math.abs(videoDuration - expectedVideoDuration) > oneFramePlusProbeTolerance) {
+            throw new Error(`unexpected video timeline duration ${videoDuration}; expected ${expectedVideoDuration}`);
+          }
+          const audioPaddingSeconds = audioDuration - approvedAudioDuration;
+          if (audioPaddingSeconds < -0.001 || audioPaddingSeconds > 0.10) {
+            throw new Error(`unexpected AAC/output audio duration ${audioDuration}; approved WAV ${approvedAudioDuration}; delta ${audioPaddingSeconds}`);
+          }
+          const longestStreamDuration = Math.max(videoDuration, audioDuration);
+          if (Math.abs(formatDuration - longestStreamDuration) > 0.01) {
+            throw new Error(`unexpected container duration ${formatDuration}; longest stream ${longestStreamDuration}`);
+          }
+          const data = await readFile(process.env.VIDEO);
+          const sha256 = createHash('sha256').update(data).digest('hex');
           const receipt = {
             schemaVersion: 'toolradar.m10-xiaoxiao-replacement-render.v1',
             exactToolRadarSourceHead: process.env.TOOLRADAR_SOURCE_HEAD,
             selectedVoice: 'zh-CN-XiaoxiaoNeural',
             approvedVoiceoverSha256: process.env.APPROVED_WAV_SHA256,
             approvedAudioArtifactRunId: Number(process.env.APPROVED_AUDIO_RUN_ID),
+            approvedAudioDurationSeconds: approvedAudioDuration,
             fullFrameFadeToBlackRemoved: true,
             outputFilename: 'toolradar-ai-design-xiaoxiao-final.mp4',
             outputSha256: sha256,
             outputBytes: (await stat(process.env.VIDEO)).size,
-            durationSeconds: duration,
+            durationSeconds: formatDuration,
+            videoDurationSeconds: videoDuration,
+            audioDurationSeconds: audioDuration,
+            audioEncoderPaddingSeconds: audioPaddingSeconds,
             width: Number(videoStream.width),
             height: Number(videoStream.height),
             frames,
@@ -193,6 +213,11 @@ jobs:
           if grep -F 'black_start:' "$RUNNER_TEMP/xiaoxiao-blackdetect.txt" >/dev/null; then
             echo 'Detected a black interval >=0.5s' >&2
             cat "$RUNNER_TEMP/xiaoxiao-blackdetect.txt" >&2
+            exit 1
+          fi
+          if grep -F 'silence_start:' "$RUNNER_TEMP/xiaoxiao-silencedetect.txt" >/dev/null; then
+            echo 'Detected a silence interval >=1.0s' >&2
+            cat "$RUNNER_TEMP/xiaoxiao-silencedetect.txt" >&2
             exit 1
           fi
 
