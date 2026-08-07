@@ -93,25 +93,28 @@ jobs:
           echo '--- all natural narration timings ---'
           cat "$RUNNER_TEMP/voice-durations.tsv"
 
-      - name: Validate narration fits authored social slots
+      - name: Validate narration fits measured social slots
         shell: bash
         run: |
           set -euo pipefail
-          slot_seconds=(4.50 5.50 4.50 4.00 4.50 5.50 4.50)
+          slot_frames=(120 145 160 160 130 130 145)
           i=0
           failed=0
+          total_frames=0
           while IFS=$'\t' read -r name duration sha; do
-            slot="${slot_seconds[$i]}"
-            printf '%s natural=%ss authored-slot=%ss sha=%s\n' "$name" "$duration" "$slot" "$sha"
-            if ! node -e 'const d=Number(process.argv[1]); const s=Number(process.argv[2]); process.exit(d <= s - 0.05 ? 0 : 1)' "$duration" "$slot"; then
-              echo "TIMING_MISMATCH $name natural=${duration}s slot=${slot}s" >&2
+            frames="${slot_frames[$i]}"
+            total_frames=$((total_frames + frames))
+            printf '%s natural=%ss authored-frames=%s sha=%s\n' "$name" "$duration" "$frames" "$sha"
+            if ! node -e 'const d=Number(process.argv[1]); const f=Number(process.argv[2]); const fps=Number(process.argv[3]); process.exit(d <= f/fps - 0.05 ? 0 : 1)' "$duration" "$frames" "$EXPECTED_FPS"; then
+              echo "TIMING_MISMATCH $name natural=${duration}s frames=${frames}" >&2
               failed=1
             fi
             i=$((i+1))
           done < "$RUNNER_TEMP/voice-durations.tsv"
           test "$i" -eq 7
+          test "$total_frames" -eq "$EXPECTED_FRAMES"
           if [ "$failed" -ne 0 ]; then
-            echo 'Natural narration does not fit the authored timeline. Re-author scene slots from these exact timings; do not time-stretch the audio.' >&2
+            echo 'Natural narration does not fit the measured timeline. Do not time-stretch the audio.' >&2
             exit 1
           fi
 
