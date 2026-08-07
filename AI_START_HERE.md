@@ -35,7 +35,7 @@
 绝不伪造或暗示以下事实已经发生：
 
 - 真实录屏 / 真人素材 / 真实旁白文件；
-- 最终 MP4 已完成；
+- 最终 MP4 已完成（除非有真实 MP4 + 加密/媒体证据）；
 - 真人 M10 已审核 / 已批准；
 - 抖音或 Bilibili 已登录、上传、发布；
 - 平台内容 ID、公开 URL、发布时间；
@@ -47,29 +47,54 @@
 
 ## 4. 当前业务交接点（2026-08-07，继续前必须重验）
 
-当前主线最近一次已知 checkpoint：
+本文件刷新前最近一次已核验的 `main` 为 `9962c70757aedac49be4d467ba662724d6176699`；**本文件此次更新自身会再次推进 `main`，所以新会话必须重新查询最新 SHA。**
 
-- `main`: `a6a02ff62f80422e7ce7a8581ec54fb2f1b80218`
-- 已合并：M10 时间线已绑定人工批准的 `zh-CN-XiaoxiaoNeural` 音轨，自然时长 `102.624s`。
-- 批准音轨已知 SHA-256：`816d9ce2f2ea8090f1eb1940f30b7ad19e9d53ae388fbaa0346b063f2c45ac9e`
-- 当前开放 Draft PR：`#85 ci: one-shot rerender with exact approved Xiaoxiao audio`
-- #85 是**临时 render carrier，DO NOT MERGE**。
-- #85 已完成实际 Remotion render 步骤，但最近一次已知 GitHub Actions 在 `Run M10 technical media preflight` 步骤失败；下一动作应先读取该失败的真实诊断/artifact，修真实根因，而不是另起旁支。
-- 即使技术 preflight 通过，`humanQualityApproved` 仍必须保持 `false`，直到真人完整观看成片并明确批准。
-- M11 仍被 M10 真人批准阻塞；M12 仍被真实发布阻塞。
+当前真实业务状态：
+
+- M9/M10 的可审看最终候选已经真实渲染出来，不再是 mock/preview。
+- 已批准旁白：`zh-CN-XiaoxiaoNeural`。
+- 批准 WAV SHA-256：`816d9ce2f2ea8090f1eb1940f30b7ad19e9d53ae388fbaa0346b063f2c45ac9e`。
+- 批准 WAV 自然时长：`102.624s`。
+- 时间线源码基线：`a6a02ff62f80422e7ce7a8581ec54fb2f1b80218`。
+- 临时 render carrier PR `#85` 已完成任务并**关闭且未合并**；不要重开/合并它。
+- 最终成功 workflow：`M10 Xiaoxiao Replacement Render v1`，run `31160564659`。
+- 成功 artifact：`toolradar-m10-xiaoxiao-replacement-v1`，artifact ID `8986967862`。
+- 最终候选文件：`toolradar-ai-design-xiaoxiao-final.mp4`。
+- 最终候选 SHA-256：`9e1b394691d5e556d5d6df6cb731a5e7b9ccb17c040fc28cef3c8602f6e182fb`。
+- 文件大小：`6,864,138` bytes。
+- 视频：H.264，`1080x1920`，`30fps`，`3079` 帧，视频流时长 `102.633333s`。
+- 音频：AAC 48kHz stereo，音频流/容器时长 `102.677333s`；相对批准 WAV 的编码/封装 padding 为 `+0.053333s`，已纳入有界技术校验。
+- CJK 修复：GitHub Ubuntu render 明确安装并绑定 `Noto Sans CJK SC`。此前一版成片虽然完成 render，但代表帧里的中文为 tofu 方框，因此被拒绝进入真人 M10；修复后 8 个代表帧的中文均可正常辨认。
+- 技术预检 PASS：精确帧数/尺寸/流完整性通过；`blackdetect >=0.5s` 为 0；`silencedetect -45dB >=1.0s` 为 0。
+- **`humanWatchedReplacementFullVideo=false`**。
+- **`humanQualityApproved=false`**。
+- **`publicationAllowed=false`**。
+- **`publicationPerformed=false`**。
+- **`analyticsObserved=false`**。
+- 刷新本文件前已核验开放 PR 数量为 0；新会话仍必须重新查询。
+
+### 当前唯一业务阻塞
+
+真人必须对上述**精确 SHA** 的 MP4 从头到尾完整观看，并明确“批准”或“拒绝”。
+
+- 若拒绝：记录具体时间点/问题，只修成片问题，不扩基础设施。
+- 若批准：M10 才算完成，然后立即进入 M11 的授权真人抖音/Bilibili 登录、可能的验证码/账号保护、上传、预览、正式发布。
+- M11 真发布完成后，M12 至少需要两次同一平台内容的真实 UI 累计指标观察，时间严格递增、累计指标不得倒退；不能把仓库逻辑当成平台数据。
 
 ## 5. 当前主目标
 
 主目标不是继续造框架，而是把这一条内容真正走完：
 
-**已批准晓晓音轨 → 可审看的最终成片 → M10 真人完整质检/批准 → M11 真人登录上传发布 → M12 两次真实平台 UI 数据观察。**
+**已批准晓晓音轨 → 已生成可审看的最终成片 → M10 真人完整质检/批准 → M11 真人登录上传发布 → M12 两次真实平台 UI 数据观察。**
 
 任何新工作都先问：它是否直接缩短这条链路？如果不是，默认不做。
 
-## 6. 跑偏记录
+## 6. 跑偏记录 / 复盘记忆
 
 - 2026-08-07：项目曾多次向 runner/orchestration/receipt 基础设施扩张。此后新增基础设施必须证明是解除当前成片闭环阻塞的直接必要条件；否则停止并回到 M9/M10/M11/M12。
 - 2026-08-07：用户明确要求“跑偏的事情写下来，下次首先读”。本文件即为固定入口。
+- 2026-08-07：M10 的第一次技术 render 已成功，但代表帧检查发现 Ubuntu 缺中文字形，画面中文变成 tofu 方框。以后在要求真人审完整成片之前，必须先做真实输出的可视帧/文字检查；不能只看 render/ffprobe 是否成功。
+- 2026-08-07：旧 M10 preflight 曾把 AAC 封装产生的约 `53ms` 尾部 padding 误判为时长失败。技术门应以精确帧数/视频时间线为主，并对编码器可解释的小幅 padding 使用有界校验，不能用脆弱的容器总时长硬阈值。
 
 ## 7. 每轮结束必须留下的证据
 
