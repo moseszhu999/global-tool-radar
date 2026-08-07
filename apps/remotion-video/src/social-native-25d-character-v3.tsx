@@ -161,7 +161,7 @@ const PayoffScene:React.FC=()=>{const frame=useCurrentFrame();const inP=p(frame,
 const scenes=[HookScene,ProblemScene,CutInfoScene,CutColorScene,OneCtaScene,RevealScene,PayoffScene] as const;
 
 export const ToolRadarSocialNative25DCharacterV3:React.FC=()=>(
-  <AbsoluteFill style={{backgroundColor:c.ink}}>
+  <AbsoluteFill style={{backgroundColor:c.ink,color:c.text}}>
     {slots.map((slot,i)=>{const Scene=scenes[i];return <Sequence key={slot.from} from={slot.from} durationInFrames={slot.duration} premountFor={20}><Scene/><Audio src={staticFile(slot.audio)} volume={1}/></Sequence>})}
     <SoundBed/>
   </AbsoluteFill>
