@@ -15,7 +15,7 @@ export type ToolRadarVideoProps = z.infer<typeof toolRadarVideoSchema>;
 const defaultProps: ToolRadarVideoProps = {
   title: 'AI 设计工作流演示',
   subtitle: '从一句需求到可视界面',
-  voiceover: 'assets/toolradar-ai-design-voiceover.wav',
+  voiceover: 'assets/toolradar-ai-design-xiaoxiao-approved.wav',
   voiceoverReady: false,
 };
 
@@ -24,7 +24,7 @@ export const ToolRadarRoot: React.FC = () => {
     <Composition
       id="ToolRadarAIDesignPortrait"
       component={ToolRadarVideo}
-      durationInFrames={2670}
+      durationInFrames={3079}
       fps={30}
       width={1080}
       height={1920}
