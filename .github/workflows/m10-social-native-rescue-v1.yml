@@ -61,7 +61,7 @@ jobs:
           python3 -m pip install --user --disable-pip-version-check edge-tts
           python3 -m edge_tts --help >/dev/null
 
-      - name: Generate seven natural neural narration segments
+      - name: Generate all seven natural neural narration segments
         shell: bash
         run: |
           set -euo pipefail
@@ -78,7 +78,6 @@ jobs:
             'AI不是替你审美，是让你更快试错。你会选左边还是右边？'
           )
           names=(01-hook 02-problem 03-cut-info 04-cut-color 05-one-cta 06-reveal 07-payoff)
-          max_seconds=(4.45 5.45 4.45 3.95 4.45 5.45 4.45)
 
           : > "$RUNNER_TEMP/voice-durations.tsv"
           for i in "${!texts[@]}"; do
@@ -87,10 +86,34 @@ jobs:
             python3 -m edge_tts --voice "$VOICE" --rate "$VOICE_RATE" --text "${texts[$i]}" --write-media "$mp3"
             ffmpeg -hide_banner -loglevel error -y -i "$mp3" -ar 48000 -ac 2 -c:a pcm_s16le "$wav"
             duration="$(ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 "$wav")"
-            node -e 'const d=Number(process.argv[1]); const max=Number(process.argv[2]); if (!(d > 0.5 && d <= max)) { console.error(`segment duration ${d}s exceeds slot ${max}s`); process.exit(1); }' "$duration" "${max_seconds[$i]}"
+            node -e 'const d=Number(process.argv[1]); if (!(d > 0.5 && d < 8.0)) { console.error(`implausible segment duration ${d}s`); process.exit(1); }' "$duration"
             sha="$(sha256sum "$wav" | awk '{print $1}')"
             printf '%s\t%s\t%s\n' "${names[$i]}" "$duration" "$sha" | tee -a "$RUNNER_TEMP/voice-durations.tsv"
           done
+          echo '--- all natural narration timings ---'
+          cat "$RUNNER_TEMP/voice-durations.tsv"
+
+      - name: Validate narration fits authored social slots
+        shell: bash
+        run: |
+          set -euo pipefail
+          slot_seconds=(4.50 5.50 4.50 4.00 4.50 5.50 4.50)
+          i=0
+          failed=0
+          while IFS=$'\t' read -r name duration sha; do
+            slot="${slot_seconds[$i]}"
+            printf '%s natural=%ss authored-slot=%ss sha=%s\n' "$name" "$duration" "$slot" "$sha"
+            if ! node -e 'const d=Number(process.argv[1]); const s=Number(process.argv[2]); process.exit(d <= s - 0.05 ? 0 : 1)' "$duration" "$slot"; then
+              echo "TIMING_MISMATCH $name natural=${duration}s slot=${slot}s" >&2
+              failed=1
+            fi
+            i=$((i+1))
+          done < "$RUNNER_TEMP/voice-durations.tsv"
+          test "$i" -eq 7
+          if [ "$failed" -ne 0 ]; then
+            echo 'Natural narration does not fit the authored timeline. Re-author scene slots from these exact timings; do not time-stretch the audio.' >&2
+            exit 1
+          fi
 
       - name: Install Remotion dependencies
         shell: bash
@@ -130,7 +153,7 @@ jobs:
           cd apps/remotion-video
           npx remotion compositions src/social-native-entry.tsx | tee "$RUNNER_TEMP/social-native-compositions.txt"
           grep -F 'ToolRadarSocialNativeRescueV1' "$RUNNER_TEMP/social-native-compositions.txt" >/dev/null
-          grep -F '990' "$RUNNER_TEMP/social-native-compositions.txt" >/dev/null
+          grep -F "$EXPECTED_FRAMES" "$RUNNER_TEMP/social-native-compositions.txt" >/dev/null
 
       - name: Render first social-native candidate
         shell: bash
