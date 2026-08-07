@@ -27,17 +27,17 @@ const validProbe = async () => ({
   audioCodec: 'aac',
 });
 
-const runnerClient = (status = 'completed') => ({
+const runnerClient = (status = 'completed', outputPath = '/tmp/final.mp4') => ({
   checkHealth: async () => ({ok: true}),
   submitRenderJob: async () => ({jobId: `job-${status}-001`}),
   pollRenderJob: async () => ({status}),
-  getRenderResult: async () => ({resultAvailable: status === 'completed'}),
+  getRenderResult: async () => ({resultAvailable: status === 'completed', ...(status === 'completed' ? {outputPath} : {})}),
   getRenderJobLog: async () => ({message: `runner ended with ${status}`}),
   getDownloadUrl: (jobId) => `https://runner.example/v1/jobs/${jobId}/download`,
 });
 
 const buildRunReceipt = async (jobRequest, status = 'completed') => runMacRemotionRender({
-  client: runnerClient(status),
+  client: runnerClient(status, jobRequest?.outputPath),
   jobRequest,
   now: () => '2026-08-06T14:00:00.000Z',
 });
