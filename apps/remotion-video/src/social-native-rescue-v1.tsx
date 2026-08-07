@@ -3,19 +3,18 @@ import {AbsoluteFill, Easing, Sequence, interpolate, staticFile, useCurrentFrame
 import {Audio} from '@remotion/media';
 
 export const SOCIAL_NATIVE_RESCUE_FPS = 30;
-export const SOCIAL_NATIVE_RESCUE_FRAMES = 990;
+export const SOCIAL_NATIVE_RESCUE_FRAMES = 860;
 
-// Measured zh-CN-XiaoxiaoNeural (+10%) durations:
-// 3.816 / 4.536 / 5.040 / 5.112 / 4.056 / 3.912 / 4.560 seconds.
-// Each authored slot preserves the natural audio with 0.18–0.42s breathing room.
+// The neural clips are never time-stretched. These slots clip only measured
+// trailing silence so spoken phrases turn over quickly in a social feed.
 const slots = [
-  {from: 0, duration: 120, audio: 'assets/social-native-rescue-v1/01-hook.wav'},
-  {from: 120, duration: 145, audio: 'assets/social-native-rescue-v1/02-problem.wav'},
-  {from: 265, duration: 160, audio: 'assets/social-native-rescue-v1/03-cut-info.wav'},
-  {from: 425, duration: 160, audio: 'assets/social-native-rescue-v1/04-cut-color.wav'},
-  {from: 585, duration: 130, audio: 'assets/social-native-rescue-v1/05-one-cta.wav'},
-  {from: 715, duration: 130, audio: 'assets/social-native-rescue-v1/06-reveal.wav'},
-  {from: 845, duration: 145, audio: 'assets/social-native-rescue-v1/07-payoff.wav'},
+  {from: 0, duration: 104, audio: 'assets/social-native-rescue-v1/01-hook.wav'},
+  {from: 104, duration: 126, audio: 'assets/social-native-rescue-v1/02-problem.wav'},
+  {from: 230, duration: 141, audio: 'assets/social-native-rescue-v1/03-cut-info.wav'},
+  {from: 371, duration: 143, audio: 'assets/social-native-rescue-v1/04-cut-color.wav'},
+  {from: 514, duration: 111, audio: 'assets/social-native-rescue-v1/05-one-cta.wav'},
+  {from: 625, duration: 107, audio: 'assets/social-native-rescue-v1/06-reveal.wav'},
+  {from: 732, duration: 128, audio: 'assets/social-native-rescue-v1/07-payoff.wav'},
 ] as const;
 
 const c = {
@@ -75,7 +74,7 @@ const UglyPage: React.FC<{compact?: boolean}> = ({compact = false}) => {
 const HookScene = () => {
   const frame = useCurrentFrame();
   const shake = frame < 22 ? Math.sin(frame * 2.4) * 7 : 0;
-  const zoom = interpolate(frame, [0, 34, 119], [1.18, 1.02, 1.06], {...clamp, easing: Easing.bezier(0.2, 0.8, 0.2, 1)});
+  const zoom = interpolate(frame, [0, 34, 103], [1.18, 1.02, 1.06], {...clamp, easing: Easing.bezier(0.2, 0.8, 0.2, 1)});
   const stamp = interpolate(frame, [8, 19], [1.7, 1], {...clamp, easing: Easing.bezier(0.16, 1, 0.3, 1)});
   return <AbsoluteFill style={{backgroundColor: c.bg, overflow: 'hidden'}}>
     <div style={{position: 'absolute', inset: 0, translate: `${shake}px 0px`, scale: zoom}}><PhoneShell accent={c.red}><UglyPage /></PhoneShell></div>
@@ -105,7 +104,7 @@ const ProblemScene = () => {
 
 const CutInfoScene = () => {
   const frame = useCurrentFrame();
-  const cut = interpolate(frame, [20, 78], [0, 1], {...clamp, easing: Easing.bezier(0.2, 0.8, 0.2, 1)});
+  const cut = interpolate(frame, [12, 70], [0, 1], {...clamp, easing: Easing.bezier(0.2, 0.8, 0.2, 1)});
   const badScale = 1 - cut * 0.08;
   return <AbsoluteFill style={{backgroundColor: c.bg}}>
     <div style={{position: 'absolute', top: 90, left: 56, fontFamily, fontSize: 108, fontWeight: 1000, color: c.yellow}}>第一刀</div>
@@ -118,7 +117,7 @@ const CutInfoScene = () => {
 
 const CutColorScene = () => {
   const frame = useCurrentFrame();
-  const p = interpolate(frame, [12, 82], [0, 1], {...clamp, easing: Easing.bezier(0.16, 1, 0.3, 1)});
+  const p = interpolate(frame, [10, 76], [0, 1], {...clamp, easing: Easing.bezier(0.16, 1, 0.3, 1)});
   const rainbow = ['#ff5d7d','#6b7cff','#00d5ff','#ffb21d','#9a65ff','#33d68f','#ff6e40'];
   const clean = [c.bg, c.blue, c.green];
   return <AbsoluteFill style={{backgroundColor: c.bg, fontFamily}}>
@@ -134,7 +133,7 @@ const CutColorScene = () => {
 
 const OneCtaScene = () => {
   const frame = useCurrentFrame();
-  const merge = interpolate(frame, [15, 80], [0, 1], {...clamp, easing: Easing.bezier(0.16, 1, 0.3, 1)});
+  const merge = interpolate(frame, [10, 62], [0, 1], {...clamp, easing: Easing.bezier(0.16, 1, 0.3, 1)});
   const buttons = ['打开', '收藏', '对比', '立即体验'];
   return <AbsoluteFill style={{backgroundColor: c.bg, fontFamily}}>
     <div style={{position: 'absolute', top: 98, left: 58, fontSize: 100, fontWeight: 1000, color: c.yellow}}>第三刀</div>
@@ -147,7 +146,7 @@ const OneCtaScene = () => {
 
 const RevealScene = () => {
   const frame = useCurrentFrame();
-  const wipe = interpolate(frame, [12, 108], [0, 1], {...clamp, easing: Easing.bezier(0.16, 1, 0.3, 1)});
+  const wipe = interpolate(frame, [8, 92], [0, 1], {...clamp, easing: Easing.bezier(0.16, 1, 0.3, 1)});
   const divider = (1 - wipe) * 940;
   return <AbsoluteFill style={{backgroundColor: c.bg, fontFamily}}>
     <div style={{position: 'absolute', top: 80, left: 55, right: 55, display: 'flex', justifyContent: 'space-between', fontSize: 38, fontWeight: 950}}><span style={{color: c.red}}>BEFORE</span><span style={{color: c.green}}>AFTER</span></div>
@@ -164,7 +163,7 @@ const RevealScene = () => {
 const PayoffScene = () => {
   const frame = useCurrentFrame();
   const pulse = 1 + Math.sin(frame / 8) * 0.018;
-  const pop = interpolate(frame, [45, 70], [0, 1], {...clamp, easing: Easing.bezier(0.16, 1, 0.3, 1)});
+  const pop = interpolate(frame, [35, 58], [0, 1], {...clamp, easing: Easing.bezier(0.16, 1, 0.3, 1)});
   return <AbsoluteFill style={{background: 'radial-gradient(circle at 50% 35%, #17375a 0%, #080a0f 55%)', fontFamily, color: c.text}}>
     <div style={{position: 'absolute', left: 55, right: 55, top: 150, fontSize: 72, lineHeight: 1.06, fontWeight: 1000, textAlign: 'center'}}>AI 不替你审美</div>
     <div style={{position: 'absolute', left: 55, right: 55, top: 330, fontSize: 80, lineHeight: 1.06, fontWeight: 1000, textAlign: 'center', color: c.yellow, scale: pulse}}>只让试错更快</div>
