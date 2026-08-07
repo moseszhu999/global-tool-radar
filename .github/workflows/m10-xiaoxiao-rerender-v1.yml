@@ -1,0 +1,180 @@
+name: M10 Xiaoxiao Replacement Render v1
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - .github/workflows/m10-xiaoxiao-rerender-v1.yml
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  render:
+    name: Render approved Xiaoxiao replacement candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      TOOLRADAR_SOURCE_HEAD: a6a02ff62f80422e7ce7a8581ec54fb2f1b80218
+      APPROVED_AUDIO_RUN_ID: '31151796004'
+      APPROVED_AUDIO_ARTIFACT: toolradar-m10-neural-voice-auditions-v1
+      APPROVED_WAV_SHA256: 816d9ce2f2ea8090f1eb1940f30b7ad19e9d53ae388fbaa0346b063f2c45ac9e
+      EXPECTED_FRAMES: '3079'
+      EXPECTED_FPS: '30'
+      EXPECTED_WIDTH: '1080'
+      EXPECTED_HEIGHT: '1920'
+    steps:
+      - name: Validate temporary render carrier
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = "moseszhu999/global-tool-radar"
+          test "$GITHUB_HEAD_REF" = "ci/m10-xiaoxiao-rerender-v1"
+          [[ "$TOOLRADAR_SOURCE_HEAD" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$APPROVED_WAV_SHA256" =~ ^[0-9a-f]{64}$ ]]
+
+      - name: Checkout exact approved-timeline ToolRadar source
+        uses: actions/checkout@v4
+        with:
+          repository: moseszhu999/global-tool-radar
+          ref: a6a02ff62f80422e7ce7a8581ec54fb2f1b80218
+          path: source
+          fetch-depth: 1
+          persist-credentials: false
+          clean: true
+
+      - name: Prove exact source and clean tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C "$GITHUB_WORKSPACE/source" rev-parse HEAD)" = "$TOOLRADAR_SOURCE_HEAD"
+          test -z "$(git -C "$GITHUB_WORKSPACE/source" status --porcelain)"
+
+      - name: Download the exact human-approved Xiaoxiao audition artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: toolradar-m10-neural-voice-auditions-v1
+          path: ${{ runner.temp }}/approved-audio
+          github-token: ${{ github.token }}
+          repository: moseszhu999/global-tool-radar
+          run-id: 31151796004
+
+      - name: Verify exact approved WAV before staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          wav="$(find "$RUNNER_TEMP/approved-audio" -type f -name 'toolradar-xiaoxiao-v1.wav' -print -quit)"
+          test -n "$wav"
+          actual_sha="$(sha256sum "$wav" | awk '{print $1}')"
+          test "$actual_sha" = "$APPROVED_WAV_SHA256"
+          duration="$(ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 "$wav")"
+          node -e 'const d=Number(process.argv[1]); if (!(d > 102.60 && d < 102.65)) { console.error(`unexpected approved audio duration ${d}`); process.exit(1); }' "$duration"
+          mkdir -p "$GITHUB_WORKSPACE/source/apps/remotion-video/public/assets"
+          cp "$wav" "$GITHUB_WORKSPACE/source/apps/remotion-video/public/assets/toolradar-ai-design-xiaoxiao-approved.wav"
+          printf '%s\n' "$actual_sha" > "$RUNNER_TEMP/approved-audio-sha256.txt"
+          printf '%s\n' "$duration" > "$RUNNER_TEMP/approved-audio-duration.txt"
+
+      - name: Install Remotion dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE/source/apps/remotion-video"
+          npm install --no-audit --no-fund
+          npx remotion browser ensure
+
+      - name: Validate approved-timeline contracts and composition
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE/source/apps/remotion-video"
+          npm run check
+          npx remotion compositions src/index.ts > "$RUNNER_TEMP/remotion-compositions.txt"
+          cat "$RUNNER_TEMP/remotion-compositions.txt"
+          grep -F 'ToolRadarAIDesignPortrait' "$RUNNER_TEMP/remotion-compositions.txt" >/dev/null
+          grep -F '3079' "$RUNNER_TEMP/remotion-compositions.txt" >/dev/null
+
+      - name: Render replacement full video with exact approved audio
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE/source/apps/remotion-video"
+          npm run render:final
+          test -s out/toolradar-ai-design-xiaoxiao-final.mp4
+
+      - name: Run M10 technical media preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          video="$GITHUB_WORKSPACE/source/apps/remotion-video/out/toolradar-ai-design-xiaoxiao-final.mp4"
+          ffprobe -v error -show_streams -show_format -of json "$video" > "$RUNNER_TEMP/xiaoxiao-final-ffprobe.json"
+          VIDEO="$video" node --input-type=module <<'NODE'
+          import {readFile, writeFile, stat} from 'node:fs/promises';
+          import {createHash} from 'node:crypto';
+          import {execFileSync} from 'node:child_process';
+          const probe = JSON.parse(await readFile(process.env.RUNNER_TEMP + '/xiaoxiao-final-ffprobe.json', 'utf8'));
+          const videoStream = probe.streams.find((s) => s.codec_type === 'video');
+          const audioStream = probe.streams.find((s) => s.codec_type === 'audio');
+          if (!videoStream || !audioStream) throw new Error('replacement MP4 must contain both video and audio streams');
+          if (Number(videoStream.width) !== Number(process.env.EXPECTED_WIDTH) || Number(videoStream.height) !== Number(process.env.EXPECTED_HEIGHT)) throw new Error('unexpected replacement dimensions');
+          const duration = Number(probe.format?.duration);
+          if (!(duration > 102.62 && duration < 102.66)) throw new Error(`unexpected replacement duration ${duration}`);
+          const data = await readFile(process.env.VIDEO);
+          const sha256 = createHash('sha256').update(data).digest('hex');
+          const framesText = execFileSync('ffprobe', ['-v','error','-count_frames','-select_streams','v:0','-show_entries','stream=nb_read_frames','-of','default=nw=1:nk=1',process.env.VIDEO], {encoding:'utf8'}).trim();
+          const frames = Number(framesText);
+          if (frames !== Number(process.env.EXPECTED_FRAMES)) throw new Error(`unexpected replacement frame count ${frames}`);
+          const receipt = {
+            schemaVersion: 'toolradar.m10-xiaoxiao-replacement-render.v1',
+            exactToolRadarSourceHead: process.env.TOOLRADAR_SOURCE_HEAD,
+            selectedVoice: 'zh-CN-XiaoxiaoNeural',
+            approvedVoiceoverSha256: process.env.APPROVED_WAV_SHA256,
+            approvedAudioArtifactRunId: Number(process.env.APPROVED_AUDIO_RUN_ID),
+            outputFilename: 'toolradar-ai-design-xiaoxiao-final.mp4',
+            outputSha256: sha256,
+            outputBytes: (await stat(process.env.VIDEO)).size,
+            durationSeconds: duration,
+            width: Number(videoStream.width),
+            height: Number(videoStream.height),
+            frames,
+            videoCodec: videoStream.codec_name,
+            audioCodec: audioStream.codec_name,
+            replacementFullVideoRendered: true,
+            technicalMediaIntegrityPassed: true,
+            humanWatchedReplacementFullVideo: false,
+            humanQualityApproved: false,
+            publicationAllowed: false,
+            publicationPerformed: false,
+            analyticsObserved: false,
+          };
+          await writeFile(process.env.RUNNER_TEMP + '/xiaoxiao-final-receipt.json', JSON.stringify(receipt, null, 2) + '\n');
+          console.log(JSON.stringify(receipt, null, 2));
+          NODE
+          ffmpeg -hide_banner -nostats -i "$video" -vf 'blackdetect=d=0.5:pix_th=0.10' -an -f null - 2> "$RUNNER_TEMP/xiaoxiao-blackdetect.txt" || true
+          ffmpeg -hide_banner -nostats -i "$video" -af 'silencedetect=noise=-45dB:d=1.0' -vn -f null - 2> "$RUNNER_TEMP/xiaoxiao-silencedetect.txt" || true
+          if grep -F 'black_start:' "$RUNNER_TEMP/xiaoxiao-blackdetect.txt" >/dev/null; then
+            echo 'Detected a black interval >=0.5s' >&2
+            cat "$RUNNER_TEMP/xiaoxiao-blackdetect.txt" >&2
+            exit 1
+          fi
+
+      - name: Upload replacement video and receipts
+        uses: actions/upload-artifact@v4
+        with:
+          name: toolradar-m10-xiaoxiao-replacement-v1
+          path: |
+            source/apps/remotion-video/out/toolradar-ai-design-xiaoxiao-final.mp4
+            ${{ runner.temp }}/xiaoxiao-final-receipt.json
+            ${{ runner.temp }}/xiaoxiao-final-ffprobe.json
+            ${{ runner.temp }}/xiaoxiao-blackdetect.txt
+            ${{ runner.temp }}/xiaoxiao-silencedetect.txt
+            ${{ runner.temp }}/approved-audio-sha256.txt
+            ${{ runner.temp }}/approved-audio-duration.txt
+            ${{ runner.temp }}/remotion-compositions.txt
+          if-no-files-found: error
+          retention-days: 30
