@@ -21,8 +21,7 @@ jobs:
     runs-on:
       - self-hosted
       - macOS
-      - macmini
-      - arm64
+      - ARM64
     timeout-minutes: 60
     env:
       CI: "true"
