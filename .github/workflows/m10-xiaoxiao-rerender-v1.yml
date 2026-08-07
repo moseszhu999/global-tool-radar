@@ -140,15 +140,18 @@ jobs:
           test -s out/toolradar-ai-design-xiaoxiao-final.mp4
 
       - name: Run M10 technical media preflight
+        id: technical_preflight
         shell: bash
         run: |
           set -euo pipefail
           video="$GITHUB_WORKSPACE/source/apps/remotion-video/out/toolradar-ai-design-xiaoxiao-final.mp4"
           ffprobe -v error -show_streams -show_format -of json "$video" > "$RUNNER_TEMP/xiaoxiao-final-ffprobe.json"
+          ffprobe -v error -count_frames -select_streams v:0 -show_entries stream=nb_read_frames -of default=nw=1:nk=1 "$video" > "$RUNNER_TEMP/xiaoxiao-frame-count.txt"
+          ffmpeg -hide_banner -nostats -i "$video" -vf 'blackdetect=d=0.5:pix_th=0.10' -an -f null - 2> "$RUNNER_TEMP/xiaoxiao-blackdetect.txt" || true
+          ffmpeg -hide_banner -nostats -i "$video" -af 'silencedetect=noise=-45dB:d=1.0' -vn -f null - 2> "$RUNNER_TEMP/xiaoxiao-silencedetect.txt" || true
           VIDEO="$video" node --input-type=module <<'NODE'
           import {readFile, writeFile, stat} from 'node:fs/promises';
           import {createHash} from 'node:crypto';
-          import {execFileSync} from 'node:child_process';
           const probe = JSON.parse(await readFile(process.env.RUNNER_TEMP + '/xiaoxiao-final-ffprobe.json', 'utf8'));
           const videoStream = probe.streams.find((s) => s.codec_type === 'video');
           const audioStream = probe.streams.find((s) => s.codec_type === 'audio');
@@ -158,8 +161,7 @@ jobs:
           if (!(duration > 102.62 && duration < 102.66)) throw new Error(`unexpected replacement duration ${duration}`);
           const data = await readFile(process.env.VIDEO);
           const sha256 = createHash('sha256').update(data).digest('hex');
-          const framesText = execFileSync('ffprobe', ['-v','error','-count_frames','-select_streams','v:0','-show_entries','stream=nb_read_frames','-of','default=nw=1:nk=1',process.env.VIDEO], {encoding:'utf8'}).trim();
-          const frames = Number(framesText);
+          const frames = Number((await readFile(process.env.RUNNER_TEMP + '/xiaoxiao-frame-count.txt', 'utf8')).trim());
           if (frames !== Number(process.env.EXPECTED_FRAMES)) throw new Error(`unexpected replacement frame count ${frames}`);
           const receipt = {
             schemaVersion: 'toolradar.m10-xiaoxiao-replacement-render.v1',
@@ -188,13 +190,29 @@ jobs:
           await writeFile(process.env.RUNNER_TEMP + '/xiaoxiao-final-receipt.json', JSON.stringify(receipt, null, 2) + '\n');
           console.log(JSON.stringify(receipt, null, 2));
           NODE
-          ffmpeg -hide_banner -nostats -i "$video" -vf 'blackdetect=d=0.5:pix_th=0.10' -an -f null - 2> "$RUNNER_TEMP/xiaoxiao-blackdetect.txt" || true
-          ffmpeg -hide_banner -nostats -i "$video" -af 'silencedetect=noise=-45dB:d=1.0' -vn -f null - 2> "$RUNNER_TEMP/xiaoxiao-silencedetect.txt" || true
           if grep -F 'black_start:' "$RUNNER_TEMP/xiaoxiao-blackdetect.txt" >/dev/null; then
             echo 'Detected a black interval >=0.5s' >&2
             cat "$RUNNER_TEMP/xiaoxiao-blackdetect.txt" >&2
             exit 1
           fi
+
+      - name: Upload failed preflight diagnostics
+        if: failure() && steps.technical_preflight.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: toolradar-m10-xiaoxiao-preflight-failure-v1
+          path: |
+            source/apps/remotion-video/out/toolradar-ai-design-xiaoxiao-final.mp4
+            ${{ runner.temp }}/xiaoxiao-final-receipt.json
+            ${{ runner.temp }}/xiaoxiao-final-ffprobe.json
+            ${{ runner.temp }}/xiaoxiao-frame-count.txt
+            ${{ runner.temp }}/xiaoxiao-blackdetect.txt
+            ${{ runner.temp }}/xiaoxiao-silencedetect.txt
+            ${{ runner.temp }}/approved-audio-sha256.txt
+            ${{ runner.temp }}/approved-audio-duration.txt
+            ${{ runner.temp }}/remotion-compositions.txt
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Upload replacement video and receipts
         uses: actions/upload-artifact@v4
@@ -204,6 +222,7 @@ jobs:
             source/apps/remotion-video/out/toolradar-ai-design-xiaoxiao-final.mp4
             ${{ runner.temp }}/xiaoxiao-final-receipt.json
             ${{ runner.temp }}/xiaoxiao-final-ffprobe.json
+            ${{ runner.temp }}/xiaoxiao-frame-count.txt
             ${{ runner.temp }}/xiaoxiao-blackdetect.txt
             ${{ runner.temp }}/xiaoxiao-silencedetect.txt
             ${{ runner.temp }}/approved-audio-sha256.txt
