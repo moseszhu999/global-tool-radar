@@ -1,18 +1,21 @@
 import React from 'react';
-import {AbsoluteFill, Easing, Sequence, interpolate, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
+import {AbsoluteFill, Easing, Sequence, interpolate, staticFile, useCurrentFrame} from 'remotion';
 import {Audio} from '@remotion/media';
 
 export const SOCIAL_NATIVE_RESCUE_FPS = 30;
 export const SOCIAL_NATIVE_RESCUE_FRAMES = 990;
 
+// Measured zh-CN-XiaoxiaoNeural (+10%) durations:
+// 3.816 / 4.536 / 5.040 / 5.112 / 4.056 / 3.912 / 4.560 seconds.
+// Each authored slot preserves the natural audio with 0.18–0.42s breathing room.
 const slots = [
-  {from: 0, duration: 135, audio: 'assets/social-native-rescue-v1/01-hook.wav'},
-  {from: 135, duration: 165, audio: 'assets/social-native-rescue-v1/02-problem.wav'},
-  {from: 300, duration: 135, audio: 'assets/social-native-rescue-v1/03-cut-info.wav'},
-  {from: 435, duration: 120, audio: 'assets/social-native-rescue-v1/04-cut-color.wav'},
-  {from: 555, duration: 135, audio: 'assets/social-native-rescue-v1/05-one-cta.wav'},
-  {from: 690, duration: 165, audio: 'assets/social-native-rescue-v1/06-reveal.wav'},
-  {from: 855, duration: 135, audio: 'assets/social-native-rescue-v1/07-payoff.wav'},
+  {from: 0, duration: 120, audio: 'assets/social-native-rescue-v1/01-hook.wav'},
+  {from: 120, duration: 145, audio: 'assets/social-native-rescue-v1/02-problem.wav'},
+  {from: 265, duration: 160, audio: 'assets/social-native-rescue-v1/03-cut-info.wav'},
+  {from: 425, duration: 160, audio: 'assets/social-native-rescue-v1/04-cut-color.wav'},
+  {from: 585, duration: 130, audio: 'assets/social-native-rescue-v1/05-one-cta.wav'},
+  {from: 715, duration: 130, audio: 'assets/social-native-rescue-v1/06-reveal.wav'},
+  {from: 845, duration: 145, audio: 'assets/social-native-rescue-v1/07-payoff.wav'},
 ] as const;
 
 const c = {
@@ -29,13 +32,11 @@ const c = {
 };
 
 const fontFamily = 'Noto Sans CJK SC, Microsoft YaHei, sans-serif';
-
 const clamp = {extrapolateLeft: 'clamp' as const, extrapolateRight: 'clamp' as const};
 
-const Caption: React.FC<{children: React.ReactNode; keyword?: string}> = ({children, keyword}) => (
+const Caption: React.FC<{children: React.ReactNode}> = ({children}) => (
   <div style={{position: 'absolute', left: 58, right: 58, bottom: 92, zIndex: 30, textAlign: 'center', fontFamily, fontSize: 52, lineHeight: 1.18, fontWeight: 950, color: c.text, textShadow: '0 4px 18px rgba(0,0,0,.82)'}}>
     {children}
-    {keyword ? <div style={{display: 'inline', color: c.yellow}}> {keyword}</div> : null}
   </div>
 );
 
@@ -74,13 +75,13 @@ const UglyPage: React.FC<{compact?: boolean}> = ({compact = false}) => {
 const HookScene = () => {
   const frame = useCurrentFrame();
   const shake = frame < 22 ? Math.sin(frame * 2.4) * 7 : 0;
-  const zoom = interpolate(frame, [0, 34, 134], [1.18, 1.02, 1.06], {...clamp, easing: Easing.bezier(0.2, 0.8, 0.2, 1)});
+  const zoom = interpolate(frame, [0, 34, 119], [1.18, 1.02, 1.06], {...clamp, easing: Easing.bezier(0.2, 0.8, 0.2, 1)});
   const stamp = interpolate(frame, [8, 19], [1.7, 1], {...clamp, easing: Easing.bezier(0.16, 1, 0.3, 1)});
   return <AbsoluteFill style={{backgroundColor: c.bg, overflow: 'hidden'}}>
     <div style={{position: 'absolute', inset: 0, translate: `${shake}px 0px`, scale: zoom}}><PhoneShell accent={c.red}><UglyPage /></PhoneShell></div>
     <div style={{position: 'absolute', top: 115, left: 58, zIndex: 20, fontFamily, fontSize: 33, fontWeight: 950, color: c.red, letterSpacing: 2}}>页面急救现场</div>
     <div style={{position: 'absolute', top: 390, left: 170, right: 170, zIndex: 25, border: `8px solid ${c.red}`, color: c.red, fontFamily, fontSize: 94, lineHeight: 1, fontWeight: 1000, textAlign: 'center', padding: '28px 10px', rotate: '-8deg', scale: stamp, backgroundColor: 'rgba(8,10,15,.72)'}}>太 挤 了</div>
-    <Caption>这个页面，丑到我自己都不想点。</Caption>
+    <Caption>这页面丑到我都不想点。<span style={{color: c.yellow}}>三刀救回来。</span></Caption>
   </AbsoluteFill>;
 };
 
@@ -89,7 +90,7 @@ const ProblemScene = () => {
   const marks = [
     {t: 6, label: '按钮太多', top: 1230, left: 120},
     {t: 38, label: '颜色太多', top: 290, left: 650},
-    {t: 76, label: '没有重点', top: 690, left: 110},
+    {t: 76, label: '重点没了', top: 690, left: 110},
   ];
   return <AbsoluteFill style={{backgroundColor: c.bg}}>
     <PhoneShell><UglyPage /></PhoneShell>
@@ -98,7 +99,7 @@ const ProblemScene = () => {
       return <div key={m.label} style={{position: 'absolute', top: m.top, left: m.left, zIndex: 20, padding: '13px 18px', borderRadius: 999, backgroundColor: c.red, color: '#fff', fontFamily, fontSize: 28, fontWeight: 950, scale: s}}>{m.label}</div>;
     })}
     <div style={{position: 'absolute', top: 95, left: 60, right: 60, fontFamily, fontSize: 66, lineHeight: 1.02, fontWeight: 1000, color: c.text}}>所有东西都在<br/><span style={{color: c.red}}>抢注意力</span></div>
-    <Caption>按钮太多，颜色太多，<span style={{color: c.red}}>没有重点。</span></Caption>
+    <Caption>按钮太多，颜色太多，<span style={{color: c.red}}>重点没了。</span></Caption>
   </AbsoluteFill>;
 };
 
@@ -111,7 +112,7 @@ const CutInfoScene = () => {
     <div style={{position: 'absolute', top: 200, left: 60, fontFamily, fontSize: 58, fontWeight: 950, color: c.text}}>砍信息</div>
     <div style={{opacity: 1 - cut, scale: badScale}}><PhoneShell accent={c.red}><UglyPage /></PhoneShell></div>
     <div style={{opacity: cut, scale: 0.92 + cut * 0.08}}><PhoneShell accent={c.green}><UglyPage compact /></PhoneShell></div>
-    <Caption>首页只留搜索、趋势和三个推荐。</Caption>
+    <Caption>只留搜索、趋势、<span style={{color: c.green}}>三个推荐。</span></Caption>
   </AbsoluteFill>;
 };
 
@@ -127,7 +128,7 @@ const CutColorScene = () => {
       <div style={{display: 'flex', gap: 12, opacity: 1 - p}}>{rainbow.map((x) => <div key={x} style={{flex: 1, height: 260, borderRadius: 28, backgroundColor: x}} />)}</div>
       <div style={{display: 'flex', gap: 24, opacity: p, translate: `0px ${70 - p * 70}px`}}>{clean.map((x, i) => <div key={x} style={{flex: 1, height: 310, borderRadius: 38, backgroundColor: x, border: `2px solid ${c.line}`, display: 'flex', alignItems: 'flex-end', padding: 20, color: i === 0 ? c.text : '#061019', fontSize: 25, fontWeight: 950}}>{['背景','强调','成功'][i]}</div>)}</div>
     </div>
-    <Caption>背景、强调、成功。<span style={{color: c.yellow}}>就三套。</span></Caption>
+    <Caption>背景、强调、成功。<span style={{color: c.yellow}}>三套够了。</span></Caption>
   </AbsoluteFill>;
 };
 
@@ -140,23 +141,23 @@ const OneCtaScene = () => {
     <div style={{position: 'absolute', top: 210, left: 60, fontSize: 58, fontWeight: 950}}>只留一个主按钮</div>
     <div style={{position: 'absolute', left: 85, right: 85, top: 480, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, opacity: 1 - merge}}>{buttons.map((x, i) => <div key={x} style={{height: 150, borderRadius: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: ['#7b61ff','#ff6f61','#24c8db','#ffb020'][i], fontSize: 33, fontWeight: 950}}>{x}</div>)}</div>
     <div style={{position: 'absolute', left: 85, right: 85, top: 570, height: 180, borderRadius: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: c.blue, color: '#061019', fontSize: 48, fontWeight: 1000, opacity: merge, scale: 0.8 + merge * 0.2, boxShadow: '0 24px 70px rgba(85,166,255,.32)'}}>查看今日趋势</div>
-    <Caption>用户不用猜：<span style={{color: c.blue}}>到底该点哪儿。</span></Caption>
+    <Caption>只留一个主按钮。<span style={{color: c.blue}}>别让用户猜。</span></Caption>
   </AbsoluteFill>;
 };
 
 const RevealScene = () => {
   const frame = useCurrentFrame();
-  const wipe = interpolate(frame, [18, 120], [0, 1], {...clamp, easing: Easing.bezier(0.16, 1, 0.3, 1)});
-  const x = 70 + wipe * 940;
+  const wipe = interpolate(frame, [12, 108], [0, 1], {...clamp, easing: Easing.bezier(0.16, 1, 0.3, 1)});
+  const divider = (1 - wipe) * 940;
   return <AbsoluteFill style={{backgroundColor: c.bg, fontFamily}}>
     <div style={{position: 'absolute', top: 80, left: 55, right: 55, display: 'flex', justifyContent: 'space-between', fontSize: 38, fontWeight: 950}}><span style={{color: c.red}}>BEFORE</span><span style={{color: c.green}}>AFTER</span></div>
     <div style={{position: 'absolute', left: 70, right: 70, top: 190, bottom: 260, borderRadius: 44, overflow: 'hidden', border: `2px solid ${c.line}`}}>
       <AbsoluteFill><UglyPage /></AbsoluteFill>
-      <div style={{position: 'absolute', inset: 0, clipPath: `inset(0 0 0 ${wipe * 100}%)`}}><UglyPage compact /></div>
-      <div style={{position: 'absolute', top: 0, bottom: 0, left: x - 70, width: 7, backgroundColor: '#fff', boxShadow: '0 0 30px rgba(255,255,255,.8)'}} />
-      <div style={{position: 'absolute', top: '46%', left: x - 94, width: 48, height: 48, borderRadius: 999, backgroundColor: '#fff', color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 25, fontWeight: 1000}}>›</div>
+      <div style={{position: 'absolute', inset: 0, clipPath: `inset(0 0 0 ${(1 - wipe) * 100}%)`}}><UglyPage compact /></div>
+      <div style={{position: 'absolute', top: 0, bottom: 0, left: divider, width: 7, backgroundColor: '#fff', boxShadow: '0 0 30px rgba(255,255,255,.8)'}} />
+      <div style={{position: 'absolute', top: '46%', left: divider - 24, width: 48, height: 48, borderRadius: 999, backgroundColor: '#fff', color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 25, fontWeight: 1000}}>‹</div>
     </div>
-    <Caption>左边像功能仓库。<span style={{color: c.green}}>右边才想继续逛。</span></Caption>
+    <Caption>左边像仓库，<span style={{color: c.green}}>右边才像产品。</span></Caption>
   </AbsoluteFill>;
 };
 
@@ -165,13 +166,13 @@ const PayoffScene = () => {
   const pulse = 1 + Math.sin(frame / 8) * 0.018;
   const pop = interpolate(frame, [45, 70], [0, 1], {...clamp, easing: Easing.bezier(0.16, 1, 0.3, 1)});
   return <AbsoluteFill style={{background: 'radial-gradient(circle at 50% 35%, #17375a 0%, #080a0f 55%)', fontFamily, color: c.text}}>
-    <div style={{position: 'absolute', left: 55, right: 55, top: 150, fontSize: 72, lineHeight: 1.06, fontWeight: 1000, textAlign: 'center'}}>AI 不是替你审美</div>
-    <div style={{position: 'absolute', left: 55, right: 55, top: 330, fontSize: 80, lineHeight: 1.06, fontWeight: 1000, textAlign: 'center', color: c.yellow, scale: pulse}}>是让你更快试错</div>
+    <div style={{position: 'absolute', left: 55, right: 55, top: 150, fontSize: 72, lineHeight: 1.06, fontWeight: 1000, textAlign: 'center'}}>AI 不替你审美</div>
+    <div style={{position: 'absolute', left: 55, right: 55, top: 330, fontSize: 80, lineHeight: 1.06, fontWeight: 1000, textAlign: 'center', color: c.yellow, scale: pulse}}>只让试错更快</div>
     <div style={{position: 'absolute', left: 90, right: 90, top: 680, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 22, scale: pop}}>
       <div style={{height: 230, borderRadius: 38, border: `3px solid ${c.red}`, backgroundColor: 'rgba(255,96,109,.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 78, fontWeight: 1000, color: c.red}}>左</div>
       <div style={{height: 230, borderRadius: 38, border: `3px solid ${c.green}`, backgroundColor: 'rgba(87,227,155,.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 78, fontWeight: 1000, color: c.green}}>右</div>
     </div>
-    <div style={{position: 'absolute', left: 55, right: 55, bottom: 140, textAlign: 'center', fontSize: 43, fontWeight: 900}}>你会选哪边？</div>
+    <div style={{position: 'absolute', left: 55, right: 55, bottom: 140, textAlign: 'center', fontSize: 43, fontWeight: 900}}>你选哪边？</div>
   </AbsoluteFill>;
 };
 
