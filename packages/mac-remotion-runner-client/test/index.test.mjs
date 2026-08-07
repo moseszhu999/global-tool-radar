@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {createMacRemotionRunnerClient, MacRemotionRunnerError} from '../src/index.mjs';
+import {createMacRemotionRunnerClient, DEFAULT_OPERATIONS, MacRemotionRunnerError} from '../src/index.mjs';
 
 const jsonResponse = (payload, {status = 200} = {}) => ({
   ok: status >= 200 && status < 300,
@@ -10,7 +10,7 @@ const jsonResponse = (payload, {status = 200} = {}) => ({
   text: async () => JSON.stringify(payload),
 });
 
-test('health is unauthenticated while job submission uses bearer auth', async () => {
+test('health is unauthenticated while live render submission uses bearer auth', async () => {
   const calls = [];
   const client = createMacRemotionRunnerClient({
     baseUrl: 'https://runner.example.test/',
@@ -26,12 +26,23 @@ test('health is unauthenticated while job submission uses bearer auth', async ()
 
   assert.equal(calls[0].url, 'https://runner.example.test/health');
   assert.equal(calls[0].init.headers.authorization, undefined);
-  assert.equal(calls[1].url, 'https://runner.example.test/v1/jobs');
+  assert.equal(calls[1].url, 'https://runner.example.test/v1/render');
   assert.equal(calls[1].init.headers.authorization, 'Bearer secret-token');
   assert.equal(calls[1].init.body, JSON.stringify({title: 'test'}));
 });
 
-test('uses the six stable operation IDs and encodes job IDs', async () => {
+test('default operations match the live RemotionActions route contract', () => {
+  assert.deepEqual(DEFAULT_OPERATIONS, {
+    checkHealth: {method: 'GET', path: '/health', auth: false},
+    submitRenderJob: {method: 'POST', path: '/v1/render', auth: true},
+    getRenderJobStatus: {method: 'GET', path: '/v1/jobs/{jobId}', auth: true},
+    getRenderJobLog: {method: 'GET', path: '/v1/jobs/{jobId}/log', auth: true},
+    getRenderResult: {method: 'GET', path: '/v1/jobs/{jobId}', auth: true},
+    cancelRenderJob: {method: 'POST', path: '/v1/jobs/{jobId}/cancel', auth: true},
+  });
+});
+
+test('uses the six stable operation IDs and aliases completed result to the status resource', async () => {
   const urls = [];
   const client = createMacRemotionRunnerClient({
     baseUrl: 'https://runner.example.test',
@@ -54,7 +65,7 @@ test('uses the six stable operation IDs and encodes job IDs', async () => {
   assert.deepEqual(urls, [
     'https://runner.example.test/v1/jobs/job%20with%20space',
     'https://runner.example.test/v1/jobs/job%20with%20space/log',
-    'https://runner.example.test/v1/jobs/job%20with%20space/result',
+    'https://runner.example.test/v1/jobs/job%20with%20space',
     'https://runner.example.test/v1/jobs/job%20with%20space/cancel',
   ]);
   assert.equal(client.getDownloadUrl('job with space'), 'https://runner.example.test/v1/jobs/job%20with%20space/download');
