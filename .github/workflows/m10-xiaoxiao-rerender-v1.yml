@@ -56,6 +56,29 @@ jobs:
           test "$(git -C "$GITHUB_WORKSPACE/source" rev-parse HEAD)" = "$TOOLRADAR_SOURCE_HEAD"
           test -z "$(git -C "$GITHUB_WORKSPACE/source" status --porcelain)"
 
+      - name: Remove full-frame fade-to-black transitions for replacement candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          file="$GITHUB_WORKSPACE/source/apps/remotion-video/src/tool-radar-video.tsx"
+          FILE="$file" node --input-type=module <<'NODE'
+          import {readFile, writeFile} from 'node:fs/promises';
+          const file = process.env.FILE;
+          let text = await readFile(file, 'utf8');
+          const fade = "  const opacity = interpolate(frame, [0, 14, scene.duration - 14, scene.duration], [0, 1, 1, 0], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});\n";
+          const fadedReturn = "  return <div style={{position: 'absolute', inset: 0, opacity}}><Shell eyebrow={scene.eyebrow} title={scene.title} body={scene.body}>{panel}</Shell></div>;";
+          const solidReturn = "  return <div style={{position: 'absolute', inset: 0}}><Shell eyebrow={scene.eyebrow} title={scene.title} body={scene.body}>{panel}</Shell></div>;";
+          if ((text.match(new RegExp(fade.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&'), 'g')) || []).length !== 1) throw new Error('expected exactly one full-frame fade expression');
+          if ((text.match(new RegExp(fadedReturn.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&'), 'g')) || []).length !== 1) throw new Error('expected exactly one faded scene return');
+          text = text.replace(fade, '').replace(fadedReturn, solidReturn);
+          await writeFile(file, text);
+          NODE
+          grep -F "return <div style={{position: 'absolute', inset: 0}}><Shell" "$file" >/dev/null
+          if grep -F "inset: 0, opacity" "$file" >/dev/null; then
+            echo 'full-frame opacity fade still present' >&2
+            exit 1
+          fi
+
       - name: Install media inspection tools
         shell: bash
         run: |
@@ -144,6 +167,7 @@ jobs:
             selectedVoice: 'zh-CN-XiaoxiaoNeural',
             approvedVoiceoverSha256: process.env.APPROVED_WAV_SHA256,
             approvedAudioArtifactRunId: Number(process.env.APPROVED_AUDIO_RUN_ID),
+            fullFrameFadeToBlackRemoved: true,
             outputFilename: 'toolradar-ai-design-xiaoxiao-final.mp4',
             outputSha256: sha256,
             outputBytes: (await stat(process.env.VIDEO)).size,
