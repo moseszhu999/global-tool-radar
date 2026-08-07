@@ -1,11 +1,27 @@
 ---
 name: toolradar-video-creative-director
-description: Direct ToolRadar social/video creative work from product truth and benchmark research through storyboard, bounded asset generation, Remotion assembly, A/B review, and evidence gates. Use when creating, revising, or reviewing ToolRadar social videos, hooks, scenes, visual assets, pacing, or creative variants.
+description: Direct ToolRadar social/video creative work from product truth through benchmark research, storyboard, bounded asset generation, Remotion assembly, controlled A/B review, and evidence gates. Use for ToolRadar social-video creation, revision, shot-quality experiments, or creative review. Do not use for social publishing, analytics reporting, generic media rendering, or unrelated product UI implementation.
 ---
 
 # ToolRadar Video Creative Director
 
 Use this skill for creative direction and production control. It does not replace the media renderer or invent product facts.
+
+## When to use
+
+Use this skill when:
+- creating or revising a ToolRadar social/video candidate;
+- diagnosing why a rendered short still feels weak or inaccurate;
+- deciding whether Figma, deterministic UI, ComfyUI, Lottie, character/3D assets, or Remotion should own a visual layer;
+- testing a new visual tool or asset pipeline against an existing baseline;
+- preparing a candidate for a human creative gate.
+
+Do not use this skill when the task is only:
+- deterministic rendering of an already-approved composition;
+- social-platform publishing or account operations;
+- analytics/performance reporting;
+- unrelated product UI coding;
+- generic image generation with no ToolRadar creative decision.
 
 ## Boundaries
 
@@ -33,7 +49,7 @@ Resolve or explicitly mark unknown:
 - current creative hypothesis;
 - available media capabilities and approved workflow IDs.
 
-## Workflow
+## Instructions
 
 ### 1. Re-establish exact state before writing
 
@@ -144,6 +160,66 @@ Keep these false until explicitly proven:
 - `publicationAllowed`;
 - `publicationPerformed`;
 - `analyticsObserved`.
+
+## Example
+
+User intent:
+
+> The 14→5 scene is structurally right but still looks synthetic. Improve the production quality without changing the product claim or timing.
+
+Expected skill behavior:
+1. identify the exact current candidate and owner;
+2. keep UI copy, card logic, camera timing, and action timing deterministic;
+3. isolate environment/material treatment as the test variable;
+4. first try a 2-3 second controlled benchmark rather than rerendering the whole short;
+5. if using ComfyUI, select an approved reference-guided workflow with bounded denoise and record model/reference/seed/digests;
+6. render baseline and candidate with the same foreground logic;
+7. reject the generated candidate if it introduces semantic drift or steals focus, even when generation technically succeeds;
+8. promote only a visibly better candidate and still keep human/product/publication flags false until explicitly proven.
+
+Expected summary:
+- hypothesis;
+- controlled variable;
+- exact run/artifact identifiers;
+- visible comparison verdict;
+- promote/reject decision;
+- next experiment.
+
+## Common edge cases
+
+### Existing implementation owner
+
+If another PR/branch already owns the same creative implementation scope, do not create a parallel implementation. Switch to review, A/B evidence, or a non-overlapping skill/infrastructure scope.
+
+### Generated result is prettier but less accurate
+
+Reject it. Product focus and truth outrank decorative realism. Prefer lower-denoise/reference-guided generation or keep the deterministic baseline.
+
+### Generated result is accurate but only marginally different
+
+Do not automatically promote it. Consider render cost, reproducibility, licensing/provenance burden, and whether the difference is visible at social viewing speed.
+
+### ComfyUI workflow requires a custom node
+
+Default to blocked until the node source/version/dependencies and executable-code risk are reviewed. Prefer core-node workflows where practical.
+
+### Product UI must be readable
+
+Do not ask image generation to reproduce canonical UI text. Composite deterministic UI above generated environment/material layers.
+
+### Human says only “continue”
+
+Treat it as authorization to continue work, not as human creative approval of an exact artifact.
+
+### Render succeeds but visual quality is weak
+
+Record technical PASS and creative FAIL separately. Never convert media integrity into creative approval.
+
+## Testing this skill
+
+Read `references/skill-evals.md` and run the normal, missing-information, negative-control, and edge-case scenarios before marking a major skill revision ready.
+
+Test on disposable branches/artifacts or duplicate design files. Do not use production publishing or irreplaceable design files as skill-test targets.
 
 ## Output format
 
