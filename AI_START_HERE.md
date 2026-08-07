@@ -35,102 +35,99 @@
 - 播放、点赞、评论、收藏、完播等真实指标；
 - 本地模型或第三方工具实际运行（除非有真实运行证据）。
 
-## 4. 已确认的产品方向
+## 4. 已确认产品方向
 
 ### Training OS / 教材培训视频
 
-已验证的 `Remotion + 晓晓旁白 + PPT/界面演示` 路线是有效资产，适合课程、教材、培训、SOP、产品说明、结构化教学。目标是：**清楚、稳定、可控、低成本批量生产**。
+`Remotion + 晓晓旁白 + PPT/界面演示` 已验证适合课程、教材、培训、SOP、产品说明、结构化教学。目标是清楚、稳定、可控、低成本批量生产。
 
 ### ToolRadar / 社交视频运营
 
-旧 PPT/课件式候选即使技术和声音合格，也被真人明确判定**不适合直接作为抖音 / YouTube / Bilibili 社交运营成片发布**。
-
-社交视频必须优先优化：
-
-- 前 1–3 秒 hook；
-- 冲突 / 挑战 / 实测 / 翻车 / 反转 / before-after；
-- 人物、场景、动作、真实/自有素材、UI 道具等多来源画面；
-- 更高镜头/构图/字幕/声音变化密度；
-- 让人继续看、评论、收藏、转发，而不是先追求“完整讲清楚”。
-
-用户已经看过第一支 social-native v1，并明确反馈：**比 PPT 版好很多，已经有抖音 / Bilibili / YouTube 味，方向没问题；下一步要显著提高画面细节、素材丰富度和整体制作质量。**
-
-随后用户进一步建议采用高播放科学解释类视频常见的 **2.5D / 3D 卡通人物 + 场景叙事**。当前主方向因此更新为：
+旧 PPT/课件式候选被真人明确判定不适合直接作为抖音 / YouTube / Bilibili 社交运营成片。ToolRadar 当前方向已经明确为：
 
 **Social-native story structure + 2.5D/3D character storytelling + richer scene/material layer + UI/motion graphics as supporting props.**
 
 不要退回“更漂亮的 PPT”。
 
-## 5. 当前 v1 基线（已验证方向，不是最终成片）
+社交视频优先级：
 
-Draft PR `#87`：`M10 prototype the first social-native rescue short`
+1. 前 1–3 秒 hook；
+2. 冲突 / 挑战 / before-after / 反转；
+3. 人物、场景、动作、真实/自有素材、UI 道具等多来源画面；
+4. 角色与场景质感；
+5. BGM / SFX / ducking / 声音变化；
+6. 镜头密度与遮挡切换；
+7. 最后才是更多特效。
+
+## 5. 历史 social-native 基线
+
+### v1
+
+旧 Draft PR `#87` 证明：social-native 结构比 PPT 明显更对，但制作质量/素材丰富度不足。它不作为发布候选。
+
+### v2
+
+Draft PR `#89` 早期 v2 首次加入卡通主持人、前中后景、透视 UI 道具、人物参与砍卡片/收颜色/按 CTA、camera push/pull、parallax、impact/whoosh/click。
+
+v2 曾真实发现 scene 4→5 `0.77375s` 长静音，超过 `0.75s` social pacing gate。没有放宽门槛，而是候选输出删除 authored frames `511..526` 共 16 帧 / `0.533333s`，最终 884 帧。这个节奏修复已在 v3 正式写回 source timeline，不再依赖后处理删除。
+
+## 6. 当前 M10 候选：richer 2.5D character studio v3
+
+当前 Draft PR：`#89` — `M10 prototype richer 2.5D character studio social short v3`
 
 最近核验 exact candidate：
 
 ```text
-head: ee8bb86ebbf909f8e73ad000d552891a473b43ce
-run/job: 31168517146 / 92835967411
-artifact: 8990169118
-MP4 SHA-256: cd7771bd9bf8aedebb076a30a73eb909012ef96f1d188388aa592f9294290fc2
-1080x1920 · 30fps · 860 frames · 28.666667s
-voice: zh-CN-XiaoxiaoNeural +10%
-time-stretch: false
-black >=0.35s: 0
-silence >=0.75s @ -45dB: 0
-```
-
-真人结论：**social-native 大方向成立，但制作质量/素材丰富度还需明显升级。** 因此 #87 保持 Draft，不作为发布候选直接进入 M11。
-
-## 6. 当前 v2：2.5D 卡通人物样片（继续前必须实时重验）
-
-Draft PR `#89`：`M10 prototype 2.5D character-driven social short`
-
-最近核验 exact candidate：
-
-```text
-head: 40a3f765b862cd2e66ed94385a29ff275f9ef07e
-workflow: M10 Social Native 2.5D Character v2
-run/job: 31171870900 / 92845243900
-artifact: 8991338966
-artifact digest: sha256:ce2bcc7ff2eb67aff3e75bb0948183795feda90a7fde2d0833fda3c76a5cce7b
-MP4: toolradar-social-native-25d-character-v2.mp4
-MP4 SHA-256: bc4e4227469f542b5d58034b2d9a041a8bbc95b3795f860c5eb5c01f403b10f8
-bytes: 7,508,143
+head: 251e49fba80cd1e1b1274b7563a51dfa56277ccf
+workflow: M10 Social Native 2.5D Character v3
+run/job: 31177464501 / 92862559618
+artifact: toolradar-social-native-25d-character-v3
+artifact id: 8993462487
+artifact digest: sha256:7eaa329cbce7b0fa9540a099453d26e229d4a7419cf62a2f2ddb88f08372a7ed
+MP4: toolradar-social-native-25d-character-v3.mp4
+MP4 SHA-256: 71cafe38e9cb10028fd19e0520df67e350aff3f63988971cf234e52aa7598e9f
+bytes: 24,511,322
 1080x1920 · 30fps · 884 frames
 video timeline: 29.466667s
-container/audio: 29.525s
+container/audio: 29.525333s
 voice: zh-CN-XiaoxiaoNeural +10%
 narrationTimeStretchApplied=false
-procedural SFX: impact / whoosh / click
+authoredDeadAirCutBakedIntoTimeline=true
+proceduralMusicIncluded=true
+procedural SFX: impact / whoosh / click / sparkle
 thirdPartyVisualAssetsUsed=false
 ```
 
-v2 视觉模式：
+v3 相比 v2 的真实升级：
 
-- 可复用简化卡通主持人；
-- 前/中/后景与透视；
-- UI 是场景里的道具，不再承担整个视频；
-- 人物参与震惊、推、砍卡片、收颜色、按 CTA、before/after 展示；
-- camera push/pull、parallax、overlap / occlusion；
-- 程序化 impact / whoosh / click。
+- 角色增加眉眼、眨眼、口型变化、耳朵/鼻子、夹克层次、鞋和边缘光；
+- 空舞台升级为持续存在的 `ToolRadar Design Rescue Lab` 环境；
+- 增加实验室招牌、工具架、植物、地面透视、灯光扫射、空气粒子和更厚的空间阴影；
+- 前景/中景/后景、遮挡、透视和飞出镜头的卡片更明显；
+- 原创程序化 116 BPM 轻电子 BGM；
+- impact / whoosh / click / sparkle 四层 SFX；
+- 16 帧节奏修复直接 baked into 884-frame authored timeline。
 
-真实节奏修复：最初 900 帧 render 在 scene 4→5 出现 `0.77375s` 的长静音，超过 social pacing gate `0.75s`。**没有放宽门槛。** 候选输出精确删除 authored frames `511..526` 共 16 帧 / `0.533333s` 的无语音尾部，将语音间隔从约 `0.91s` 收紧到约 `0.38s`，最终为 884 帧。
-
-最终 exact-head checks：
+技术/节奏检查：
 
 ```text
-ci: 31171871341 SUCCESS
-remotion-final-composition: 31171870721 SUCCESS
-publication-feedback-report: 31171870720 SUCCESS
-M10 Social Native 2.5D Character v2: 31171870900 SUCCESS
-unresolved review threads: 0
+ci: 31177464459 SUCCESS
+remotion-final-composition: 31177464462 SUCCESS
+publication-feedback-report: 31177464469 SUCCESS
+M10 Social Native 2.5D Character v3: 31177464501 SUCCESS
 black >=0.35s: 0
 silence >=0.75s @ -45dB: 0
 technicalMediaIntegrityPassed=true
 socialPacingSilenceGatePassed=true
+measured integrated loudness: -19.71 LUFS
+measured true peak: -6.37 dBTP
 ```
 
-### v2 当前真实性状态
+代表帧第一次复核时真实发现：`三个问题`、`看前后`、`AI 不替你审美` 三处未显式设色，浏览器默认黑色导致深背景可读性差。该 artifact 不作为当前候选。source 随后在 exact head `251e49f...` 修为根容器继承浅色文字，重新 render 后代表帧已复核，三处均清楚可见。
+
+## 7. 当前真实性状态 / M10 边界
+
+即使 v3 technical CI 全绿、代表帧已复核，也仍然不能宣称真人 M10 通过：
 
 ```text
 humanWatchedFullCandidate=false
@@ -140,39 +137,26 @@ publicationPerformed=false
 analyticsObserved=false
 ```
 
-**绝不能因为技术全绿就把 v2 当作 M10 真人批准或最终社交成片。**
+当前真正的下一阻塞点：**真人完整观看 exact v3 MP4，并明确接受或拒绝。**
 
-## 7. v2 代表帧复核结论 / 下一质量目标
+如果接受：
 
-自动化和代表帧检查说明 2.5D 人物、透视 UI 道具、场景空间关系已经成立；但当前只是**视觉语言 prototype**，距离成熟高播放 2.5D/3D 科普/短视频制作还有明显差距：
+- 把 #89 的一次性 render carrier 清理掉，只保留可复用 production code / evidence；
+- 再决定是否进入 M11 真发布。
 
-- 角色造型仍偏简化，像程序化占位角色；
-- 背景空间偏空，环境道具和生活/真实质感不足；
-- 材质、灯光、阴影、景深、运动模糊还不够精细；
-- 音效层已有，但完整 BGM / ducking / richer sound design 尚不足；
-- 缺少真实/自有操作素材与角色动画的混合；
-- 镜头仍可进一步增加局部特写、遮挡切换和镜头动机。
+如果拒绝：
 
-如果真人认可 v2 的“人物+场景”方向，**下一轮不要重写故事结构**，优先提高：
+- 只按真人反馈改画面/角色/声音/节奏，不另造基础设施；
+- 继续保持 M11 blocked。
 
-1. 角色美术与动作自然度；
-2. 场景/道具丰富度；
-3. 光影、材质、景深、运动细节；
-4. BGM + 更细致 SFX + ducking；
-5. 自有/真实素材与 2.5D 场景混合；
-6. 最后才是更多特效。
+## 8. 并发 PR 边界（继续前实时重验）
 
-优先级：**真实素材感 / 角色场景质感 > 声音设计 > 镜头丰富度 > 微细节 > 堆特效。**
+最近核验开放 PR：
 
-## 8. 并发 PR 边界（继续前重验）
-
-最近核验时开放 PR：
-
-- `#87` — social-native v1 prototype，Draft；
 - `#88` — shared `media.render.v1` contract，独立 owner；不要把视频样片工作混入；
-- `#89` — 当前 2.5D character v2 prototype，Draft。
+- `#89` — 当前 ToolRadar social-native 2.5D v3，Draft。
 
-`#88` 与 #87/#89 当前无路径冲突。任何新窗口仍必须重新检查 changed files。
+最近核验 #88 与 #89 无 changed-file overlap。任何新窗口仍必须重新检查。
 
 ## 9. 跑偏 / 复盘记忆
 
@@ -180,9 +164,9 @@ analyticsObserved=false
 - 旧 M10 曾把系统 TTS 强压固定时长导致声音断续；以后自然语音决定时间线，不使用全局硬拉伸。
 - Ubuntu render 曾缺 CJK 字体导致中文 tofu 方框；真人审片前必须实际检查代表帧，不得只看 ffprobe/render success。
 - AAC 尾部几十毫秒 padding 是正常编码现象；用有界校验，不用脆弱容器时长等式。
-- **技术可播 ≠ 教学可用 ≠ 社交平台可运营。**
-- v1 已证明 social-native 结构比 PPT 明显更对，但“有社交味”仍不等于“头部制作质量”。
-- v2 当前最重要的判断不是“能不能播”，而是：**人物+场景是否值得作为下一阶段 ToolRadar 的长期视觉语言。**
+- 技术可播 ≠ 教学可用 ≠ 社交平台可运营。
+- 代表帧检查确实抓到过 CI 无法发现的黑字/深背景可读性问题，因此后续每个发布候选都必须保留视觉帧复核。
+- 当前最重要的判断不是“能不能播”，而是：**v3 的 richer character + studio environment 是否达到真人愿意继续精修并最终发布的方向。**
 
 ## 10. 每轮结束格式
 
