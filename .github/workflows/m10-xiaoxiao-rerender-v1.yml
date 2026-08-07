@@ -102,11 +102,12 @@ jobs:
           let text = await readFile(file, 'utf8');
           const before = "fontFamily: 'Arial, Microsoft YaHei, sans-serif'";
           const after = "fontFamily: 'Noto Sans CJK SC, Microsoft YaHei, sans-serif'";
-          if (text.split(before).length !== 2) throw new Error('expected exactly one composition fontFamily declaration');
-          text = text.replace(before, after);
+          const count = text.split(before).length - 1;
+          if (count !== 2) throw new Error(`expected exactly two composition fontFamily declarations; found ${count}`);
+          text = text.replaceAll(before, after);
           await writeFile(file, text);
           NODE
-          grep -F "fontFamily: 'Noto Sans CJK SC, Microsoft YaHei, sans-serif'" "$file" >/dev/null
+          test "$(grep -Fo "fontFamily: 'Noto Sans CJK SC, Microsoft YaHei, sans-serif'" "$file" | wc -l | tr -d ' ')" = '2'
 
       - name: Download the exact human-approved Xiaoxiao audition artifact
         uses: actions/download-artifact@v4
