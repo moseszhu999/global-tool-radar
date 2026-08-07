@@ -56,6 +56,15 @@ jobs:
           test "$(git -C "$GITHUB_WORKSPACE/source" rev-parse HEAD)" = "$TOOLRADAR_SOURCE_HEAD"
           test -z "$(git -C "$GITHUB_WORKSPACE/source" status --porcelain)"
 
+      - name: Install media inspection tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg
+          ffmpeg -version | head -n 1
+          ffprobe -version | head -n 1
+
       - name: Download the exact human-approved Xiaoxiao audition artifact
         uses: actions/download-artifact@v4
         with:
