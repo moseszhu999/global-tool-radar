@@ -8,11 +8,11 @@ export const SOCIAL_NATIVE_25D_FRAMES = 900;
 const slots = [
   {from: 0, duration: 118, audio: 'assets/social-native-25d-v2/01-hook.wav'},
   {from: 118, duration: 132, audio: 'assets/social-native-25d-v2/02-problem.wav'},
-  {from: 250, duration: 145, audio: 'assets/social-native-25d-v2/03-cut-info.wav'},
-  {from: 395, duration: 145, audio: 'assets/social-native-25d-v2/04-cut-color.wav'},
-  {from: 540, duration: 118, audio: 'assets/social-native-25d-v2/05-one-cta.wav'},
-  {from: 658, duration: 112, audio: 'assets/social-native-25d-v2/06-reveal.wav'},
-  {from: 770, duration: 130, audio: 'assets/social-native-25d-v2/07-payoff.wav'},
+  {from: 250, duration: 138, audio: 'assets/social-native-25d-v2/03-cut-info.wav'},
+  {from: 388, duration: 139, audio: 'assets/social-native-25d-v2/04-cut-color.wav'},
+  {from: 527, duration: 118, audio: 'assets/social-native-25d-v2/05-one-cta.wav'},
+  {from: 645, duration: 123, audio: 'assets/social-native-25d-v2/06-reveal.wav'},
+  {from: 768, duration: 132, audio: 'assets/social-native-25d-v2/07-payoff.wav'},
 ] as const;
 
 const c = {
@@ -106,7 +106,7 @@ const MiniToolPage: React.FC<{clean?: boolean}> = ({clean=false}) => {
 };
 
 const TransitionSfx = () => <>
-  {[0,118,250,395,540,658,770].map((from,i)=><Sequence key={from} from={from} durationInFrames={18}><Audio src={staticFile(i===0?'assets/social-native-25d-v2/impact.wav':'assets/social-native-25d-v2/whoosh.wav')} volume={i===0?0.42:0.22}/></Sequence>)}
+  {[0,118,250,388,527,645,768].map((from,i)=><Sequence key={from} from={from} durationInFrames={18}><Audio src={staticFile(i===0?'assets/social-native-25d-v2/impact.wav':'assets/social-native-25d-v2/whoosh.wav')} volume={i===0?0.42:0.22}/></Sequence>)}
   {[320,470,590,700].map((from)=><Sequence key={from} from={from} durationInFrames={12}><Audio src={staticFile('assets/social-native-25d-v2/click.wav')} volume={0.32}/></Sequence>)}
 </>;
 
@@ -191,7 +191,7 @@ const OneCtaScene: React.FC = () => {
 const RevealScene: React.FC = () => {
   const frame=useCurrentFrame();
   const turn=p(frame,8,58);
-  return <Stage cameraScale={interpolate(frame,[0,60,111],[1.12,1.0,1.05],clamp)}>
+  return <Stage cameraScale={interpolate(frame,[0,60,122],[1.12,1.0,1.05],clamp)}>
     <div style={{position:'absolute',left:58,top:90,fontFamily,fontSize:67,fontWeight:1000}}>看前后</div>
     <FloatingPanel x={80} y={330} width={410} height={680} rotateY={interpolate(turn,[0,1],[-24,-8])} rotateZ={-2} border={c.red}><MiniToolPage/></FloatingPanel>
     <FloatingPanel x={590} y={300} width={410} height={700} rotateY={interpolate(turn,[0,1],[26,8])} rotateZ={2} border={c.green} z={45}><MiniToolPage clean/></FloatingPanel>
