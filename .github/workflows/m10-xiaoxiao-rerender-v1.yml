@@ -79,14 +79,34 @@ jobs:
             exit 1
           fi
 
-      - name: Install media inspection tools
+      - name: Install media inspection tools and CJK render font
         shell: bash
         run: |
           set -euo pipefail
           sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends ffmpeg
+          sudo apt-get install -y --no-install-recommends ffmpeg fontconfig fonts-noto-cjk
+          sudo fc-cache -f
           ffmpeg -version | head -n 1
           ffprobe -version | head -n 1
+          fc-match 'Noto Sans CJK SC' | tee "$RUNNER_TEMP/cjk-font-match.txt"
+          grep -F 'NotoSansCJK' "$RUNNER_TEMP/cjk-font-match.txt" >/dev/null
+
+      - name: Bind the composition to the installed Simplified Chinese font
+        shell: bash
+        run: |
+          set -euo pipefail
+          file="$GITHUB_WORKSPACE/source/apps/remotion-video/src/tool-radar-video.tsx"
+          FILE="$file" node --input-type=module <<'NODE'
+          import {readFile, writeFile} from 'node:fs/promises';
+          const file = process.env.FILE;
+          let text = await readFile(file, 'utf8');
+          const before = "fontFamily: 'Arial, Microsoft YaHei, sans-serif'";
+          const after = "fontFamily: 'Noto Sans CJK SC, Microsoft YaHei, sans-serif'";
+          if (text.split(before).length !== 2) throw new Error('expected exactly one composition fontFamily declaration');
+          text = text.replace(before, after);
+          await writeFile(file, text);
+          NODE
+          grep -F "fontFamily: 'Noto Sans CJK SC, Microsoft YaHei, sans-serif'" "$file" >/dev/null
 
       - name: Download the exact human-approved Xiaoxiao audition artifact
         uses: actions/download-artifact@v4
@@ -187,6 +207,7 @@ jobs:
             approvedAudioArtifactRunId: Number(process.env.APPROVED_AUDIO_RUN_ID),
             approvedAudioDurationSeconds: approvedAudioDuration,
             fullFrameFadeToBlackRemoved: true,
+            cjkRenderFont: 'Noto Sans CJK SC',
             outputFilename: 'toolradar-ai-design-xiaoxiao-final.mp4',
             outputSha256: sha256,
             outputBytes: (await stat(process.env.VIDEO)).size,
@@ -236,6 +257,7 @@ jobs:
             ${{ runner.temp }}/approved-audio-sha256.txt
             ${{ runner.temp }}/approved-audio-duration.txt
             ${{ runner.temp }}/remotion-compositions.txt
+            ${{ runner.temp }}/cjk-font-match.txt
           if-no-files-found: error
           retention-days: 7
 
@@ -253,5 +275,6 @@ jobs:
             ${{ runner.temp }}/approved-audio-sha256.txt
             ${{ runner.temp }}/approved-audio-duration.txt
             ${{ runner.temp }}/remotion-compositions.txt
+            ${{ runner.temp }}/cjk-font-match.txt
           if-no-files-found: error
           retention-days: 30
