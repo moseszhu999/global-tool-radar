@@ -9,10 +9,11 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 concurrency:
-  group: toolradar-shared-macrunner-autotrigger-main-${{ github.sha }}
-  cancel-in-progress: false
+  group: toolradar-shared-macrunner-autotrigger-main
+  cancel-in-progress: true
 
 jobs:
   latest-main:
@@ -133,6 +134,44 @@ jobs:
             ${{ runner.temp }}/toolradar-deepseek-advisory-receipt.json
           if-no-files-found: warn
           retention-days: 7
+
+      - name: Publish sanitized MacRunner receipt to PR 71
+        if: always()
+        uses: actions/github-script@v7
+        env:
+          TOOLRADAR_JOB_STATUS: ${{ job.status }}
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const readJson = (name) => {
+              const file = path.join(process.env.RUNNER_TEMP, name);
+              if (!fs.existsSync(file)) return null;
+              return JSON.parse(fs.readFileSync(file, 'utf8'));
+            };
+            const mac = readJson('toolradar-shared-macrunner-contract.json');
+            const deepseek = readJson('toolradar-deepseek-advisory-receipt.json');
+            const body = [
+              '### Shared MacRunner latest-main receipt',
+              '',
+              `- exact main: \`${context.sha}\``,
+              `- run: \`${context.runId}\``,
+              `- job status at receipt: \`${process.env.TOOLRADAR_JOB_STATUS}\``,
+              `- MacRunner health: \`${mac?.health?.ok === true ? 'PASS' : mac ? 'FAIL' : 'NOT_REACHED'}\``,
+              `- MacRunner operations observed: \`${mac?.operations?.length ?? 0}\``,
+              `- MacRunner receipt digest: \`${mac?.receiptDigest ?? 'none'}\``,
+              `- local DeepSeek: \`${deepseek ? 'RAN_ADVISORY_ONLY' : 'NOT_RUN_OR_NOT_INSTALLED'}\``,
+              `- DeepSeek receipt digest: \`${deepseek?.receiptDigest ?? 'none'}\``,
+              '- real render submitted: `false`',
+              '- final MP4 claimed: `false`',
+              '- publication/analytics write: `false`',
+            ].join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: 71,
+              body,
+            });
 
       - name: Final exact-head and clean-tree proof
         if: always()
