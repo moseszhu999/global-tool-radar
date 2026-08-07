@@ -40,6 +40,26 @@ const timestamp = (now) => {
   return date.toISOString();
 };
 
+const nonEmptyText = (value) => typeof value === 'string' && value.trim() !== '' ? value.trim() : null;
+
+const findFinalVideoEvidence = ({result, statusSnapshot}) => {
+  const candidates = [
+    ['result.outputPath', result?.outputPath],
+    ['result.videoPath', result?.videoPath],
+    ['result.filePath', result?.filePath],
+    ['result.output.path', result?.output?.path],
+    ['statusSnapshot.outputPath', statusSnapshot?.outputPath],
+    ['statusSnapshot.videoPath', statusSnapshot?.videoPath],
+    ['statusSnapshot.filePath', statusSnapshot?.filePath],
+    ['statusSnapshot.output.path', statusSnapshot?.output?.path],
+  ];
+  for (const [source, value] of candidates) {
+    const locator = nonEmptyText(value);
+    if (locator) return Object.freeze({source, locator});
+  }
+  return null;
+};
+
 const buildReceipt = (core) => Object.freeze({...core, receiptDigest: digest(core)});
 
 export const runMacRemotionRender = async ({
@@ -70,6 +90,7 @@ export const runMacRemotionRender = async ({
       result: null,
       log: null,
       downloadUrl: null,
+      finalVideoEvidence: null,
       realSubmissionPerformed: false,
       finalVideoClaimAllowed: false,
     });
@@ -85,9 +106,11 @@ export const runMacRemotionRender = async ({
   let result = null;
   let log = null;
   let downloadUrl = null;
+  let finalVideoEvidence = null;
   if (terminalStatus === 'completed') {
     result = sanitize(await client.getRenderResult(normalizedJobId));
     downloadUrl = client.getDownloadUrl(normalizedJobId);
+    finalVideoEvidence = findFinalVideoEvidence({result, statusSnapshot});
   } else if (terminalStatus === 'failed') {
     log = sanitize(await client.getRenderJobLog(normalizedJobId));
   }
@@ -114,8 +137,9 @@ export const runMacRemotionRender = async ({
     result,
     log,
     downloadUrl,
+    finalVideoEvidence,
     realSubmissionPerformed: true,
-    finalVideoClaimAllowed: terminalStatus === 'completed',
+    finalVideoClaimAllowed: terminalStatus === 'completed' && finalVideoEvidence !== null,
   });
 };
 
@@ -124,8 +148,14 @@ export const validateMacRemotionRenderReceipt = (receipt) => {
   const {receiptDigest, ...core} = receipt;
   if (!/^[a-f0-9]{64}$/.test(receiptDigest ?? '')) throw new TypeError('receiptDigest must be a SHA-256 digest');
   if (digest(core) !== receiptDigest) throw new TypeError('receipt digest mismatch');
-  if (receipt.status === 'COMPLETED' && (receipt.terminalStatus !== 'completed' || receipt.finalVideoClaimAllowed !== true)) {
-    throw new TypeError('completed receipt boundary is invalid');
+  if (receipt.status === 'COMPLETED') {
+    if (receipt.terminalStatus !== 'completed') throw new TypeError('completed receipt boundary is invalid');
+    const locator = nonEmptyText(receipt.finalVideoEvidence?.locator);
+    if (!locator || nonEmptyText(receipt.finalVideoEvidence?.source) === null) {
+      if (receipt.finalVideoClaimAllowed === true) throw new TypeError('final video claim requires runner-returned media evidence');
+    } else if (receipt.finalVideoClaimAllowed !== true) {
+      throw new TypeError('completed receipt with final video evidence must allow the final video claim');
+    }
   }
   if (receipt.realSubmissionPerformed !== true && receipt.jobId !== null) throw new TypeError('blocked receipt must not contain a jobId');
   return true;
