@@ -6,31 +6,23 @@ import {ToolRadarVideo} from './tool-radar-video';
 export const toolRadarVideoSchema = z.object({
   title: z.string(),
   subtitle: z.string(),
-  designRecording: z.string(),
-  buildLimitRecording: z.string(),
   voiceover: z.string(),
-  designRecordingVerified: z.boolean(),
-  buildLimitRecordingVerified: z.boolean(),
-  voiceoverVerified: z.boolean(),
+  voiceoverReady: z.boolean(),
 });
 
 export type ToolRadarVideoProps = z.infer<typeof toolRadarVideoSchema>;
 
 const defaultProps: ToolRadarVideoProps = {
-  title: 'Replit Design 独立实测',
-  subtitle: '设计探索通过，生产交付未证明',
-  designRecording: 'assets/replit-design-owned-recording.mp4',
-  buildLimitRecording: 'assets/replit-build-limit-owned-recording.mp4',
-  voiceover: 'assets/replit-design-voiceover.wav',
-  designRecordingVerified: false,
-  buildLimitRecordingVerified: false,
-  voiceoverVerified: false,
+  title: 'AI 设计工作流演示',
+  subtitle: '从一句需求到可视界面',
+  voiceover: 'assets/toolradar-ai-design-voiceover.wav',
+  voiceoverReady: false,
 };
 
 export const ToolRadarRoot: React.FC = () => {
   return (
     <Composition
-      id="ToolRadarReplitPortrait"
+      id="ToolRadarAIDesignPortrait"
       component={ToolRadarVideo}
       durationInFrames={2670}
       fps={30}
