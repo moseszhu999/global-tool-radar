@@ -1,0 +1,10 @@
+{
+  "name": "@toolradar/m9-runner-final-video-binding",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "check": "node --check src/index.mjs",
+    "test": "node --test test/*.test.mjs"
+  }
+}
