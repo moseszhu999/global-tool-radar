@@ -1,0 +1,214 @@
+name: M10 Social Native 2.5D Character v4 r2
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - apps/remotion-video/src/social-native-25d-character-v4.tsx
+      - .github/workflows/m10-social-native-25d-character-v4-r2.yml
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    name: Render native retention-first v4 r2
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      EXPECTED_FRAMES: '576'
+      EXPECTED_FPS: '30'
+      EXPECTED_WIDTH: '1080'
+      EXPECTED_HEIGHT: '1920'
+      FIRST_PAYOFF_FRAME: '156'
+      FULL_REVEAL_FRAME: '312'
+      LOOP_START_FRAME: '528'
+      VOICE: zh-CN-XiaoxiaoNeural
+      VOICE_RATE: '+12%'
+      LOUDNESS_TARGET: '-16'
+      TRUE_PEAK_TARGET: '-1.5'
+    steps:
+      - name: Validate carrier and exact head
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = "moseszhu999/global-tool-radar"
+          test "$GITHUB_HEAD_REF" = "feat/social-native-25d-character-v2"
+
+      - name: Checkout exact candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Prove native retention structure
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          test -z "$(git status --porcelain)"
+          src=apps/remotion-video/src/social-native-25d-character-v4.tsx
+          grep -F 'SOCIAL_NATIVE_25D_V4_FRAMES = 576' "$src" >/dev/null
+          grep -F 'SOCIAL_NATIVE_25D_V4_FIRST_PAYOFF_FRAME = 156' "$src" >/dev/null
+          grep -F 'SOCIAL_NATIVE_25D_V4_FULL_REVEAL_FRAME = 312' "$src" >/dev/null
+          grep -F 'SOCIAL_NATIVE_25D_V4_LOOP_START_FRAME = 528' "$src" >/dev/null
+          node - <<'NODE'
+          const fps=30,frames=576,first=156,reveal=312,loop=528;
+          if(frames/fps>21) throw new Error('duration gate');
+          if(first/fps>7) throw new Error('payoff gate');
+          if(reveal/fps>15) throw new Error('reveal gate');
+          if(loop>=frames) throw new Error('loop gate');
+          console.log(JSON.stringify({durationSeconds:frames/fps,firstPayoffSeconds:first/fps,fullRevealSeconds:reveal/fps,loopStartSeconds:loop/fps}));
+          NODE
+
+      - name: Install media, font, TTS
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg fontconfig fonts-noto-cjk python3-pip
+          sudo fc-cache -f
+          fc-match 'Noto Sans CJK SC' | tee "$RUNNER_TEMP/cjk-font-match.txt"
+          grep -F 'NotoSansCJK' "$RUNNER_TEMP/cjk-font-match.txt" >/dev/null
+          python3 -m pip install --user --disable-pip-version-check edge-tts
+
+      - name: Generate concise v4 narration and sound bed
+        shell: bash
+        run: |
+          set -euo pipefail
+          dir="$GITHUB_WORKSPACE/apps/remotion-video/public/assets/social-native-25d-v4"
+          mkdir -p "$dir"
+          texts=(
+            '只删三样，看结果。'
+            '先删没用的信息。'
+            '七种颜色，收成三种。'
+            '六个按钮，只留一个。'
+            '差的不是特效，是信息顺序。'
+            '好设计，不是加，是敢删。'
+            '你选左，还是右？'
+          )
+          names=(01-hook 02-info 03-color 04-cta 05-reveal 06-takeaway 07-choice)
+          : > "$RUNNER_TEMP/voice-timings.tsv"
+          for i in "${!texts[@]}"; do
+            mp3="$RUNNER_TEMP/${names[$i]}.mp3"
+            wav="$dir/${names[$i]}.wav"
+            ok=0
+            for attempt in 1 2 3; do
+              if python3 -m edge_tts --voice "$VOICE" --rate "$VOICE_RATE" --text "${texts[$i]}" --write-media "$mp3" && test -s "$mp3"; then ok=1; break; fi
+              rm -f "$mp3"; sleep $((attempt*2))
+            done
+            test "$ok" -eq 1
+            ffmpeg -hide_banner -loglevel error -y -i "$mp3" -ar 48000 -ac 2 -c:a pcm_s16le "$wav"
+            sha="$(sha256sum "$wav" | awk '{print $1}')"
+            python3 - "$wav" "${names[$i]}" "$sha" >> "$RUNNER_TEMP/voice-timings.tsv" <<'PY'
+          import array,math,sys,wave
+          path,name,sha=sys.argv[1:4]
+          with wave.open(path,'rb') as w:
+              rate,channels,nframes=w.getframerate(),w.getnchannels(),w.getnframes(); raw=w.readframes(nframes)
+          samples=array.array('h'); samples.frombytes(raw); window=max(1,int(rate*.02)); active=[]
+          for start in range(0,nframes,window):
+              end=min(nframes,start+window); acc=0.; count=0
+              for f in range(start,end):
+                  for ch in range(channels):
+                      v=samples[f*channels+ch]; acc+=v*v; count+=1
+              if math.sqrt(acc/max(1,count))>=180.: active.append((start,end))
+          if not active: raise SystemExit(f'no audible speech in {name}')
+          print(f'{name}\t{nframes/rate:.6f}\t{active[0][0]/rate:.6f}\t{active[-1][1]/rate:.6f}\t{sha}')
+          PY
+          done
+          cat "$RUNNER_TEMP/voice-timings.tsv"
+
+          ffmpeg -hide_banner -loglevel error -y -f lavfi -i 'sine=frequency=82:sample_rate=48000:duration=0.30' -af 'afade=t=out:st=0.05:d=0.25,volume=0.72' -ac 2 -c:a pcm_s16le "$dir/impact.wav"
+          ffmpeg -hide_banner -loglevel error -y -f lavfi -i 'anoisesrc=color=pink:sample_rate=48000:duration=0.40' -af 'highpass=f=520,lowpass=f=7000,afade=t=in:st=0:d=0.025,afade=t=out:st=0.13:d=0.27,volume=0.20' -ac 2 -c:a pcm_s16le "$dir/whoosh.wav"
+          ffmpeg -hide_banner -loglevel error -y -f lavfi -i 'sine=frequency=1080:sample_rate=48000:duration=0.11' -af 'afade=t=out:st=0.02:d=0.09,volume=0.27' -ac 2 -c:a pcm_s16le "$dir/click.wav"
+          ffmpeg -hide_banner -loglevel error -y -f lavfi -i 'sine=frequency=1320:sample_rate=48000:duration=0.50' -af 'aecho=0.8:0.35:42|88:0.32|0.18,afade=t=out:st=0.22:d=0.28,volume=0.16' -ac 2 -c:a pcm_s16le "$dir/sparkle.wav"
+          python3 - "$dir/bgm.wav" "$EXPECTED_FRAMES" "$EXPECTED_FPS" <<'PY'
+          import array,math,sys,wave
+          out,frames,fps=sys.argv[1],int(sys.argv[2]),int(sys.argv[3]); rate=48000; n=rate*frames//fps; bpm=124.; beat=60./bpm; roots=(110.,130.81,146.83,98.); buf=array.array('h')
+          for j in range(n):
+              t=j/rate; root=roots[int(t//2.9)%len(roots)]; pad=(math.sin(2*math.pi*root*t)+.48*math.sin(2*math.pi*root*1.5*t)+.30*math.sin(2*math.pi*root*2*t))*.042; bp=t%beat
+              kick=math.sin(2*math.pi*(76-28*min(1,bp/.14))*bp)*math.exp(-27*bp)*.29 if bp<.17 else 0.; hb=t%(beat/2); hat=math.sin(2*math.pi*5480*t)*math.sin(2*math.pi*3330*t)*math.exp(-70*hb)*.047 if hb<.065 else 0.; bi=int(t/beat)%4; snp=t%beat; snare=math.sin(2*math.pi*1840*t)*math.sin(2*math.pi*1290*t)*math.exp(-30*snp)*.078 if bi in (1,3) and snp<.15 else 0.; lift=.019*math.sin(2*math.pi*(220 if bi<2 else 247)*t); v=max(-.85,min(.85,pad+kick+hat+snare+lift)); s=int(v*32767); buf.append(s); buf.append(s)
+          with wave.open(out,'wb') as w: w.setnchannels(2); w.setsampwidth(2); w.setframerate(rate); w.writeframes(buf.tobytes())
+          PY
+
+      - name: Enforce native voice slots
+        shell: bash
+        run: |
+          set -euo pipefail
+          slot_frames=(60 84 78 78 102 114 48)
+          i=0; total=0
+          while IFS=$'\t' read -r name duration speech_start speech_end sha; do
+            frames="${slot_frames[$i]}"; total=$((total+frames)); slot="$(node -e 'console.log(Number(process.argv[1])/30)' "$frames")"
+            printf '%s speech=%s..%ss slot=%ss frames=%s sha=%s\n' "$name" "$speech_start" "$speech_end" "$slot" "$frames" "$sha"
+            node -e 'const end=+process.argv[1],slot=+process.argv[2];if(!(end+.05<slot)){console.error(`speech exceeds slot end=${end} slot=${slot}`);process.exit(1)}' "$speech_end" "$slot"
+            i=$((i+1))
+          done < "$RUNNER_TEMP/voice-timings.tsv"
+          test "$i" -eq 7
+          test "$total" -eq 564
+
+      - name: Install and bundle Remotion
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd apps/remotion-video
+          npm install --no-audit --no-fund
+          npx remotion browser ensure
+          cat > src/social-native-25d-v4-entry.tsx <<'TSX'
+          import React from 'react';
+          import {Composition,registerRoot} from 'remotion';
+          import {SOCIAL_NATIVE_25D_V4_FPS,SOCIAL_NATIVE_25D_V4_FRAMES,ToolRadarSocialNative25DCharacterV4} from './social-native-25d-character-v4';
+          const Root:React.FC=()=> <Composition id="ToolRadarSocialNative25DCharacterV4" component={ToolRadarSocialNative25DCharacterV4} durationInFrames={SOCIAL_NATIVE_25D_V4_FRAMES} fps={SOCIAL_NATIVE_25D_V4_FPS} width={1080} height={1920}/>;
+          registerRoot(Root);
+          TSX
+          npx remotion compositions src/social-native-25d-v4-entry.tsx | tee "$RUNNER_TEMP/v4-compositions.txt"
+          grep -F 'ToolRadarSocialNative25DCharacterV4' "$RUNNER_TEMP/v4-compositions.txt" >/dev/null
+          grep -F "$EXPECTED_FRAMES" "$RUNNER_TEMP/v4-compositions.txt" >/dev/null
+
+      - name: Render and normalize native v4
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd apps/remotion-video
+          mkdir -p out
+          npx remotion render src/social-native-25d-v4-entry.tsx ToolRadarSocialNative25DCharacterV4 out/toolradar-social-native-25d-character-v4-raw.mp4 --codec=h264 --crf=18
+          ffmpeg -hide_banner -loglevel error -y -i out/toolradar-social-native-25d-character-v4-raw.mp4 -map 0:v:0 -map 0:a:0 -c:v copy -af "loudnorm=I=${LOUDNESS_TARGET}:TP=${TRUE_PEAK_TARGET}:LRA=11" -c:a aac -b:a 192k -ar 48000 -ac 2 -movflags +faststart out/toolradar-social-native-25d-character-v4.mp4
+          test -s out/toolradar-social-native-25d-character-v4.mp4
+          rm -f out/toolradar-social-native-25d-character-v4-raw.mp4
+
+      - name: Prove artifact, pacing, and truth receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          video="$GITHUB_WORKSPACE/apps/remotion-video/out/toolradar-social-native-25d-character-v4.mp4"
+          ffprobe -v error -show_streams -show_format -of json "$video" > "$RUNNER_TEMP/v4-ffprobe.json"
+          ffprobe -v error -count_frames -select_streams v:0 -show_entries stream=nb_read_frames -of default=nw=1:nk=1 "$video" > "$RUNNER_TEMP/v4-frame-count.txt"
+          ffmpeg -hide_banner -nostats -i "$video" -vf 'blackdetect=d=0.35:pix_th=0.10' -an -f null - 2> "$RUNNER_TEMP/v4-blackdetect.txt" || true
+          ffmpeg -hide_banner -nostats -i "$video" -af 'silencedetect=noise=-45dB:d=0.75' -vn -f null - 2> "$RUNNER_TEMP/v4-silencedetect.txt" || true
+          ffmpeg -hide_banner -nostats -i "$video" -af 'loudnorm=I=-16:TP=-1.5:LRA=11:print_format=json' -f null - 2> "$RUNNER_TEMP/v4-loudness.txt" || true
+          ffmpeg -hide_banner -loglevel error -y -i "$video" -vf 'fps=1/2.4,scale=270:480,tile=2x4:padding=8:margin=8' -frames:v 1 "$RUNNER_TEMP/v4-contact-sheet.jpg"
+          VIDEO="$video" PR_HEAD="${{ github.event.pull_request.head.sha }}" node --input-type=module <<'NODE'
+          import {readFile,writeFile,stat} from 'node:fs/promises'; import {createHash} from 'node:crypto';
+          const probe=JSON.parse(await readFile(process.env.RUNNER_TEMP+'/v4-ffprobe.json','utf8')); const vs=probe.streams.find(s=>s.codec_type==='video'),as=probe.streams.find(s=>s.codec_type==='audio'); if(!vs||!as) throw new Error('video+audio required'); if(+vs.width!==+process.env.EXPECTED_WIDTH||+vs.height!==+process.env.EXPECTED_HEIGHT) throw new Error('dimensions'); const frames=Number((await readFile(process.env.RUNNER_TEMP+'/v4-frame-count.txt','utf8')).trim()); if(frames!==+process.env.EXPECTED_FRAMES) throw new Error(`frames ${frames}`); const duration=frames/(+process.env.EXPECTED_FPS); const bytes=await readFile(process.env.VIDEO); const receipt={schemaVersion:'toolradar.m10.social-native-25d-character.v4.r2',exactCandidateHead:process.env.PR_HEAD,format:'9:16 portrait',visualMode:'retention-first native 2.5D operator transformation',selectedVoice:process.env.VOICE,voiceRate:process.env.VOICE_RATE,hookNarration:'只删三样，看结果。',narrationTimeStretchApplied:false,nativeRetentionTimeline:true,postRenderTimelineCutApplied:false,firstPayoffSeconds:+process.env.FIRST_PAYOFF_FRAME/(+process.env.EXPECTED_FPS),fullRevealSeconds:+process.env.FULL_REVEAL_FRAME/(+process.env.EXPECTED_FPS),loopStartSeconds:+process.env.LOOP_START_FRAME/(+process.env.EXPECTED_FPS),hostRole:'operator',outputFilename:'toolradar-social-native-25d-character-v4.mp4',outputSha256:createHash('sha256').update(bytes).digest('hex'),outputBytes:(await stat(process.env.VIDEO)).size,frames,fps:+process.env.EXPECTED_FPS,durationSeconds:duration,width:+vs.width,height:+vs.height,technicalMediaIntegrityPassed:true,retentionStructureGatePassed:true,socialPacingSilenceGatePassed:true,humanWatchedFullCandidate:false,socialPlatformBusinessFitApprovedByHuman:false,publicationAllowed:false,publicationPerformed:false,analyticsObserved:false}; await writeFile(process.env.RUNNER_TEMP+'/v4-receipt.json',JSON.stringify(receipt,null,2)+'\n'); console.log(JSON.stringify(receipt,null,2));
+          NODE
+          if grep -F 'black_start:' "$RUNNER_TEMP/v4-blackdetect.txt" >/dev/null; then cat "$RUNNER_TEMP/v4-blackdetect.txt" >&2; exit 1; fi
+          if grep -F 'silence_start:' "$RUNNER_TEMP/v4-silencedetect.txt" >/dev/null; then cat "$RUNNER_TEMP/v4-silencedetect.txt" >&2; exit 1; fi
+
+      - name: Upload v4 r2 candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: toolradar-social-native-25d-character-v4-r2
+          path: |
+            apps/remotion-video/out/toolradar-social-native-25d-character-v4.mp4
+            ${{ runner.temp }}/v4-contact-sheet.jpg
+            ${{ runner.temp }}/v4-receipt.json
+            ${{ runner.temp }}/v4-ffprobe.json
+            ${{ runner.temp }}/v4-frame-count.txt
+            ${{ runner.temp }}/v4-blackdetect.txt
+            ${{ runner.temp }}/v4-silencedetect.txt
+            ${{ runner.temp }}/v4-loudness.txt
+            ${{ runner.temp }}/voice-timings.tsv
+            ${{ runner.temp }}/cjk-font-match.txt
+          if-no-files-found: error
+          retention-days: 14
