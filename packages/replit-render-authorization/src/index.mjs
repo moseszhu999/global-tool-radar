@@ -66,14 +66,14 @@ const gateArtifact = (gate, renderIntent, creativePreflight) => ({
   },
 });
 
-const creativeBlockedReceipt = ({project, sourceProjectDigest, creativePreflight, error}) => buildReceipt({
+const creativeBlockedReceipt = ({project, sourceProjectDigest, error}) => buildReceipt({
   schemaVersion: 'toolradar.render-authorization.v1',
   status: 'CREATIVE_PREFLIGHT_BLOCKED',
   truthBoundary: 'creative_preflight_required_before_render_authorization',
   projectId: project.projectId,
   sourceProjectDigest,
-  creativePreflight: creativePreflight ?? null,
-  creativePreflightDigest: creativePreflight?.receiptDigest ?? null,
+  creativePreflight: null,
+  creativePreflightDigest: null,
   finalRenderGate: null,
   renderIntent: null,
   projectUnchanged: true,
@@ -107,7 +107,7 @@ export const authorizeReplitRender = async ({
   try {
     assertCreativePreflightAllowsRenderAuthorization({project, receipt: creativePreflight});
   } catch (error) {
-    return creativeBlockedReceipt({project, sourceProjectDigest, creativePreflight, error});
+    return creativeBlockedReceipt({project, sourceProjectDigest, error});
   }
 
   const finalRenderGate = await buildFinalRenderGate({
@@ -229,6 +229,7 @@ export const validateRenderAuthorizationReceipt = (receipt) => {
     validateVideoProject(receipt.updatedProject);
   } else if (receipt.status === 'CREATIVE_PREFLIGHT_BLOCKED') {
     if (receipt.projectUnchanged !== true || receipt.updatedProject !== null) throw new Error('creative-preflight block must not change the project');
+    if (receipt.creativePreflight !== null || receipt.creativePreflightDigest !== null) throw new Error('creative-preflight block must not persist untrusted preflight input');
     if (receipt.finalRenderGate !== null || receipt.renderIntent !== null) throw new Error('creative-preflight block must stop before render gate construction');
     if (receipt.renderExecutionAllowed !== false || receipt.runnerSubmissionReady !== false) throw new Error('creative-preflight block cannot allow execution or submission');
   } else if (receipt.status === 'RENDER_GATE_BLOCKED' || receipt.status === 'RENDER_INTENT_BLOCKED') {
