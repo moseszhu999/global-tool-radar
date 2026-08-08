@@ -74,10 +74,9 @@ jobs:
             '顺序一变，立刻更清楚。'
             '升级，不是加，是敢删。'
             'Agent 可以提议，但决定要交给人。'
-            '再来。'
           )
-          names=(01-after 02-filter 03-evidence 04-reveal 05-reduce 06-human 07-loop)
-          maxes=(2.30 2.90 2.60 2.60 2.90 4.20 1.60)
+          names=(01-after 02-filter 03-evidence 04-reveal 05-reduce 06-human)
+          maxes=(2.30 2.90 2.60 2.60 2.90 4.20)
           : > "$RUNNER_TEMP/narration-durations.tsv"
           for i in "${!texts[@]}"; do
             mp3="$dir/${names[$i]}.mp3"
@@ -99,6 +98,7 @@ jobs:
           PY
             printf '%s\t%s\t%s\n' "${names[$i]}" "$dur" "${maxes[$i]}" >> "$RUNNER_TEMP/narration-durations.tsv"
           done
+          printf '07-loop\tNONVERBAL\t1.60\n' >> "$RUNNER_TEMP/narration-durations.tsv"
 
       - name: Generate procedural music and semantic SFX
         shell: bash
@@ -133,7 +133,7 @@ jobs:
           ffmpeg -hide_banner -loglevel error -y \
             -i "$base" \
             -i "$RUNNER_TEMP/bgm.wav" \
-            -i "$n/01-after.wav" -i "$n/02-filter.wav" -i "$n/03-evidence.wav" -i "$n/04-reveal.wav" -i "$n/05-reduce.wav" -i "$n/06-human.wav" -i "$n/07-loop.wav" \
+            -i "$n/01-after.wav" -i "$n/02-filter.wav" -i "$n/03-evidence.wav" -i "$n/04-reveal.wav" -i "$n/05-reduce.wav" -i "$n/06-human.wav" \
             -i "$RUNNER_TEMP/whoosh.wav" -i "$RUNNER_TEMP/impact.wav" -i "$RUNNER_TEMP/click.wav" -i "$RUNNER_TEMP/sparkle.wav" \
             -filter_complex "\
               [1:a]volume=0.24[bg];\
@@ -143,15 +143,14 @@ jobs:
               [5:a]adelay=7800|7800[n4];\
               [6:a]adelay=10400|10400[n5];\
               [7:a]adelay=13300|13300[n6];\
-              [8:a]adelay=17600|17600[n7];\
-              [9:a]adelay=3200|3200,volume=0.9[w1];\
-              [9:a]adelay=17600|17600,volume=0.95[w2];\
-              [10:a]adelay=5200|5200[i1];\
-              [10:a]adelay=10400|10400,volume=0.78[i2];\
-              [11:a]adelay=6500|6500[c1];\
-              [11:a]adelay=15000|15000[c2];\
-              [12:a]adelay=10100|10100[s1];\
-              [bg][n1][n2][n3][n4][n5][n6][n7][w1][w2][i1][i2][c1][c2][s1]amix=inputs=15:duration=longest:normalize=0,loudnorm=I=-16:TP=-1.5:LRA=11[mix]" \
+              [8:a]adelay=3200|3200,volume=0.9[w1];\
+              [8:a]adelay=17600|17600,volume=0.95[w2];\
+              [9:a]adelay=5200|5200[i1];\
+              [9:a]adelay=10400|10400,volume=0.78[i2];\
+              [10:a]adelay=6500|6500[c1];\
+              [10:a]adelay=15000|15000[c2];\
+              [11:a]adelay=10100|10100[s1];\
+              [bg][n1][n2][n3][n4][n5][n6][w1][w2][i1][i2][c1][c2][s1]amix=inputs=14:duration=longest:normalize=0,loudnorm=I=-16:TP=-1.5:LRA=11[mix]" \
             -map 0:v:0 -map '[mix]' -c:v copy -c:a aac -b:a 192k -ar 48000 -ac 2 -t 19.2 -movflags +faststart "$out"
           test -s "$out"
 
@@ -182,6 +181,8 @@ jobs:
             'visualComposition':'ToolRadarExplainer19sAnimaticV1',
             'voice':os.environ['VOICE'],
             'voiceRate':os.environ['VOICE_RATE'],
+            'narratedBeatCount':6,
+            'loopBeatNarrationIncluded':False,
             'perBeatSynthesis':True,
             'narrationTimeStretchApplied':False,
             'proceduralMusicIncluded':True,
