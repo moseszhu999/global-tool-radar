@@ -28,6 +28,7 @@ const writeJson = async (path, value) => {
 };
 
 const ledgerInput = resolve(process.env.VIDEO_PROJECT_LEDGER_INPUT?.trim() || 'artifacts/replit-design-assets-verified-ledger.json');
+const creativePreflightInput = resolve(process.env.TOOLRADAR_CREATIVE_PREFLIGHT_INPUT?.trim() || 'artifacts/toolradar-video-creative-preflight.json');
 const preflightInput = resolve(process.env.REMOTION_PREFLIGHT_INPUT?.trim() || 'artifacts/remotion-media-preflight.json');
 const ledgerOutput = resolve(process.env.VIDEO_PROJECT_LEDGER_OUTPUT?.trim() || 'artifacts/replit-design-render-authorized-ledger.json');
 const receiptOutput = resolve(process.env.RENDER_AUTHORIZATION_RECEIPT_OUTPUT?.trim() || 'artifacts/replit-render-authorization-receipt.json');
@@ -36,8 +37,10 @@ const intentOutput = resolve(process.env.MAC_REMOTION_RENDER_INTENT_OUTPUT?.trim
 
 try {
   const ledger = JSON.parse(await readFile(ledgerInput, 'utf8'));
+  const creativePreflight = JSON.parse(await readFile(creativePreflightInput, 'utf8'));
   const receipt = await authorizeReplitRender({
     project: ledger.project,
+    creativePreflight,
     preflightReceiptPath: preflightInput,
     actor: required('TOOLRADAR_OPERATOR'),
     occurredAt: process.env.TOOLRADAR_OCCURRED_AT?.trim() || new Date().toISOString(),
@@ -48,7 +51,7 @@ try {
   });
   validateRenderAuthorizationReceipt(receipt);
   await writeJson(receiptOutput, receipt);
-  await writeJson(gateOutput, receipt.finalRenderGate);
+  if (receipt.finalRenderGate) await writeJson(gateOutput, receipt.finalRenderGate);
   if (receipt.renderIntent) await writeJson(intentOutput, receipt.renderIntent);
 
   if (receipt.status === 'RENDER_AUTHORIZED') {
@@ -58,6 +61,7 @@ try {
       summary: receipt.summary,
       renderAuthorization: {
         receiptDigest: receipt.receiptDigest,
+        creativePreflightDigest: receipt.creativePreflightDigest,
         gateDigest: receipt.finalRenderGate.gateDigest,
         renderIntentBindingDigest: receipt.renderIntent.bindingDigest,
         truthBoundary: receipt.truthBoundary,
@@ -69,8 +73,10 @@ try {
     status: receipt.status,
     truthBoundary: receipt.truthBoundary,
     projectId: receipt.projectId,
+    creativePreflightInput,
+    creativePreflightDigest: receipt.creativePreflightDigest,
     receiptOutput,
-    gateOutput,
+    gateOutput: receipt.finalRenderGate ? gateOutput : null,
     intentOutput: receipt.renderIntent ? intentOutput : null,
     ledgerOutput: receipt.status === 'RENDER_AUTHORIZED' ? ledgerOutput : null,
     projectStage: receipt.summary.stage,
