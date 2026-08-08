@@ -52,11 +52,7 @@ const narrationSegments = (plan) => plan.timeline.shots
 const voicePreparation = (plan, segments) => {
   if (plan.voice.mode === 'none') return {mode: 'none', action: 'none'};
   if (plan.voice.mode === 'provided') {
-    return {
-      mode: 'provided',
-      action: 'resolve_exact_voice_asset',
-      audioAsset: clone(plan.voice.audioAsset),
-    };
+    return {mode: 'provided', action: 'resolve_exact_voice_asset', audioAsset: clone(plan.voice.audioAsset)};
   }
   return {
     mode: 'synthesize',
@@ -112,8 +108,7 @@ const digestPayload = (manifest) => ({
 
 export const computePreparationManifestDigestV1 = (manifest) => sha256CanonicalJsonV1(digestPayload(manifest));
 
-export const compilePreparationManifestV1 = (plan) => {
-  validateCanonicalRenderPlanV1(plan);
+const buildPreparationManifest = (plan) => {
   const segments = narrationSegments(plan);
   const manifest = {
     schemaVersion: SHARED_MEDIA_PREPARATION_MANIFEST_V1,
@@ -137,17 +132,15 @@ export const compilePreparationManifestV1 = (plan) => {
     businessOutcomeInferred: false,
   };
   manifest.preparationManifestDigest = computePreparationManifestDigestV1(manifest);
-  validatePreparationManifestV1(manifest, {plan});
-  return deepFreeze(manifest);
+  return manifest;
 };
 
-const expectedFromManifestSemantics = (manifest) => ({
-  visualRequired: manifest.visualInputs.length > 0,
-  synthVoice: manifest.voicePreparation.mode === 'synthesize',
-  providedVoice: manifest.voicePreparation.mode === 'provided',
-  autoCaptions: manifest.captionPreparation.mode === 'auto',
-  providedCaptions: manifest.captionPreparation.mode === 'provided',
-});
+export const compilePreparationManifestV1 = (plan) => {
+  validateCanonicalRenderPlanV1(plan);
+  const manifest = buildPreparationManifest(plan);
+  validatePreparationManifestV1(manifest);
+  return deepFreeze(manifest);
+};
 
 export const validatePreparationManifestV1 = (manifest, {plan = null} = {}) => {
   const value = object(manifest, '$manifest');
@@ -175,14 +168,16 @@ export const validatePreparationManifestV1 = (manifest, {plan = null} = {}) => {
   });
 
   if (!Array.isArray(value.narrationSegments)) fail('INVALID_MANIFEST', 'narrationSegments must be an array', '$manifest.narrationSegments');
-  const segmentIds = new Set();
+  const segmentIds = [];
+  const seenSegments = new Set();
   value.narrationSegments.forEach((segment, index) => {
     const path = `$manifest.narrationSegments[${index}]`;
     exactKeys(object(segment, path), new Set(['segmentId','shotId','startMs','durationMs','text']), path);
     if (!Number.isInteger(segment.startMs) || segment.startMs < 0 || !Number.isInteger(segment.durationMs) || segment.durationMs <= 0) fail('INVALID_MANIFEST', 'narration segment timing invalid', path);
     if (typeof segment.text !== 'string' || segment.text.length === 0) fail('INVALID_MANIFEST', 'narration text required', `${path}.text`);
-    if (segmentIds.has(segment.segmentId)) fail('INVALID_MANIFEST', 'duplicate narration segmentId', `${path}.segmentId`);
-    segmentIds.add(segment.segmentId);
+    if (seenSegments.has(segment.segmentId)) fail('INVALID_MANIFEST', 'duplicate narration segmentId', `${path}.segmentId`);
+    seenSegments.add(segment.segmentId);
+    segmentIds.push(segment.segmentId);
   });
 
   const voice = object(value.voicePreparation, '$manifest.voicePreparation');
@@ -197,7 +192,7 @@ export const validatePreparationManifestV1 = (manifest, {plan = null} = {}) => {
   } else {
     exactKeys(voice, new Set(['mode','action','provider','voiceId','locale','rate','segmentIds']), '$manifest.voicePreparation');
     if (voice.action !== 'synthesize_narration_segments') fail('INVALID_MANIFEST', 'synthesize voice action mismatch', '$manifest.voicePreparation.action');
-    if (!Array.isArray(voice.segmentIds) || stableStringifyV1(voice.segmentIds) !== stableStringifyV1([...segmentIds])) fail('INVALID_MANIFEST', 'voice segmentIds must exactly match narration segments', '$manifest.voicePreparation.segmentIds');
+    if (!Array.isArray(voice.segmentIds) || stableStringifyV1(voice.segmentIds) !== stableStringifyV1(segmentIds)) fail('INVALID_MANIFEST', 'voice segmentIds must exactly match narration segments', '$manifest.voicePreparation.segmentIds');
   }
 
   const captions = object(value.captionPreparation, '$manifest.captionPreparation');
@@ -217,7 +212,6 @@ export const validatePreparationManifestV1 = (manifest, {plan = null} = {}) => {
   object(value.timeline, '$manifest.timeline');
   object(value.outputProfile, '$manifest.outputProfile');
   object(value.evidenceRequirements, '$manifest.evidenceRequirements');
-  expectedFromManifestSemantics(value);
 
   for (const field of ['providerSelected','providerExecutionPerformed','preparedArtifactsProduced','transportSelected','bindingCreated','renderAuthorized','consumerDomainDecisionInferred','businessOutcomeInferred']) {
     if (value[field] !== false) fail('TRUTH_BOUNDARY', `${field} must remain false in preparation manifest`, `$manifest.${field}`);
@@ -226,7 +220,7 @@ export const validatePreparationManifestV1 = (manifest, {plan = null} = {}) => {
 
   if (plan !== null) {
     validateCanonicalRenderPlanV1(plan);
-    const expected = compilePreparationManifestV1(plan);
+    const expected = buildPreparationManifest(plan);
     if (stableStringifyV1(value) !== stableStringifyV1(expected)) fail('PLAN_MANIFEST_MISMATCH', 'preparation manifest does not match exact render plan', '$manifest');
   }
   return true;
