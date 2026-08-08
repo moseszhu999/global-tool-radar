@@ -49,7 +49,24 @@ The plan contains:
 - derived technical requirements for asset resolution, voice synthesis/provided audio, caption generation/provided captions, timeline materialization and evidence closure;
 - deterministic `renderPlanDigest`.
 
-`validateCanonicalRenderPlanV1(plan, {request})` recompiles the exact request and requires semantic equality, so a plan cannot be detached from its source canonical request.
+## Semantic re-derivation
+
+`renderPlanDigest` is an integrity checksum, not authorization and not sufficient semantic proof. A caller can compute a new SHA after modifying a plan, so standalone validation does not trust the digest by itself.
+
+`validateCanonicalRenderPlanV1(...)` reconstructs a canonical `media.render.v1` request from the plan and reruns the canonical request validator. This re-checks:
+
+- request/input-manifest digest identity;
+- shot order and narration structure;
+- visual asset IDs and shot asset references;
+- voice mode/provided asset structure;
+- caption mode/provided asset structure;
+- output profile and canonical evidence requirements.
+
+It also independently re-derives the technical `requirements` flags from preserved assets/voice/captions and requires exact equality.
+
+Therefore changing requirements, shot order or asset references and then recomputing `renderPlanDigest` still fails validation.
+
+`validateCanonicalRenderPlanV1(plan, {request})` adds the stronger source tie-out: it recompiles the exact external canonical request and requires complete semantic equality, so a valid plan for one request cannot be substituted for another.
 
 ## Truth boundary
 
@@ -91,7 +108,7 @@ This compiler contains neither domain's business vocabulary or approval truth.
 
 ## Tests
 
-The exact-head suite requires 19 contracts covering:
+The exact-head suite requires 22 contracts covering:
 
 - course-explainer-shaped canonical input;
 - lossless assets/voice/captions/output/evidence preservation;
@@ -103,6 +120,9 @@ The exact-head suite requires 19 contracts covering:
 - provided voice/caption assets;
 - none-mode behavior;
 - timeline/digest/truth-boundary tamper rejection;
+- re-signed requirements tamper rejection;
+- re-signed unknown asset-reference rejection;
+- re-signed shot-order rejection;
 - exact request↔plan verification;
 - deep freeze;
 - product-neutral output.
