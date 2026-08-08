@@ -1,0 +1,9 @@
+{
+  "name": "@toolradar/video-creative-preflight",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node --check src/index.mjs && node --check src/cli.mjs",
+    "test": "node --test test/index.test.mjs"
+  }
+}
