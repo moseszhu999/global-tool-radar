@@ -1,0 +1,165 @@
+name: M10 Explainer 19s Product Proof v1
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - apps/remotion-video/src/toolradar-explainer-19s-animatic-v1.tsx
+      - apps/web/workspace.html
+      - .github/workflows/m10-explainer-19s-product-proof-v1.yml
+
+permissions:
+  contents: read
+
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      EXPECTED_FRAMES: '576'
+      EXPECTED_FPS: '30'
+      SOURCE_FILE: apps/remotion-video/src/toolradar-explainer-19s-animatic-v1.tsx
+      WORKSPACE_FILE: apps/web/workspace.html
+      BASE_VIDEO: apps/remotion-video/out/toolradar-explainer-19s-proof-base.mp4
+      PROOF_VIDEO: apps/remotion-video/out/toolradar-explainer-19s-product-proof-v1.mp4
+    steps:
+      - name: Checkout exact proof head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Bind proof copy to exact Workspace truth
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          test -z "$(git status --porcelain)"
+          grep -F '<strong>Radar inbox</strong>' "$WORKSPACE_FILE"
+          grep -F '<small>候选</small><strong data-count>UNKNOWN</strong>' "$WORKSPACE_FILE"
+          grep -F '<small>版权待审</small><strong data-rights>UNKNOWN</strong>' "$WORKSPACE_FILE"
+          grep -F '<small>安全待审</small><strong data-security>UNKNOWN</strong>' "$WORKSPACE_FILE"
+          grep -F '缺失不会显示为 0。' "$WORKSPACE_FILE"
+          grep -F '只生成 draft，不下载、复制或发布源视频。' "$WORKSPACE_FILE"
+          grep -F 'EXPLAINER_19S_FRAMES = 576' "$SOURCE_FILE"
+          grep -F 'EXPLAINER_19S_FIRST_PAYOFF_FRAME = 156' "$SOURCE_FILE"
+          grep -F 'EXPLAINER_19S_FULL_REVEAL_FRAME = 312' "$SOURCE_FILE"
+          grep -F 'EXPLAINER_19S_LOOP_START_FRAME = 528' "$SOURCE_FILE"
+
+      - name: Install media and deterministic Chinese font
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg fontconfig fonts-noto-cjk
+          sudo fc-cache -f
+          font="$(fc-match -f '%{file}\n' 'Noto Sans CJK SC' | head -1)"
+          test -f "$font"
+          printf '%s\n' "$font" > "$RUNNER_TEMP/font-path.txt"
+          printf '%s\n' 'Radar inbox' > "$RUNNER_TEMP/proof-title.txt"
+          printf '%s\n' '候选' > "$RUNNER_TEMP/label-candidate.txt"
+          printf '%s\n' '版权待审' > "$RUNNER_TEMP/label-rights.txt"
+          printf '%s\n' '安全待审' > "$RUNNER_TEMP/label-security.txt"
+          printf '%s\n' 'UNKNOWN' > "$RUNNER_TEMP/value-unknown.txt"
+          printf '%s\n' '缺失不会显示为 0' > "$RUNNER_TEMP/proof-note.txt"
+          printf '%s\n' 'REAL WORKSPACE PROOF' > "$RUNNER_TEMP/proof-badge.txt"
+
+      - name: Install Remotion and render unchanged animatic baseline
+        working-directory: apps/remotion-video
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f package-lock.json ]; then npm ci --no-audit --no-fund; else npm install --no-audit --no-fund; fi
+          npx remotion browser ensure
+          mkdir -p out
+          npx remotion render src/toolradar-explainer-19s-animatic-v1.tsx ToolRadarExplainer19sAnimaticV1 out/toolradar-explainer-19s-proof-base.mp4 --codec=h264 --crf=19
+          test -s out/toolradar-explainer-19s-proof-base.mp4
+
+      - name: Insert bounded real-product proof card
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="$GITHUB_WORKSPACE/$BASE_VIDEO"
+          out="$GITHUB_WORKSPACE/$PROOF_VIDEO"
+          font="$(cat "$RUNNER_TEMP/font-path.txt")"
+          # The proof card exists only during the evidence beat (6.10s–7.72s).
+          # It reconstructs exact current Workspace copy; it is not a generated screenshot.
+          ffmpeg -hide_banner -loglevel error -y -i "$base" \
+            -vf "\
+              drawbox=x=124:y=1242:w=832:h=470:color=0xF8FBFF@0.98:t=fill:enable='between(t,6.10,7.72)',\
+              drawbox=x=124:y=1242:w=12:h=470:color=0x5DE2F2@1:t=fill:enable='between(t,6.10,7.72)',\
+              drawbox=x=158:y=1280:w=270:h=44:color=0x0B2238@1:t=fill:enable='between(t,6.10,7.72)',\
+              drawtext=fontfile='$font':textfile='$RUNNER_TEMP/proof-badge.txt':fontcolor=0x5DE2F2:fontsize=19:x=176:y=1290:enable='between(t,6.10,7.72)',\
+              drawtext=fontfile='$font':textfile='$RUNNER_TEMP/proof-title.txt':fontcolor=0x071421:fontsize=36:x=158:y=1347:enable='between(t,6.10,7.72)',\
+              drawtext=fontfile='$font':textfile='$RUNNER_TEMP/label-candidate.txt':fontcolor=0x526B83:fontsize=22:x=165:y=1424:enable='between(t,6.10,7.72)',\
+              drawtext=fontfile='$font':textfile='$RUNNER_TEMP/value-unknown.txt':fontcolor=0xE5A827:fontsize=26:x=165:y=1460:enable='between(t,6.10,7.72)',\
+              drawtext=fontfile='$font':textfile='$RUNNER_TEMP/label-rights.txt':fontcolor=0x526B83:fontsize=22:x=416:y=1424:enable='between(t,6.10,7.72)',\
+              drawtext=fontfile='$font':textfile='$RUNNER_TEMP/value-unknown.txt':fontcolor=0xE5A827:fontsize=26:x=416:y=1460:enable='between(t,6.10,7.72)',\
+              drawtext=fontfile='$font':textfile='$RUNNER_TEMP/label-security.txt':fontcolor=0x526B83:fontsize=22:x=696:y=1424:enable='between(t,6.10,7.72)',\
+              drawtext=fontfile='$font':textfile='$RUNNER_TEMP/value-unknown.txt':fontcolor=0xE5A827:fontsize=26:x=696:y=1460:enable='between(t,6.10,7.72)',\
+              drawbox=x=158:y=1537:w=764:h=2:color=0xDDE7F0@1:t=fill:enable='between(t,6.10,7.72)',\
+              drawtext=fontfile='$font':textfile='$RUNNER_TEMP/proof-note.txt':fontcolor=0x1F3B52:fontsize=25:x=158:y=1570:enable='between(t,6.10,7.72)'" \
+            -an -c:v libx264 -crf 19 -pix_fmt yuv420p -movflags +faststart "$out"
+          test -s "$out"
+
+      - name: Inspect and compare proof insertion
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="$GITHUB_WORKSPACE/$BASE_VIDEO"
+          proof="$GITHUB_WORKSPACE/$PROOF_VIDEO"
+          ffprobe -v error -count_frames -select_streams v:0 -show_entries stream=nb_read_frames -of default=nw=1:nk=1 "$proof" > "$RUNNER_TEMP/frame-count.txt"
+          ffprobe -v error -show_streams -show_format -of json "$proof" > "$RUNNER_TEMP/ffprobe.json"
+          ffmpeg -hide_banner -nostats -i "$proof" -vf 'blackdetect=d=0.35:pix_th=0.10' -an -f null - 2> "$RUNNER_TEMP/blackdetect.txt" || true
+          ffmpeg -hide_banner -loglevel error -y -ss 6.55 -i "$base" -frames:v 1 -vf scale=405:720 "$RUNNER_TEMP/base-proof-moment.jpg"
+          ffmpeg -hide_banner -loglevel error -y -ss 6.55 -i "$proof" -frames:v 1 -vf scale=405:720 "$RUNNER_TEMP/product-proof-moment.jpg"
+          ffmpeg -hide_banner -loglevel error -y -i "$RUNNER_TEMP/base-proof-moment.jpg" -i "$RUNNER_TEMP/product-proof-moment.jpg" -filter_complex 'hstack=inputs=2' "$RUNNER_TEMP/base-vs-proof.jpg"
+          BASE="$base" PROOF="$proof" PR_HEAD="${{ github.event.pull_request.head.sha }}" python3 - <<'PY'
+          import hashlib,json,os,pathlib
+          rt=pathlib.Path(os.environ['RUNNER_TEMP'])
+          frames=int((rt/'frame-count.txt').read_text().strip()); assert frames==576
+          probe=json.loads((rt/'ffprobe.json').read_text()); vs=next(s for s in probe['streams'] if s['codec_type']=='video')
+          assert int(vs['width'])==1080 and int(vs['height'])==1920
+          assert 'black_start:' not in (rt/'blackdetect.txt').read_text(errors='ignore')
+          base=pathlib.Path(os.environ['BASE']).read_bytes(); proof=pathlib.Path(os.environ['PROOF']).read_bytes()
+          assert base != proof
+          receipt={
+            'schemaVersion':'toolradar.m10.explainer-19s-product-proof.v1',
+            'exactHead':os.environ['PR_HEAD'],
+            'sourceTruth':'apps/web/workspace.html',
+            'proofWindowSeconds':[6.10,7.72],
+            'proofStrings':['Radar inbox','候选','UNKNOWN','版权待审','安全待审','缺失不会显示为 0'],
+            'generatedFactualUiUsed':False,
+            'deterministicProductProofUsed':True,
+            'visualTimelineChanged':False,
+            'audioIncluded':False,
+            'frames':frames,
+            'width':1080,
+            'height':1920,
+            'baseSha256':hashlib.sha256(base).hexdigest(),
+            'proofSha256':hashlib.sha256(proof).hexdigest(),
+            'proofBytes':len(proof),
+            'humanDesignApproved':False,
+            'canonicalPR89CandidateReplaced':False,
+            'publicationAllowed':False,
+            'publicationPerformed':False,
+            'analyticsObserved':False,
+          }
+          (rt/'product-proof-receipt.json').write_text(json.dumps(receipt,ensure_ascii=False,indent=2)+'\n')
+          print(json.dumps(receipt,ensure_ascii=False,indent=2))
+          PY
+
+      - name: Upload product-proof evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: toolradar-explainer-19s-product-proof-v1
+          path: |
+            apps/remotion-video/out/toolradar-explainer-19s-product-proof-v1.mp4
+            ${{ runner.temp }}/base-vs-proof.jpg
+            ${{ runner.temp }}/product-proof-receipt.json
+            ${{ runner.temp }}/ffprobe.json
+            ${{ runner.temp }}/blackdetect.txt
+          if-no-files-found: error
+          retention-days: 30
