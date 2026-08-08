@@ -75,9 +75,12 @@ test('synthesized voice becomes provider-neutral synthesis preparation without e
   assert.equal(manifest.providerExecutionPerformed, false);
 });
 
-test('auto captions become timeline-derived caption preparation without execution', () => {
+test('auto captions bind exactly to narration timeline segments without execution', () => {
   const manifest = compilePreparationManifestV1(plan());
-  assert.deepEqual(manifest.captionPreparation, {mode:'auto',format:'burn-in',action:'generate_captions_from_timeline',language:'zh-CN'});
+  assert.deepEqual(manifest.captionPreparation, {
+    mode:'auto',format:'burn-in',action:'generate_captions_from_narration_timeline',language:'zh-CN',
+    segmentIds:['narration-shot-1','narration-shot-2'],
+  });
   assert.equal(manifest.preparedArtifactsProduced, false);
 });
 
@@ -108,6 +111,22 @@ test('none voice and captions produce no provider actions', () => {
   assert.deepEqual(manifest.captionPreparation,{mode:'none',format:'none',action:'none'});
 });
 
+test('synthesized voice without narration text fails closed', () => {
+  const source=request({
+    shots:[{shotId:'shot-1',order:1,durationMs:1000,narration:{mode:'none'},visualAssetIds:[]}],
+    visualAssets:[],voice:{mode:'synthesize',provider:'shared-tts',voiceId:'zh-neutral-01'},captions:{mode:'none',format:'none'},
+  });
+  assert.throws(()=>compilePreparationManifestV1(compileCanonicalRenderPlanV1(source)),/synthesized voice requires at least one narration text segment/);
+});
+
+test('auto captions without narration text fail closed in v1', () => {
+  const source=request({
+    shots:[{shotId:'shot-1',order:1,durationMs:1000,narration:{mode:'none'},visualAssetIds:[]}],
+    visualAssets:[],voice:{mode:'none'},captions:{mode:'auto',format:'burn-in',language:'zh-CN'},
+  });
+  assert.throws(()=>compilePreparationManifestV1(compileCanonicalRenderPlanV1(source)),/auto captions v1 require narration text segments/);
+});
+
 test('same exact render plan produces deterministic preparation digest', () => {
   const source=plan();
   const first=compilePreparationManifestV1(source);
@@ -134,6 +153,13 @@ test('plain digest tampering is rejected', () => {
   assert.throws(()=>validatePreparationManifestV1(manifest),/preparationManifestDigest mismatch/);
 });
 
+test('re-signed narration tampering is rejected by timeline re-derivation', () => {
+  const manifest=clone(compilePreparationManifestV1(plan()));
+  manifest.narrationSegments[0].text='tampered text';
+  resign(manifest);
+  assert.throws(()=>validatePreparationManifestV1(manifest),/exactly re-derived from preserved timeline/);
+});
+
 test('re-signed visual action tampering is rejected semantically', () => {
   const manifest=clone(compilePreparationManifestV1(plan()));
   manifest.visualInputs[0].action='skip_integrity_check';
@@ -146,6 +172,21 @@ test('re-signed synthesis segment mismatch is rejected semantically', () => {
   manifest.voicePreparation.segmentIds=['narration-shot-2'];
   resign(manifest);
   assert.throws(()=>validatePreparationManifestV1(manifest),/segmentIds must exactly match narration segments/);
+});
+
+test('re-signed auto-caption segment mismatch is rejected semantically', () => {
+  const manifest=clone(compilePreparationManifestV1(plan()));
+  manifest.captionPreparation.segmentIds=['narration-shot-2'];
+  resign(manifest);
+  assert.throws(()=>validatePreparationManifestV1(manifest),/caption segmentIds must exactly match narration segments/);
+});
+
+test('re-signed provided asset with invalid SHA is rejected semantically', () => {
+  const audioAsset={assetId:'voice-1',locator:'media://voice/voice.wav',mediaType:'audio/wav',sha256:sha('c')};
+  const manifest=clone(compilePreparationManifestV1(plan({voice:{mode:'provided',audioAsset}})));
+  manifest.voicePreparation.audioAsset.sha256='bad';
+  resign(manifest);
+  assert.throws(()=>validatePreparationManifestV1(manifest),/sha256 must be lowercase SHA-256/);
 });
 
 test('preparation manifest cannot claim provider, artifact, transport, binding or render execution', () => {
