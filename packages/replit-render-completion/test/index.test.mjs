@@ -4,6 +4,11 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import test from 'node:test';
 import {intakeOwnedMediaIntoVideoProject} from '../../replit-owned-media-intake/src/index.mjs';
+import {
+  ART_GATE_CHECKS,
+  ANIMATIC_GATE_CHECKS,
+  createVideoCreativePreflight,
+} from '../../video-creative-preflight/src/index.mjs';
 import {authorizeReplitRender} from '../../replit-render-authorization/src/index.mjs';
 import {materializeMacRemotionRunnerRequest} from '../../mac-remotion-render-job-binding/src/index.mjs';
 import {runMacRemotionRender} from '../../mac-remotion-render-orchestration/src/index.mjs';
@@ -42,6 +47,23 @@ const buildRunReceipt = async (jobRequest, status = 'completed') => runMacRemoti
   now: () => '2026-08-06T14:00:00.000Z',
 });
 
+const passChecks = (names) => Object.fromEntries(names.map((name) => [name, true]));
+const creativePreflightFor = (project, label) => createVideoCreativePreflight({
+  project,
+  artGate: {
+    evidenceType: 'toolradar.styleframe-art-gate.v1',
+    evidenceDigest: label === 'a' ? 'a'.repeat(64) : 'c'.repeat(64),
+    checks: passChecks(ART_GATE_CHECKS),
+  },
+  animaticGate: {
+    evidenceType: 'toolradar.animatic-gate.v1',
+    evidenceDigest: label === 'a' ? 'b'.repeat(64) : 'd'.repeat(64),
+    checks: passChecks(ANIMATIC_GATE_CHECKS),
+  },
+  reviewer: 'creative-controller',
+  reviewedAt: '2026-08-09T04:50:00.000Z',
+});
+
 const prepareFixture = async (label = 'a') => {
   const dir = await mkdtemp(join(tmpdir(), `toolradar-render-completion-${label}-`));
   const designRecording = join(dir, 'design.mp4');
@@ -69,11 +91,13 @@ const prepareFixture = async (label = 'a') => {
   const videoPath = join(dir, `final-${label}.mp4`);
   const authorization = await authorizeReplitRender({
     project: intake.updatedProject,
+    creativePreflight: creativePreflightFor(intake.updatedProject, label),
     preflightReceiptPath: preflightPath,
     actor: 'render-operator',
-    occurredAt: '2026-08-06T13:10:00.000Z',
+    occurredAt: '2026-08-09T04:55:00.000Z',
     outputPath: videoPath,
   });
+  assert.equal(authorization.status, 'RENDER_AUTHORIZED');
   const gatePath = join(dir, 'gate.json');
   await writeFile(gatePath, `${JSON.stringify(authorization.finalRenderGate, null, 2)}\n`);
 
