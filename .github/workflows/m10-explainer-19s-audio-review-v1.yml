@@ -1,0 +1,221 @@
+name: M10 Explainer 19s Audio Review v1
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - apps/remotion-video/src/toolradar-explainer-19s-animatic-v1.tsx
+      - .github/workflows/m10-explainer-19s-audio-review-v1.yml
+
+permissions:
+  contents: read
+
+jobs:
+  audio-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      EXPECTED_FRAMES: '576'
+      EXPECTED_FPS: '30'
+      VOICE: zh-CN-XiaoxiaoNeural
+      VOICE_RATE: '+12%'
+    steps:
+      - name: Checkout exact animatic head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify visual source anchors
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          src=apps/remotion-video/src/toolradar-explainer-19s-animatic-v1.tsx
+          grep -F 'EXPLAINER_19S_FRAMES = 576' "$src"
+          grep -F 'EXPLAINER_19S_FIRST_PAYOFF_FRAME = 156' "$src"
+          grep -F 'EXPLAINER_19S_FULL_REVEAL_FRAME = 312' "$src"
+          grep -F 'EXPLAINER_19S_LOOP_START_FRAME = 528' "$src"
+
+      - name: Install media, font, and TTS
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg fontconfig fonts-noto-cjk python3-pip
+          sudo fc-cache -f
+          python3 -m pip install --user --disable-pip-version-check edge-tts
+          fc-match 'Noto Sans CJK SC' | tee "$RUNNER_TEMP/font-match.txt"
+          grep -F 'NotoSansCJK' "$RUNNER_TEMP/font-match.txt" >/dev/null
+
+      - name: Install Remotion and render exact animatic video
+        working-directory: apps/remotion-video
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f package-lock.json ]; then npm ci --no-audit --no-fund; else npm install --no-audit --no-fund; fi
+          npx remotion browser ensure
+          mkdir -p out
+          npx remotion render src/toolradar-explainer-19s-animatic-v1.tsx ToolRadarExplainer19sAnimaticV1 out/toolradar-explainer-19s-audio-base.mp4 --codec=h264 --crf=19
+          test -s out/toolradar-explainer-19s-audio-base.mp4
+
+      - name: Synthesize per-beat narration without time stretching
+        shell: bash
+        run: |
+          set -euo pipefail
+          dir="$RUNNER_TEMP/narration"
+          mkdir -p "$dir"
+          texts=(
+            '结果，只留五个。'
+            '先筛掉噪声，再留下焦点。'
+            '没有证据，就保持未知。'
+            '顺序一变，立刻更清楚。'
+            '升级，不是加，是敢删。'
+            'Agent 可以提议，但决定要交给人。'
+          )
+          names=(01-after 02-filter 03-evidence 04-reveal 05-reduce 06-human)
+          maxes=(2.30 2.90 2.60 2.60 2.90 4.20)
+          : > "$RUNNER_TEMP/narration-durations.tsv"
+          for i in "${!texts[@]}"; do
+            mp3="$dir/${names[$i]}.mp3"
+            wav="$dir/${names[$i]}.wav"
+            ok=0
+            for attempt in 1 2 3; do
+              if python3 -m edge_tts --voice "$VOICE" --rate "$VOICE_RATE" --text "${texts[$i]}" --write-media "$mp3" && test -s "$mp3"; then ok=1; break; fi
+              rm -f "$mp3"; sleep $((attempt*2))
+            done
+            test "$ok" -eq 1
+            ffmpeg -hide_banner -loglevel error -y -i "$mp3" -ar 48000 -ac 2 -c:a pcm_s16le "$wav"
+            dur="$(ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 "$wav")"
+            python3 - "$dur" "${maxes[$i]}" "${names[$i]}" <<'PY'
+          import sys
+          duration=float(sys.argv[1]); maximum=float(sys.argv[2]); name=sys.argv[3]
+          if duration > maximum:
+              raise SystemExit(f'{name} narration too long: {duration:.3f}s > {maximum:.3f}s')
+          print(f'{name}\t{duration:.6f}\t{maximum:.2f}')
+          PY
+            printf '%s\t%s\t%s\n' "${names[$i]}" "$dur" "${maxes[$i]}" >> "$RUNNER_TEMP/narration-durations.tsv"
+          done
+          printf '07-loop\tNONVERBAL\t1.60\n' >> "$RUNNER_TEMP/narration-durations.tsv"
+
+      - name: Generate procedural music and semantic SFX
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - "$RUNNER_TEMP/bgm.wav" <<'PY'
+          import array,math,sys,wave
+          out=sys.argv[1]; rate=48000; duration=19.2; n=int(rate*duration); bpm=118.; beat=60./bpm
+          roots=(98.,110.,130.81,116.54); buf=array.array('h')
+          for j in range(n):
+              t=j/rate; root=roots[int(t//4.8)%len(roots)]
+              pad=(math.sin(2*math.pi*root*t)+.42*math.sin(2*math.pi*root*1.5*t)+.24*math.sin(2*math.pi*root*2*t))*.036
+              bp=t%beat; kick=math.sin(2*math.pi*(72-24*min(1,bp/.13))*bp)*math.exp(-29*bp)*.20 if bp<.15 else 0.
+              hb=t%(beat/2); hat=math.sin(2*math.pi*5200*t)*math.sin(2*math.pi*3100*t)*math.exp(-74*hb)*.032 if hb<.055 else 0.
+              lift=.013*math.sin(2*math.pi*(196 if int(t/beat)%4<2 else 220)*t)
+              v=max(-.75,min(.75,pad+kick+hat+lift)); s=int(v*32767); buf.append(s); buf.append(s)
+          with wave.open(out,'wb') as w:
+              w.setnchannels(2); w.setsampwidth(2); w.setframerate(rate); w.writeframes(buf.tobytes())
+          PY
+          ffmpeg -hide_banner -loglevel error -y -f lavfi -i 'anoisesrc=color=pink:sample_rate=48000:duration=0.42' -af 'highpass=f=600,lowpass=f=6500,afade=t=in:st=0:d=0.02,afade=t=out:st=0.13:d=0.28,volume=0.18' -ac 2 -c:a pcm_s16le "$RUNNER_TEMP/whoosh.wav"
+          ffmpeg -hide_banner -loglevel error -y -f lavfi -i 'sine=frequency=82:sample_rate=48000:duration=0.28' -af 'afade=t=out:st=0.04:d=0.24,volume=0.55' -ac 2 -c:a pcm_s16le "$RUNNER_TEMP/impact.wav"
+          ffmpeg -hide_banner -loglevel error -y -f lavfi -i 'sine=frequency=1180:sample_rate=48000:duration=0.10' -af 'afade=t=out:st=0.015:d=0.085,volume=0.22' -ac 2 -c:a pcm_s16le "$RUNNER_TEMP/click.wav"
+          ffmpeg -hide_banner -loglevel error -y -f lavfi -i 'sine=frequency=1420:sample_rate=48000:duration=0.46' -af 'aecho=0.8:0.35:38|76:0.28|0.15,afade=t=out:st=0.18:d=0.28,volume=0.12' -ac 2 -c:a pcm_s16le "$RUNNER_TEMP/sparkle.wav"
+
+      - name: Mix narration, music, and action-aligned SFX
+        shell: bash
+        run: |
+          set -euo pipefail
+          n="$RUNNER_TEMP/narration"
+          base="$GITHUB_WORKSPACE/apps/remotion-video/out/toolradar-explainer-19s-audio-base.mp4"
+          out="$GITHUB_WORKSPACE/apps/remotion-video/out/toolradar-explainer-19s-audio-review-v1.mp4"
+          ffmpeg -hide_banner -loglevel error -y \
+            -i "$base" \
+            -i "$RUNNER_TEMP/bgm.wav" \
+            -i "$n/01-after.wav" -i "$n/02-filter.wav" -i "$n/03-evidence.wav" -i "$n/04-reveal.wav" -i "$n/05-reduce.wav" -i "$n/06-human.wav" \
+            -i "$RUNNER_TEMP/whoosh.wav" -i "$RUNNER_TEMP/impact.wav" -i "$RUNNER_TEMP/click.wav" -i "$RUNNER_TEMP/sparkle.wav" \
+            -filter_complex "\
+              [1:a]volume=0.24[bg];\
+              [2:a]adelay=0|0[n1];\
+              [3:a]adelay=2300|2300[n2];\
+              [4:a]adelay=5200|5200[n3];\
+              [5:a]adelay=7800|7800[n4];\
+              [6:a]adelay=10400|10400[n5];\
+              [7:a]adelay=13300|13300[n6];\
+              [8:a]adelay=3200|3200,volume=0.9[w1];\
+              [8:a]adelay=17600|17600,volume=0.95[w2];\
+              [9:a]adelay=5200|5200[i1];\
+              [9:a]adelay=10400|10400,volume=0.78[i2];\
+              [10:a]adelay=6500|6500[c1];\
+              [10:a]adelay=15000|15000[c2];\
+              [11:a]adelay=10100|10100[s1];\
+              [bg][n1][n2][n3][n4][n5][n6][w1][w2][i1][i2][c1][c2][s1]amix=inputs=14:duration=longest:normalize=0,loudnorm=I=-16:TP=-1.5:LRA=11[mix]" \
+            -map 0:v:0 -map '[mix]' -c:v copy -c:a aac -b:a 192k -ar 48000 -ac 2 -t 19.2 -movflags +faststart "$out"
+          test -s "$out"
+
+      - name: Inspect audio review exact media
+        shell: bash
+        run: |
+          set -euo pipefail
+          video="$GITHUB_WORKSPACE/apps/remotion-video/out/toolradar-explainer-19s-audio-review-v1.mp4"
+          ffprobe -v error -show_streams -show_format -of json "$video" > "$RUNNER_TEMP/ffprobe.json"
+          ffprobe -v error -count_frames -select_streams v:0 -show_entries stream=nb_read_frames -of default=nw=1:nk=1 "$video" > "$RUNNER_TEMP/frame-count.txt"
+          ffmpeg -hide_banner -nostats -i "$video" -af 'silencedetect=noise=-45dB:d=0.75' -vn -f null - 2> "$RUNNER_TEMP/silencedetect.txt" || true
+          ffmpeg -hide_banner -nostats -i "$video" -af 'loudnorm=I=-16:TP=-1.5:LRA=11:print_format=json' -f null - 2> "$RUNNER_TEMP/loudness.txt" || true
+          VIDEO="$video" PR_HEAD="${{ github.event.pull_request.head.sha }}" python3 - <<'PY'
+          import hashlib,json,os,pathlib,re
+          rt=pathlib.Path(os.environ['RUNNER_TEMP']); probe=json.loads((rt/'ffprobe.json').read_text())
+          vs=next(s for s in probe['streams'] if s['codec_type']=='video'); au=next(s for s in probe['streams'] if s['codec_type']=='audio')
+          frames=int((rt/'frame-count.txt').read_text().strip()); assert frames==576
+          silence=(rt/'silencedetect.txt').read_text(errors='ignore')
+          assert 'silence_start:' not in silence, silence
+          loud=(rt/'loudness.txt').read_text(errors='ignore')
+          def metric(name):
+              m=re.search(rf'"{name}"\s*:\s*"?(-?\d+(?:\.\d+)?)',loud)
+              return float(m.group(1)) if m else None
+          data=pathlib.Path(os.environ['VIDEO']).read_bytes()
+          receipt={
+            'schemaVersion':'toolradar.m10.explainer-19s-audio-review.v1',
+            'exactHead':os.environ['PR_HEAD'],
+            'visualComposition':'ToolRadarExplainer19sAnimaticV1',
+            'voice':os.environ['VOICE'],
+            'voiceRate':os.environ['VOICE_RATE'],
+            'narratedBeatCount':6,
+            'loopBeatNarrationIncluded':False,
+            'perBeatSynthesis':True,
+            'narrationTimeStretchApplied':False,
+            'proceduralMusicIncluded':True,
+            'semanticSfx':['whoosh','impact','click','sparkle'],
+            'durationSeconds':19.2,
+            'frames':frames,
+            'videoCodec':vs['codec_name'],
+            'audioCodec':au['codec_name'],
+            'integratedLoudnessMeasured':metric('input_i'),
+            'truePeakMeasured':metric('input_tp'),
+            'silenceIntervalAtLeast075s':False,
+            'outputSha256':hashlib.sha256(data).hexdigest(),
+            'outputBytes':len(data),
+            'humanWatchedFullCandidate':False,
+            'socialPlatformBusinessFitApprovedByHuman':False,
+            'publicationAllowed':False,
+            'publicationPerformed':False,
+            'analyticsObserved':False,
+          }
+          (rt/'audio-review-receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')
+          print(json.dumps(receipt,indent=2))
+          PY
+
+      - name: Upload audio review evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: toolradar-explainer-19s-audio-review-v1
+          path: |
+            apps/remotion-video/out/toolradar-explainer-19s-audio-review-v1.mp4
+            ${{ runner.temp }}/audio-review-receipt.json
+            ${{ runner.temp }}/narration-durations.tsv
+            ${{ runner.temp }}/ffprobe.json
+            ${{ runner.temp }}/silencedetect.txt
+            ${{ runner.temp }}/loudness.txt
+          if-no-files-found: error
+          retention-days: 30

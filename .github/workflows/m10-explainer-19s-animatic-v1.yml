@@ -1,0 +1,156 @@
+name: M10 Explainer 19s Structural Animatic v1
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - apps/remotion-video/src/toolradar-explainer-19s-animatic-v1.tsx
+      - .github/workflows/m10-explainer-19s-animatic-v1.yml
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      EXPECTED_FRAMES: '576'
+      EXPECTED_FPS: '30'
+      EXPECTED_WIDTH: '1080'
+      EXPECTED_HEIGHT: '1920'
+      FIRST_PAYOFF_FRAME: '156'
+      FULL_REVEAL_FRAME: '312'
+      LOOP_START_FRAME: '528'
+      SOURCE_FILE: apps/remotion-video/src/toolradar-explainer-19s-animatic-v1.tsx
+      OUTPUT_FILE: apps/remotion-video/out/toolradar-explainer-19s-animatic-v1.mp4
+    steps:
+      - name: Checkout exact animatic head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify exact head and retention anchors
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "${{ github.event.pull_request.head.sha }}"
+          test -z "$(git status --porcelain)"
+          grep -F 'EXPLAINER_19S_FRAMES = 576' "$SOURCE_FILE"
+          grep -F 'EXPLAINER_19S_FIRST_PAYOFF_FRAME = 156' "$SOURCE_FILE"
+          grep -F 'EXPLAINER_19S_FULL_REVEAL_FRAME = 312' "$SOURCE_FILE"
+          grep -F 'EXPLAINER_19S_LOOP_START_FRAME = 528' "$SOURCE_FILE"
+          grep -F 'ToolRadarExplainer19sAnimaticV1' "$SOURCE_FILE"
+          grep -F 'STRUCTURAL ANIMATIC · NO AUDIO · NO PUBLICATION CLAIM' "$SOURCE_FILE"
+          ! grep -Eq '(<Video|<Img|staticFile\(|https?://|Kurzgesagt|execute_arbitrary_graph)' "$SOURCE_FILE"
+          python3 - <<'PY'
+          fps=30; frames=576; first=156; reveal=312; loop=528
+          assert frames/fps == 19.2
+          assert first/fps == 5.2
+          assert reveal/fps == 10.4
+          assert loop/fps == 17.6
+          print({'durationSeconds':19.2,'firstPayoffSeconds':5.2,'fullRevealSeconds':10.4,'loopStartSeconds':17.6})
+          PY
+
+      - name: Install media and fonts
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg fontconfig fonts-noto-cjk
+          sudo fc-cache -f
+          fc-match 'Noto Sans CJK SC' | tee "$RUNNER_TEMP/font-match.txt"
+          grep -F 'NotoSansCJK' "$RUNNER_TEMP/font-match.txt" >/dev/null
+
+      - name: Install Remotion dependencies
+        working-directory: apps/remotion-video
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f package-lock.json ]; then npm ci --no-audit --no-fund; else npm install --no-audit --no-fund; fi
+          npx remotion browser ensure
+          npx remotion compositions src/toolradar-explainer-19s-animatic-v1.tsx | tee "$RUNNER_TEMP/compositions.txt"
+          grep -F 'ToolRadarExplainer19sAnimaticV1' "$RUNNER_TEMP/compositions.txt"
+          grep -F "$EXPECTED_FRAMES" "$RUNNER_TEMP/compositions.txt"
+
+      - name: Render structural animatic
+        working-directory: apps/remotion-video
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          npx remotion render \
+            src/toolradar-explainer-19s-animatic-v1.tsx \
+            ToolRadarExplainer19sAnimaticV1 \
+            out/toolradar-explainer-19s-animatic-v1.mp4 \
+            --codec=h264 \
+            --crf=19
+          test -s out/toolradar-explainer-19s-animatic-v1.mp4
+
+      - name: Inspect and bind animatic evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          video="$GITHUB_WORKSPACE/$OUTPUT_FILE"
+          ffprobe -v error -show_streams -show_format -of json "$video" > "$RUNNER_TEMP/ffprobe.json"
+          ffprobe -v error -count_frames -select_streams v:0 -show_entries stream=nb_read_frames -of default=nw=1:nk=1 "$video" > "$RUNNER_TEMP/frame-count.txt"
+          ffmpeg -hide_banner -nostats -i "$video" -vf 'blackdetect=d=0.35:pix_th=0.10' -an -f null - 2> "$RUNNER_TEMP/blackdetect.txt" || true
+          ffmpeg -hide_banner -loglevel error -y -i "$video" -vf 'fps=1/1.6,scale=270:480,tile=3x4:padding=8:margin=8' -frames:v 1 "$RUNNER_TEMP/contact-sheet.jpg"
+          VIDEO="$video" PR_HEAD="${{ github.event.pull_request.head.sha }}" python3 - <<'PY'
+          import hashlib,json,os,pathlib
+          rt=pathlib.Path(os.environ['RUNNER_TEMP'])
+          probe=json.loads((rt/'ffprobe.json').read_text())
+          video=next(s for s in probe['streams'] if s['codec_type']=='video')
+          frames=int((rt/'frame-count.txt').read_text().strip())
+          assert frames == int(os.environ['EXPECTED_FRAMES'])
+          assert int(video['width']) == int(os.environ['EXPECTED_WIDTH'])
+          assert int(video['height']) == int(os.environ['EXPECTED_HEIGHT'])
+          black=(rt/'blackdetect.txt').read_text(errors='ignore')
+          assert 'black_start:' not in black, black
+          data=pathlib.Path(os.environ['VIDEO']).read_bytes()
+          receipt={
+            'schemaVersion':'toolradar.m10.explainer-19s-animatic.v1',
+            'exactHead':os.environ['PR_HEAD'],
+            'compositionId':'ToolRadarExplainer19sAnimaticV1',
+            'visualMode':'original-flat-geometric-explainer-structural-animatic',
+            'durationSeconds':19.2,
+            'frames':frames,
+            'fps':30,
+            'width':1080,
+            'height':1920,
+            'firstPayoffSeconds':5.2,
+            'fullRevealSeconds':10.4,
+            'loopStartSeconds':17.6,
+            'audioIncluded':False,
+            'thirdPartyVisualAssetsUsed':False,
+            'generatedFactualUiUsed':False,
+            'sourceCandidateR5Modified':False,
+            'outputSha256':hashlib.sha256(data).hexdigest(),
+            'outputBytes':len(data),
+            'humanWatchedFullCandidate':False,
+            'socialPlatformBusinessFitApprovedByHuman':False,
+            'publicationAllowed':False,
+            'publicationPerformed':False,
+            'analyticsObserved':False,
+          }
+          (rt/'receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')
+          print(json.dumps(receipt,indent=2))
+          PY
+
+      - name: Upload animatic evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: toolradar-explainer-19s-animatic-v1
+          path: |
+            apps/remotion-video/out/toolradar-explainer-19s-animatic-v1.mp4
+            ${{ runner.temp }}/contact-sheet.jpg
+            ${{ runner.temp }}/receipt.json
+            ${{ runner.temp }}/ffprobe.json
+            ${{ runner.temp }}/blackdetect.txt
+            ${{ runner.temp }}/font-match.txt
+          if-no-files-found: error
+          retention-days: 30
