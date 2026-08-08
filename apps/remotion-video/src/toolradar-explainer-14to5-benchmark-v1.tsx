@@ -96,6 +96,29 @@ const RadarField: React.FC<{frame: number}> = ({frame}) => {
   );
 };
 
+const FocusPulse: React.FC<{frame: number}> = ({frame}) => {
+  const enter = easeOut(interpolate(frame, [82, 100], [0, 1], clamp));
+  const leave = interpolate(frame, [116, 130], [1, 0], clamp);
+  const pulse = 1 + Math.sin(Math.max(0, frame - 90) * 0.22) * 0.035;
+  const size = lerp(330, 545, enter) * pulse;
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        left: 540 - size / 2,
+        top: 765 - size / 2,
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        opacity: enter * leave * 0.9,
+        border: `4px solid ${C.green}66`,
+        background: `radial-gradient(circle, ${C.green}18 0%, ${C.cyan}0d 42%, transparent 70%)`,
+        boxShadow: `0 0 95px ${C.green}24`,
+      }}
+    />
+  );
+};
+
 const CandidateSignals: React.FC<{frame: number}> = ({frame}) => {
   const surviveProgress = easeInOut(interpolate(frame, [48, 90], [0, 1], clamp));
   let survivorOrder = -1;
@@ -118,7 +141,7 @@ const CandidateSignals: React.FC<{frame: number}> = ({frame}) => {
           const target = finalPositions[survivorOrder];
           x = lerp(x, target.x, surviveProgress);
           y = lerp(y, target.y, surviveProgress);
-          scale = lerp(1, 1.28, surviveProgress);
+          scale = lerp(1, 1.3, surviveProgress);
         } else {
           const reject = easeOut(interpolate(frame, [44 + (i % 4) * 3, 74 + (i % 4) * 3], [0, 1], clamp));
           const dx = (p.x - 540) * (0.95 + (i % 2) * 0.3);
@@ -173,7 +196,7 @@ const CandidateSignals: React.FC<{frame: number}> = ({frame}) => {
 
 const EvidenceLinks: React.FC<{frame: number}> = ({frame}) => {
   const progress = interpolate(frame, [65, 98], [0, 1], clamp);
-  const opacity = interpolate(frame, [62, 72, 108, 116], [0, 1, 1, 0], clamp);
+  const opacity = interpolate(frame, [62, 72, 106, 114], [0, 1, 1, 0], clamp);
   return (
     <svg
       width={1080}
@@ -194,7 +217,7 @@ const EvidenceLinks: React.FC<{frame: number}> = ({frame}) => {
               stroke={i % 2 === 0 ? C.green : C.cyan}
               strokeWidth="5"
               strokeLinecap="round"
-              opacity="0.75"
+              opacity="0.72"
             />
             <rect x={sx - 28} y={sy - 22} width="56" height="44" rx="12" fill={C.white} opacity="0.95" />
             <path d={`M ${sx - 13} ${sy - 7} h 26 M ${sx - 13} ${sy + 4} h 17`} stroke={C.blue} strokeWidth="4" strokeLinecap="round" />
@@ -206,92 +229,92 @@ const EvidenceLinks: React.FC<{frame: number}> = ({frame}) => {
 };
 
 const GateAndProof: React.FC<{frame: number}> = ({frame}) => {
-  const gateIn = easeOut(interpolate(frame, [78, 102], [0, 1], clamp));
-  const proofIn = easeOut(interpolate(frame, [96, 122], [0, 1], clamp));
-  const gateY = lerp(1350, 1120, gateIn);
+  const gateIn = easeOut(interpolate(frame, [82, 102], [0, 1], clamp));
+  const proofIn = easeOut(interpolate(frame, [100, 122], [0, 1], clamp));
+  const gateY = lerp(1340, 1145, gateIn);
   return (
     <>
       <div
         style={{
           position: 'absolute',
-          left: 170,
+          left: 185,
           top: gateY,
-          width: 740,
-          height: 190,
-          borderRadius: 95,
+          width: 710,
+          height: 158,
+          borderRadius: 79,
           opacity: gateIn,
           background: `linear-gradient(90deg, ${C.green}22, ${C.cyan}18)`,
           border: `3px solid ${C.green}88`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: 26,
+          gap: 22,
           boxShadow: `0 24px 70px #0006, 0 0 50px ${C.green}18 inset`,
         }}
       >
         <div
           style={{
-            width: 92,
-            height: 92,
-            borderRadius: 30,
+            width: 76,
+            height: 76,
+            borderRadius: 25,
             background: C.green,
             color: C.ink,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: 50,
+            fontSize: 42,
             fontWeight: 1000,
           }}
         >
           ✓
         </div>
         <div>
-          <div style={{fontSize: 34, fontWeight: 900, color: C.text}}>聚焦保留下来的 5 个</div>
-          <div style={{fontSize: 22, color: C.muted, marginTop: 6}}>解释动画示意 · 不代表发布批准</div>
+          <div style={{fontSize: 30, fontWeight: 900, color: C.text}}>5 个焦点已经形成</div>
+          <div style={{fontSize: 18, color: C.muted, marginTop: 3}}>视觉示意 · 不代表发布批准</div>
         </div>
       </div>
 
       <div
         style={{
           position: 'absolute',
-          left: lerp(920, 160, proofIn),
-          top: 1435,
-          width: 760,
-          height: 260,
-          borderRadius: 42,
+          left: lerp(930, 180, proofIn),
+          top: 1465,
+          width: 720,
+          height: 220,
+          borderRadius: 38,
           opacity: proofIn,
           background: '#f8fbff',
           color: C.ink,
-          padding: '34px 42px',
+          padding: '29px 38px',
           boxShadow: '0 32px 80px #0007',
-          transform: `rotate(${lerp(5, -1.5, proofIn)}deg)`,
+          transform: `rotate(${lerp(4.5, -1.2, proofIn)}deg)`,
         }}
       >
-        <div style={{fontSize: 22, fontWeight: 800, color: '#4e6b88', letterSpacing: 2}}>TOOLRADAR · VISUAL BENCHMARK</div>
-        <div style={{display: 'flex', alignItems: 'baseline', gap: 22, marginTop: 13}}>
-          <span style={{fontSize: 88, fontWeight: 1000, color: C.blue}}>14</span>
-          <span style={{fontSize: 54, fontWeight: 900, color: '#8a9db2'}}>→</span>
-          <span style={{fontSize: 88, fontWeight: 1000, color: '#20b879'}}>5</span>
+        <div style={{fontSize: 18, fontWeight: 800, color: '#4e6b88', letterSpacing: 2}}>TOOLRADAR · VISUAL BENCHMARK</div>
+        <div style={{display: 'flex', alignItems: 'baseline', gap: 20, marginTop: 9}}>
+          <span style={{fontSize: 72, fontWeight: 1000, color: C.blue}}>14</span>
+          <span style={{fontSize: 45, fontWeight: 900, color: '#8a9db2'}}>→</span>
+          <span style={{fontSize: 72, fontWeight: 1000, color: '#20b879'}}>5</span>
         </div>
-        <div style={{fontSize: 27, fontWeight: 800, marginTop: -4}}>先把注意力收拢，再进入真实产品证据。</div>
+        <div style={{fontSize: 22, fontWeight: 800, marginTop: -2}}>收拢注意力，再进入真实产品证据。</div>
       </div>
     </>
   );
 };
 
 const PortalTransition: React.FC<{frame: number}> = ({frame}) => {
-  const p = easeInOut(interpolate(frame, [126, 149], [0, 1], clamp));
+  const p = easeInOut(interpolate(frame, [128, 149], [0, 1], clamp));
   return (
     <div
       style={{
         position: 'absolute',
-        left: 540 - lerp(60, 1350, p),
-        top: 860 - lerp(60, 1350, p),
-        width: lerp(120, 2700, p),
-        height: lerp(120, 2700, p),
+        left: 540 - lerp(58, 1350, p),
+        top: 760 - lerp(58, 1350, p),
+        width: lerp(116, 2700, p),
+        height: lerp(116, 2700, p),
         borderRadius: '50%',
         background: C.cyan,
-        opacity: interpolate(frame, [126, 132, 149], [0, 0.95, 1], clamp),
+        opacity: interpolate(frame, [128, 133, 149], [0, 0.95, 1], clamp),
         boxShadow: `0 0 90px ${C.cyan}77`,
       }}
     />
@@ -314,12 +337,13 @@ export const ToolRadarExplainer14to5BenchmarkV1: React.FC = () => {
 
       <div style={{position: 'absolute', left: 62, right: 62, top: 105, opacity: headerOpacity}}>
         <div style={{fontSize: 24, fontWeight: 900, color: C.cyan, letterSpacing: 3}}>TOOLRADAR · EXPLAINER BENCHMARK</div>
-        <div style={{fontSize: 70, fontWeight: 1000, marginTop: 10, lineHeight: 1.05}}>从 14 个信号，收拢到 5 个焦点</div>
-        <div style={{fontSize: 28, color: C.muted, marginTop: 16}}>发现 → 筛选 → 聚焦</div>
+        <div style={{fontSize: 58, fontWeight: 1000, marginTop: 12, lineHeight: 1.08, whiteSpace: 'nowrap'}}>14 个信号 → 5 个焦点</div>
+        <div style={{fontSize: 27, color: C.muted, marginTop: 16}}>发现 → 筛选 → 聚焦</div>
       </div>
 
       <RadarField frame={frame} />
       <EvidenceLinks frame={frame} />
+      <FocusPulse frame={frame} />
       <CandidateSignals frame={frame} />
       <GateAndProof frame={frame} />
       <PortalTransition frame={frame} />
