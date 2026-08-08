@@ -1,6 +1,7 @@
 import {createHash} from 'node:crypto';
 
 import {
+  MEDIA_RENDER_ERROR_STAGES,
   MEDIA_RENDER_V1,
   assertNoForbiddenDomainFieldsV1,
   validateMediaRenderRequestV1,
@@ -11,6 +12,7 @@ export const SHARED_MEDIA_EVIDENCE_COLLECTOR_V1 = 'shared-media.evidence-collect
 
 const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,199}$/;
 const SHA = /^[a-f0-9]{64}$/;
+const ERROR_STAGES = new Set(MEDIA_RENDER_ERROR_STAGES);
 
 export class SharedMediaEvidenceCollectorError extends TypeError {
   constructor(code, message, {path = null} = {}) {
@@ -129,7 +131,8 @@ const canonicalError = (value) => {
   const error = structuredClone(object(value, '$error'));
   exactKeys(error, new Set(['code', 'stage', 'message', 'retryable']), '$error');
   text(error.code, '$error.code', {max: 160});
-  text(error.stage, '$error.stage', {max: 80});
+  const stage = text(error.stage, '$error.stage', {max: 80});
+  if (!ERROR_STAGES.has(stage)) fail('INVALID_FIELD', '$error.stage unsupported', '$error.stage');
   text(error.message, '$error.message', {max: 2000});
   if (typeof error.retryable !== 'boolean') fail('INVALID_FIELD', '$error.retryable must be boolean', '$error.retryable');
   assertNoForbiddenDomainFieldsV1(error, '$error');
@@ -177,16 +180,15 @@ export const createSharedMediaEvidenceCollectorV1 = ({
         locator: source.locator,
         bytes: source.artifactBytes,
       })));
+      if (inspectionData.inspection.format.sizeBytes !== source.artifactBytes.byteLength) {
+        fail('EVIDENCE_MISMATCH', 'ffprobe size does not match collected artifact bytes', '$mediaInspection.format.sizeBytes');
+      }
+
       const renderLog = canonicalRenderLog(await renderLogReader(Object.freeze({
         requestId: request.requestId,
         inputManifestDigest: request.inputManifestDigest,
         jobId: normalizedJobId,
       })));
-
-      if (inspectionData.inspection.format.sizeBytes !== source.artifactBytes.byteLength) {
-        fail('EVIDENCE_MISMATCH', 'ffprobe size does not match collected artifact bytes', '$mediaInspection.format.sizeBytes');
-      }
-
       const artifactSha256 = sha256(source.artifactBytes);
       const collectedAt = canonicalTimestamp(await clock());
       const artifact = {
