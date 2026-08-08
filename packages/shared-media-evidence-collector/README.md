@@ -1,35 +1,29 @@
 # Shared Media Evidence Collector v1
 
-Product-neutral evidence closure for `media.render.v1` terminal results.
-
-This package exists after transport compatibility and before any consumer-domain interpretation.
+Product-neutral evidence closure for canonical `media.render.v1` terminal results.
 
 ```text
 media.render.v1 request
 + authorized backend job
-+ exact artifact bytes
++ exact artifact-byte snapshot
 + passed ffprobe inspection
-+ exact render log bytes
-→ artifact SHA-256
-→ render-log SHA-256
++ exact render-log bytes
+→ artifact/render-log SHA-256
 → request/job/input-manifest tie-out
-→ canonical media.render.v1 result validation
+→ canonical validateMediaRenderResultV1(...)
 ```
 
 ## Canonical owner
 
-The package does not redefine success/failure semantics. Final truth remains owned by:
+This package does not redefine success/failure. Final truth remains owned by `packages/shared-media-render-contract` and every returned terminal result must pass:
 
-```text
-packages/shared-media-render-contract
-→ validateMediaRenderResultV1(result, {request})
+```js
+validateMediaRenderResultV1(result, {request})
 ```
-
-A collector output is returned only if that canonical validator accepts it.
 
 ## Injected operations
 
-v1 deliberately does not own HTTP, filesystem, Mac tunnel, ffprobe process execution, object storage or provider credentials.
+v1 owns no HTTP, filesystem, Mac tunnel, ffprobe process execution, object storage or provider credentials.
 
 ```js
 createSharedMediaEvidenceCollectorV1({
@@ -41,13 +35,11 @@ createSharedMediaEvidenceCollectorV1({
 })
 ```
 
-The future Mac backend binding may implement these operations using already-owned transport/runtime primitives. A cloud backend can implement the same bounded interface without changing `media.render.v1` truth.
+Backend-specific code supplies those operations. The same evidence gate can therefore sit behind Mac or future cloud transport without moving canonical truth.
 
-## Authorization boundary
+## Authorization
 
-Evidence collection is not authorized by possession of a `jobId`.
-
-Before any artifact/log read, the collector calls:
+Knowing a `jobId` is not authority. Before any evidence read, the collector requires exact boolean `true` from:
 
 ```text
 isJobAuthorized({
@@ -58,128 +50,100 @@ isJobAuthorized({
 })
 ```
 
-Only exact boolean `true` allows evidence I/O. All other values fail closed.
+Anything else fails before I/O. No token, Workspace grant or backend credential is stored here.
 
-The package stores no token and does not own Workspace, Agent, provider or backend-job authorization truth.
+## Success closure
 
-## Succeeded result
-
-Succeeded collection requires all three injected evidence sources:
+`readArtifact` may provide only:
 
 ```text
-readArtifact
-→ artifactId + locator + mediaType + exact bytes
-
-inspectArtifact
-→ passed ffprobe evidence
-
-readRenderLog
-→ exact render-log bytes/text
+artifactId
+locator
+mediaType
+bytes
 ```
 
-The collector itself computes:
+Caller-supplied SHA/evidence fields are rejected. Credential-bearing/signed-query locators are rejected so ephemeral secrets do not become canonical evidence.
+
+Artifact bytes are copied into a collector-owned snapshot. The inspector receives a separate copy, so an inspector cannot mutate the bytes later hashed into canonical evidence.
+
+`inspectArtifact` must return passed ffprobe evidence. The byte length must equal ffprobe `format.sizeBytes`; a video stream is mandatory. Artifact duration/dimensions/container/codecs are derived from inspection, not caller claims.
+
+`readRenderLog` supplies exact log bytes/text. The collector computes both artifact and log SHA-256 itself.
+
+The final canonical validator then checks request/job/inputManifestDigest, output profile, codec, ffprobe and evidence tie-outs.
+
+## Failure closure
+
+A failed result does not claim artifact or ffprobe evidence. It still requires:
 
 ```text
-artifact.sha256
-artifact.byteLength
-renderLog.sha256
-renderLog.byteLength
-```
-
-Caller-supplied artifact SHA fields are rejected. The collected artifact byte length must equal ffprobe `format.sizeBytes`.
-
-Artifact duration, dimensions, container and codecs are derived from inspection, then the final result is checked against the original request output profile by the canonical contract.
-
-## Failed result
-
-A failed render does not claim a final artifact or ffprobe evidence.
-
-It still requires:
-
-```text
-exact requestId/jobId/inputManifestDigest
-render-log bytes + SHA-256
+requestId/jobId/inputManifestDigest
+exact render-log SHA evidence
 canonical error {code, stage, message, retryable}
 ```
 
-Invalid error stages/fields fail before authorization and I/O.
+Invalid error fields/stages are rejected before authorization and I/O.
 
-## Product-neutral boundary
+## Immutable terminal receipts
 
-The collector does not infer:
-
-- TrainingOS course/teacher/student truth;
-- ToolRadar creative/social/publishing truth;
-- human approval;
-- publication permission/state;
-- analytics/business outcome.
-
-Those remain with the consumer domain.
+After canonical validation, the returned result is a structured clone that is recursively frozen. Consumers cannot mutate nested artifact/evidence/inspection objects and continue treating the modified object as the collector-issued receipt.
 
 ## Failure ordering
-
-v1 minimizes unnecessary evidence I/O:
 
 ```text
 invalid request/job/error
 → stop
 
 authorization denied
-→ stop before reads
+→ stop before evidence reads
 
-invalid artifact source
+invalid artifact source/locator/bytes
 → stop before inspection/log
 
 invalid ffprobe / size mismatch
 → stop before render-log read
 
 missing/bad render log
-→ no canonical terminal result
+→ no terminal result
 
-canonical result mismatch
-→ no result returned
+canonical output/evidence mismatch
+→ no terminal result
 ```
+
+## Product-neutral boundary
+
+The collector does not infer TrainingOS course/student/teacher truth, ToolRadar creative/social/publishing truth, human approval, publication state or analytics/business outcome.
 
 ## In-memory v1 limitation
 
-Artifact bytes are currently passed as `Buffer`/`Uint8Array` so the collector can compute an exact SHA-256 and feed the same bytes to the injected inspector.
+Artifact bytes are currently carried as `Buffer`/`Uint8Array` so the collector can snapshot/hash the exact bytes and give a separate copy to the injected inspector.
 
-This is intentionally a bounded v1 contract/test implementation. It does **not** claim production-grade streaming for very large media artifacts. A later streaming collector may preserve the same canonical evidence semantics while hashing/inspecting file or stream handles without loading a whole artifact in memory.
+This is a bounded contract/runtime adapter v1, **not** a claim of production-grade large-file streaming. A later streaming implementation should preserve the same authorization, SHA, ffprobe, render-log and canonical-validator semantics while using file/stream handles.
 
-Do not call v1 production-scalable solely because the source contracts pass.
+## Exact-head tests
+
+The dedicated gate requires 22/22 contracts covering:
+
+- required injected operations and authorization;
+- byte-derived artifact/log SHA;
+- canonical request/job/manifest tie-out;
+- ffprobe-derived artifact metadata;
+- authorization denial before I/O;
+- caller-supplied evidence rejection;
+- signed/credential locator rejection;
+- empty artifact rejection;
+- non-passed/missing-video/size-mismatched inspection;
+- inspector mutation isolation;
+- canonical output-profile mismatch;
+- artifact/inspection/log operation failures;
+- failed-result log-only behavior;
+- failure authorization;
+- invalid error stage/fields;
+- invalid collection timestamp;
+- deep-frozen terminal receipts;
+- consumer-domain truth exclusion.
 
 ## What source/test PASS does not prove
 
-```text
-real Mac render
-real artifact download
-real ffprobe process invocation
-real render-log retrieval
-real backend credential use
-real media.render.v1 succeeded/failed receipt from Mac
-TrainingOS Course Video completion
-ToolRadar human review/publication
-Production deployment
-```
-
-Those require a separate non-production runtime proof after this truth gate is accepted.
-
-## Test coverage
-
-The exact-head suite covers 19 contracts including:
-
-- required injected operations and authorization;
-- exact SHA derivation from artifact/log bytes;
-- successful canonical identity/manifest tie-out;
-- ffprobe-derived artifact metadata;
-- denial before evidence I/O;
-- rejection of caller-supplied SHA/evidence fields;
-- empty artifact rejection;
-- non-passed/missing-video/size-mismatched inspection rejection;
-- final canonical output-profile rejection;
-- artifact/inspection/log operation failure propagation;
-- failed result reading log only;
-- failure authorization denial;
-- invalid error stage/field rejection before I/O;
-- invalid collection timestamp rejection;
-- consumer-domain truth exclusion.
+It does not prove a real Mac render, artifact download, ffprobe process, render-log retrieval, backend credentials, real `media.render.v1` terminal receipt, TrainingOS Course Video completion, ToolRadar review/publication or Production operation. Those remain a separate non-production runtime proof.
