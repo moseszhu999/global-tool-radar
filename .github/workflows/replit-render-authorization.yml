@@ -12,6 +12,9 @@ on:
       - 'packages/video-project-lifecycle/**'
       - 'apps/worker/src/intake-replit-owned-media.mjs'
       - 'apps/worker/src/authorize-replit-render.mjs'
+      - 'apps/web/video-projects.html'
+      - 'apps/web/video-projects.mjs'
+      - 'apps/web/video-projects.css'
       - 'apps/web/data/replit-design-video-project-ledger.json'
       - '.github/workflows/replit-render-authorization.yml'
   workflow_dispatch:
@@ -32,10 +35,12 @@ jobs:
           npm --prefix packages/video-creative-preflight run check
           npm --prefix packages/replit-render-authorization run check
           node --check apps/worker/src/authorize-replit-render.mjs
+          node --check apps/web/video-projects.mjs
       - name: Contract tests
         run: |
           npm --prefix packages/video-creative-preflight test
           npm --prefix packages/replit-render-authorization test
+          node --test packages/video-project-lifecycle/test/video-project-board.test.mjs
       - name: End-to-end intake, creative preflight and authorization fixture
         run: |
           mkdir -p /tmp/toolradar-render-auth artifacts
@@ -103,7 +108,7 @@ jobs:
           FINAL_RENDER_GATE_OUTPUT=artifacts/contract-final-render-gate.json \
           MAC_REMOTION_RENDER_INTENT_OUTPUT=artifacts/contract-render-intent.json \
           node apps/worker/src/authorize-replit-render.mjs
-      - name: Verify exact creative and render authorization boundaries
+      - name: Verify exact creative, ledger and render authorization boundaries
         run: |
           node --input-type=module <<'NODE'
           import {readFile} from 'node:fs/promises';
@@ -126,6 +131,10 @@ jobs:
           if (creative.humanCreativeApprovalClaimed !== false) throw new Error('creative preflight inferred human creative approval');
           if (creative.publicationAllowed !== false) throw new Error('creative preflight inferred publication permission');
           if (receipt.creativePreflightDigest !== creative.receiptDigest) throw new Error('render authorization did not bind creative preflight');
+          if (ledger.creativePreflight?.receiptDigest !== creative.receiptDigest) throw new Error('authorized ledger did not retain exact creative preflight digest');
+          if (ledger.creativePreflight?.status !== 'CREATIVE_PREFLIGHT_PASSED') throw new Error('authorized ledger creative preflight state is invalid');
+          if (ledger.creativePreflight?.humanCreativeApprovalClaimed !== false || ledger.creativePreflight?.publicationAllowed !== false) throw new Error('authorized ledger widened creative truth boundary');
+          if (ledger.renderAuthorization?.creativePreflightDigest !== creative.receiptDigest) throw new Error('authorized ledger render binding does not match creative preflight');
           if (receipt.status !== 'RENDER_AUTHORIZED') throw new Error('render was not authorized');
           if (ledger.project.stage !== 'RENDER_AUTHORIZED') throw new Error('project did not reach RENDER_AUTHORIZED');
           if (ledger.project.nextEvent !== 'COMPLETE_RENDER') throw new Error('unexpected next lifecycle event');
