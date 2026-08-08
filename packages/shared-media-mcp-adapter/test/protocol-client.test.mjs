@@ -58,15 +58,23 @@ const expectedTools = [
   'media_list_workflows',
 ];
 
+const legacyConsumerTruthKeys = [
+  'humanApproved',
+  'humanWatchedFullCandidate',
+  'socialPlatformBusinessFitApprovedByHuman',
+  'publicationAllowed',
+  'publicationPerformed',
+  'analyticsObserved',
+];
+
 const call = async (client, name, args = {}) => client.callTool({name, arguments: args});
 
-const assertTruthBoundary = (value) => {
-  assert.equal(value.humanApproved, false);
-  assert.equal(value.humanWatchedFullCandidate, false);
-  assert.equal(value.socialPlatformBusinessFitApprovedByHuman, false);
-  assert.equal(value.publicationAllowed, false);
-  assert.equal(value.publicationPerformed, false);
-  assert.equal(value.analyticsObserved, false);
+const assertTechnicalTruthBoundary = (value) => {
+  assert.equal(value.technicalResultOnly, true);
+  assert.equal(value.humanDecisionInferred, false);
+  assert.equal(value.consumerDomainDecisionInferred, false);
+  assert.equal(value.businessOutcomeInferred, false);
+  for (const key of legacyConsumerTruthKeys) assert.equal(key in value, false);
 };
 
 test('legacy in-memory client lists and calls the six bounded MCP tools', async (t) => {
@@ -100,7 +108,7 @@ test('legacy in-memory client lists and calls the six bounded MCP tools', async 
   });
   assert.equal(generated.isError, undefined);
   assert.equal(generated.structuredContent.jobId, 'job:protocol-image-polish-v1');
-  assertTruthBoundary(generated.structuredContent);
+  assertTechnicalTruthBoundary(generated.structuredContent);
 
   const rejected = await call(client, 'media_generate_asset', {
     workflowId: 'protocol-image-polish-v1',
@@ -165,17 +173,17 @@ export const backend={
   assert.equal(generated.structuredContent.status, 'queued');
   assert.equal(generated.structuredContent.jobId, 'job:protocol-image-polish-v1');
   assert.equal('taskId' in generated.structuredContent, false);
-  assertTruthBoundary(generated.structuredContent);
+  assertTechnicalTruthBoundary(generated.structuredContent);
 
   const job = await call(client, 'media_get_job', {jobId: generated.structuredContent.jobId});
   assert.equal(job.isError, undefined);
   assert.equal(job.structuredContent.job.jobId, generated.structuredContent.jobId);
-  assertTruthBoundary(job.structuredContent.job);
+  assertTechnicalTruthBoundary(job.structuredContent.job);
 
   const artifact = await call(client, 'media_get_artifact', {artifactId: 'artifact:modern'});
   assert.equal(artifact.isError, undefined);
   assert.match(artifact.structuredContent.artifact.sha256, /^[a-f0-9]{64}$/);
-  assertTruthBoundary(artifact.structuredContent.artifact);
+  assertTechnicalTruthBoundary(artifact.structuredContent.artifact);
 
   const invalidSchema = await call(client, 'media_get_job', {jobId: ''});
   assert.equal(invalidSchema.isError, true);
