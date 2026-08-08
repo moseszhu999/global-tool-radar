@@ -44,7 +44,7 @@ Auto captions v1 also require narration text segments and bind to those exact se
 
 Provided voice/caption assets retain exact `assetId + locator + mediaType + sha256` identity.
 
-## Semantic re-derivation
+## Semantic re-derivation and source authority
 
 The manifest SHA is integrity, not semantic authority.
 
@@ -58,7 +58,9 @@ Standalone validation:
 - checks mode/action pairing;
 - keeps all execution/authority flags false.
 
-`validatePreparationManifestV1(manifest, {plan})` additionally rebuilds the expected manifest directly from the exact render plan and requires full equality.
+A re-signed manifest can still be internally self-consistent after replacing a visual locator with a different valid locator/SHA pair. That does **not** make the substituted source authoritative.
+
+`validatePreparationManifestV1(manifest, {plan})` is therefore the source-authority gate: it rebuilds the expected manifest directly from the exact canonical render plan and requires full equality. Downstream provider/materializer execution must use this exact-plan form before treating preparation inputs as authorized source semantics.
 
 ## Truth boundary
 
@@ -85,6 +87,6 @@ A future Shared Media provider adapter may implement the preparation actions fro
 
 ## Tests
 
-The exact-head suite requires 22 contracts covering course-shaped plans, exact visual SHA requirements, narration timing, synthesized/provided voice, auto/provided captions, none modes, missing synthesis/caption source fail-closed, deterministic digest, exact plan tie-out, re-signed narration/action/segment/asset tamper rejection, execution truth boundaries, deep freeze and product-neutral output.
+The exact-head suite requires 24 contracts covering course-shaped plans, exact visual SHA requirements, narration timing, synthesized/provided voice, auto/provided captions, none modes, missing synthesis/caption source fail-closed, deterministic digest, exact plan tie-out, re-signed narration/action/segment/asset tamper rejection, explicit exact-plan source-authority rejection after a valid source substitution, execution truth boundaries, deep freeze and product-neutral output.
 
 A PASS does not prove provider availability, TTS/caption execution, prepared files, Remotion materialization, Mac render, artifact evidence, human review or publication.
