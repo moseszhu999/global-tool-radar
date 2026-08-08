@@ -51,12 +51,14 @@ jobs:
         run: |
           set -euo pipefail
           npm --prefix packages/shared-media-remotion-materializer test | tee "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
-          grep -Eq '# tests[[:space:]]+21$' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
-          grep -Eq '# pass[[:space:]]+21$' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
+          grep -Eq '# tests[[:space:]]+24$' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
+          grep -Eq '# pass[[:space:]]+24$' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
           grep -Eq '# fail[[:space:]]+0$' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
-          grep -F 'blank canonical smoke request materializes deterministic three-file Remotion candidate' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
+          grep -F 'semantically equal output profile with different key insertion order produces same candidate' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
           grep -F 'candidate never grants render authorization or creates an approved binding' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
-          grep -F 'shot duration must map exactly to integer frames' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
+          grep -F 'unknown output-affecting request, shot or profile fields fail closed' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
+          grep -F 'candidate validation rejects semantic or generated-source tampering' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
+          grep -F 'candidate must independently match the exact canonical request before staging approval' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
           grep -F 'observed generated-file manifest must exactly match candidate before later binding approval' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
           grep -F 'generated project is product-neutral and contains no ToolRadar or TrainingOS domain vocabulary' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
 
@@ -69,6 +71,7 @@ jobs:
           grep -F "react: '19.2.3'" packages/shared-media-remotion-materializer/src/index.mjs
           grep -F "'react-dom': '19.2.3'" packages/shared-media-remotion-materializer/src/index.mjs
           grep -F 'runtimePropsInjectionProven: false' packages/shared-media-remotion-materializer/src/index.mjs
+          grep -F 'verifyCandidateAgainstRequestV1' packages/shared-media-remotion-materializer/src/index.mjs
           grep -F 'renderAuthorized: false' packages/shared-media-remotion-materializer/src/index.mjs
           grep -F 'bindingCreated: false' packages/shared-media-remotion-materializer/src/index.mjs
           ! grep -RInE 'ToolRadar|GLOBAL TOOL RADAR|TrainingOS|courseId|studentId|teacherId|humanApproved|publicationAllowed|publicationPerformed|analyticsObserved' packages/shared-media-remotion-materializer/src
@@ -97,6 +100,9 @@ jobs:
             'referenceRemotionVersion':'4.0.506',
             'referenceReactVersion':'19.2.3',
             'runtimePropsInjectionProven':False,
+            'unknownOutputSemanticsRejected':True,
+            'semanticCandidateRederivationRequired':True,
+            'candidateMustMatchExactRequest':True,
             'filesystemWritePerformed':False,
             'networkPerformed':False,
             'processExecutionPerformed':False,
