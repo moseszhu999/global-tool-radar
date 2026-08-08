@@ -24,6 +24,7 @@ every shot has durationMs
 all durationMs map exactly to integer frames
 total duration 1..900 seconds
 no unknown request/shot/output-profile semantics
+safe non-secret persisted requestId/profileId
 ```
 
 Anything else fails `SMOKE_SUBSET_UNSUPPORTED` / `UNSUPPORTED_FIELD` before project generation.
@@ -92,6 +93,8 @@ The composition is product-neutral black output only. Canonical shots become exa
 
 The marker file binds the generated project to the exact canonical `inputManifestDigest`, project/composition identity, normalized output profile, segment frame plan and exact duration.
 
+Persisted identifiers are bounded. Both `requestId` and `outputProfile.profileId` must be safe non-secret identifiers; path-like or credential-shaped values are rejected before generated marker/source material can be created.
+
 ## Canonicalization and semantic re-derivation
 
 `outputProfile` is normalized into a fixed five-field shape before any generated JSON/source is emitted:
@@ -109,7 +112,7 @@ Therefore two semantically equal canonical requests with a different JavaScript 
 The candidate also carries `segmentFrames[]` explicitly. Candidate validation does not merely trust its SHA values. It revalidates:
 
 - exact audited runtime requirements;
-- normalized output profile;
+- normalized safe persisted output profile;
 - contiguous frame segments starting at zero;
 - total-frame/duration equality;
 - deterministic regeneration of all three files;
@@ -190,7 +193,7 @@ It only returns deeply frozen strings/metadata for a later explicitly authorized
 
 ## Tests
 
-The exact-head suite requires 24/24 contracts covering deterministic generation, key-order canonicalization, exact frame segments, marker truth, audited runtime pinning, no approval claim, visual/narration/voice/caption rejection, codec/container/fps constraints, unknown semantic rejection, integer-frame timing, safe request identity, file/candidate digest integrity, semantic/source tamper rejection, exact request↔candidate verification, observed staging manifest equality, deep freeze and product-neutral output.
+The exact-head suite requires 25/25 contracts covering deterministic generation, key-order canonicalization, exact frame segments, marker truth, audited runtime pinning, no approval claim, visual/narration/voice/caption rejection, codec/container/fps constraints, unknown semantic rejection, integer-frame timing, safe request identity, safe persisted profile identity, file/candidate digest integrity, semantic/source tamper rejection, exact request↔candidate verification, observed staging manifest equality, deep freeze and product-neutral output.
 
 ## What source/test PASS does not prove
 
