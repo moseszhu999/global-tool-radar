@@ -49,11 +49,14 @@ jobs:
         run: |
           set -euo pipefail
           npm --prefix packages/shared-media-mac-compatibility test | tee "$RUNNER_TEMP/shared-media-mac-compatibility.tap"
-          grep -Eq '# tests[[:space:]]+16$' "$RUNNER_TEMP/shared-media-mac-compatibility.tap"
-          grep -Eq '# pass[[:space:]]+16$' "$RUNNER_TEMP/shared-media-mac-compatibility.tap"
+          grep -Eq '# tests[[:space:]]+20$' "$RUNNER_TEMP/shared-media-mac-compatibility.tap"
+          grep -Eq '# pass[[:space:]]+20$' "$RUNNER_TEMP/shared-media-mac-compatibility.tap"
           grep -Eq '# fail[[:space:]]+0$' "$RUNNER_TEMP/shared-media-mac-compatibility.tap"
+          grep -F 'adapter construction requires both external authorizers' "$RUNNER_TEMP/shared-media-mac-compatibility.tap"
+          grep -F 'binding authorization denial occurs before submitRenderJob' "$RUNNER_TEMP/shared-media-mac-compatibility.tap"
+          grep -F 'status authorization denial occurs before getRenderJobStatus' "$RUNNER_TEMP/shared-media-mac-compatibility.tap"
+          grep -F 'cancel authorization denial occurs before cancelRenderJob' "$RUNNER_TEMP/shared-media-mac-compatibility.tap"
           grep -F 'Mac completed transport status is not upgraded to canonical media.render.v1 succeeded' "$RUNNER_TEMP/shared-media-mac-compatibility.tap"
-          grep -F 'adapter validation failure occurs before submitRenderJob' "$RUNNER_TEMP/shared-media-mac-compatibility.tap"
 
       - name: Enforce audited runtime and truth boundary
         shell: bash
@@ -65,6 +68,8 @@ jobs:
           grep -F 'canonicalResultReady: false' packages/shared-media-mac-compatibility/src/index.mjs
           grep -F 'canonicalEvidenceCollected: false' packages/shared-media-mac-compatibility/src/index.mjs
           grep -F 'consumerDomainDecisionInferred: false' packages/shared-media-mac-compatibility/src/index.mjs
+          grep -F 'isBindingAuthorized' packages/shared-media-mac-compatibility/src/index.mjs
+          grep -F 'isJobAuthorized' packages/shared-media-mac-compatibility/src/index.mjs
           ! grep -RInE '(accessToken|refreshToken|clientSecret|password|Authorization[[:space:]]*:|Bearer[[:space:]]+[A-Za-z0-9._-]+)' packages/shared-media-mac-compatibility/src
           ! grep -RInE 'humanApproved|humanWatchedFullCandidate|socialPlatformBusinessFitApprovedByHuman|publicationAllowed|publicationPerformed|analyticsObserved' packages/shared-media-mac-compatibility/src
 
@@ -91,6 +96,8 @@ jobs:
             'mode':'render_existing_only',
             'preMaterializedBindingRequired':True,
             'bindingIntegrityRequired':True,
+            'bindingAuthorizationRequired':True,
+            'jobAuthorizationRequired':True,
             'projectDirCallerControlled':False,
             'transportCompletedUpgradedToCanonicalSucceeded':False,
             'canonicalEvidenceCollected':False,
