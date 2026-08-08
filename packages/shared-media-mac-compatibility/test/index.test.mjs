@@ -107,6 +107,21 @@ const fakeClient = () => {
   };
 };
 
+const allowAllAuthorizers = () => ({
+  async isBindingAuthorized() {
+    return true;
+  },
+  async isJobAuthorized() {
+    return true;
+  },
+});
+
+const adapterFixture = (client, overrides = {}) => createSharedMediaMacTransportAdapterV1({
+  client,
+  ...allowAllAuthorizers(),
+  ...overrides,
+});
+
 test('approved pre-materialized binding receives a deterministic integrity digest', () => {
   const request = requestFixture();
   const binding = bindingFixture(request);
@@ -243,11 +258,23 @@ test('unknown Mac transport status fails closed', () => {
   );
 });
 
-test('adapter submits exactly one audited render_existing request after all checks pass', async () => {
+test('adapter construction requires both external authorizers', () => {
+  const client = fakeClient();
+  assert.throws(
+    () => createSharedMediaMacTransportAdapterV1({client}),
+    /isBindingAuthorized must be a function/,
+  );
+  assert.throws(
+    () => createSharedMediaMacTransportAdapterV1({client, isBindingAuthorized: async () => true}),
+    /isJobAuthorized must be a function/,
+  );
+});
+
+test('adapter submits exactly one audited render_existing request after binding authorization passes', async () => {
   const request = requestFixture();
   const binding = bindingFixture(request);
   const client = fakeClient();
-  const adapter = createSharedMediaMacTransportAdapterV1({client});
+  const adapter = adapterFixture(client);
   const receipt = await adapter.submitPreMaterializedRender({request, binding});
   assert.equal(client.calls.submit.length, 1);
   assert.equal(client.calls.submit[0].mode, 'render_existing');
@@ -262,22 +289,65 @@ test('adapter submits exactly one audited render_existing request after all chec
   assert.equal('publicationPerformed' in receipt, false);
 });
 
-test('adapter validation failure occurs before submitRenderJob', async () => {
+test('binding authorization denial occurs before submitRenderJob', async () => {
   const request = requestFixture();
-  const other = requestFixture({title: 'Different input'});
-  const binding = bindingFixture(other);
+  const binding = bindingFixture(request);
   const client = fakeClient();
-  const adapter = createSharedMediaMacTransportAdapterV1({client});
+  const adapter = adapterFixture(client, {isBindingAuthorized: async () => false});
   await assert.rejects(
     () => adapter.submitPreMaterializedRender({request, binding}),
-    /does not match this canonical inputManifestDigest/,
+    /binding is not authorized for render submission/,
   );
   assert.equal(client.calls.submit.length, 0);
 });
 
-test('status and cancel methods reuse only the existing Mac runner client surface', async () => {
+test('adapter validation failure occurs before binding authorization and submitRenderJob', async () => {
+  const request = requestFixture();
+  const other = requestFixture({title: 'Different input'});
+  const binding = bindingFixture(other);
   const client = fakeClient();
-  const adapter = createSharedMediaMacTransportAdapterV1({client});
+  let bindingAuthorizationCalls = 0;
+  const adapter = adapterFixture(client, {
+    isBindingAuthorized: async () => {
+      bindingAuthorizationCalls += 1;
+      return true;
+    },
+  });
+  await assert.rejects(
+    () => adapter.submitPreMaterializedRender({request, binding}),
+    /does not match this canonical inputManifestDigest/,
+  );
+  assert.equal(bindingAuthorizationCalls, 0);
+  assert.equal(client.calls.submit.length, 0);
+});
+
+test('status authorization denial occurs before getRenderJobStatus', async () => {
+  const client = fakeClient();
+  const adapter = adapterFixture(client, {
+    isJobAuthorized: async ({action}) => action !== 'read_status',
+  });
+  await assert.rejects(
+    () => adapter.getTransportStatus({runnerJobId: 'job-001'}),
+    /render job is not authorized for status read/,
+  );
+  assert.deepEqual(client.calls.status, []);
+});
+
+test('cancel authorization denial occurs before cancelRenderJob', async () => {
+  const client = fakeClient();
+  const adapter = adapterFixture(client, {
+    isJobAuthorized: async ({action}) => action !== 'cancel',
+  });
+  await assert.rejects(
+    () => adapter.cancelTransportJob({runnerJobId: 'job-001'}),
+    /render job is not authorized for cancellation/,
+  );
+  assert.deepEqual(client.calls.cancel, []);
+});
+
+test('status and cancel methods reuse only the existing Mac runner client surface after job authorization passes', async () => {
+  const client = fakeClient();
+  const adapter = adapterFixture(client);
   const status = await adapter.getTransportStatus({runnerJobId: 'job-001'});
   const cancelled = await adapter.cancelTransportJob({runnerJobId: 'job-001'});
   assert.deepEqual(client.calls.status, ['job-001']);
