@@ -1,0 +1,120 @@
+name: shared-media-evidence-collector-v1
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - packages/shared-media-evidence-collector/**
+      - .github/workflows/shared-media-evidence-collector-v1.yml
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TARGET_SHA: ${{ github.event.pull_request.head.sha }}
+
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify exact head and isolated source boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "$TARGET_SHA"
+          echo "exact_head=$actual"
+          test -f packages/shared-media-render-contract/src/index.mjs
+          test -f packages/shared-media-evidence-collector/src/index.mjs
+          ! grep -RInE "from ['\"](node:child_process|node:fs|node:http|node:https|node:net|node:dgram)|\b(fetch|exec|execFile|spawn|fork)\s*\(" packages/shared-media-evidence-collector/src || {
+            echo 'Evidence collector must not own network/filesystem/process execution.' >&2
+            exit 1
+          }
+
+      - name: Syntax check
+        run: npm --prefix packages/shared-media-evidence-collector run check
+
+      - name: Run exact evidence contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --prefix packages/shared-media-evidence-collector test | tee "$RUNNER_TEMP/shared-media-evidence-collector.tap"
+          grep -Eq '# tests[[:space:]]+19$' "$RUNNER_TEMP/shared-media-evidence-collector.tap"
+          grep -Eq '# pass[[:space:]]+19$' "$RUNNER_TEMP/shared-media-evidence-collector.tap"
+          grep -Eq '# fail[[:space:]]+0$' "$RUNNER_TEMP/shared-media-evidence-collector.tap"
+          grep -F 'job authorization denial occurs before artifact, inspection and render-log reads' "$RUNNER_TEMP/shared-media-evidence-collector.tap"
+          grep -F 'ffprobe size mismatch fails before render-log read' "$RUNNER_TEMP/shared-media-evidence-collector.tap"
+          grep -F 'failed collection reads only render log and emits no artifact or ffprobe evidence' "$RUNNER_TEMP/shared-media-evidence-collector.tap"
+          grep -F 'canonical result validation rejects an inspected output profile that differs from the request' "$RUNNER_TEMP/shared-media-evidence-collector.tap"
+
+      - name: Enforce canonical truth and product-neutral boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F 'validateMediaRenderResultV1(result, {request})' packages/shared-media-evidence-collector/src/index.mjs
+          grep -F "action: 'collect_succeeded_evidence'" packages/shared-media-evidence-collector/src/index.mjs
+          grep -F "action: 'collect_failed_evidence'" packages/shared-media-evidence-collector/src/index.mjs
+          grep -F 'artifactSha256' packages/shared-media-evidence-collector/src/index.mjs
+          grep -F 'mediaInspection' packages/shared-media-evidence-collector/src/index.mjs
+          grep -F 'renderLog' packages/shared-media-evidence-collector/src/index.mjs
+          ! grep -RInE 'courseId|studentId|teacherId|humanApproved|publicationAllowed|publicationPerformed|socialPlatformBusinessFitApprovedByHuman|analyticsObserved' packages/shared-media-evidence-collector/src
+          ! grep -RInE '(accessToken|refreshToken|clientSecret|password|Authorization[[:space:]]*:|Bearer[[:space:]]+[A-Za-z0-9._-]+)' packages/shared-media-evidence-collector/src
+
+      - name: Emit exact-head receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json,os,pathlib,re
+          root=pathlib.Path(os.environ['RUNNER_TEMP'])
+          tap=(root/'shared-media-evidence-collector.tap').read_text()
+          def number(name):
+              m=re.search(rf'^# {name}\s+(\d+)\s*$',tap,re.M)
+              return int(m.group(1)) if m else None
+          receipt={
+            'schemaVersion':'shared-media.evidence-collector-exact-head.v1',
+            'exactHead':os.environ['TARGET_SHA'],
+            'package':'@shared-media/evidence-collector@0.1.0',
+            'tests':number('tests'),
+            'pass':number('pass'),
+            'fail':number('fail'),
+            'canonicalValidatorRequired':True,
+            'jobAuthorizationRequired':True,
+            'artifactShaDerivedFromBytes':True,
+            'renderLogShaDerivedFromBytes':True,
+            'passedFfprobeRequiredForSuccess':True,
+            'failedResultRequiresRenderLog':True,
+            'networkOwnedByCollector':False,
+            'filesystemOwnedByCollector':False,
+            'processExecutionOwnedByCollector':False,
+            'realArtifactReadPerformed':False,
+            'realFfprobePerformed':False,
+            'realRenderLogReadPerformed':False,
+            'realMacOperationPerformed':False,
+            'consumerDomainDecisionInferred':False,
+            'businessOutcomeInferred':False,
+            'inMemoryArtifactV1':True,
+            'testLogSha256':hashlib.sha256(tap.encode()).hexdigest(),
+          }
+          path=root/'shared-media-evidence-collector-exact-head.json'
+          path.write_text(json.dumps(receipt,indent=2)+'\n')
+          print(json.dumps(receipt,indent=2))
+          PY
+
+      - name: Upload exact-head evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: shared-media-evidence-collector-v1
+          path: |
+            ${{ runner.temp }}/shared-media-evidence-collector-exact-head.json
+            ${{ runner.temp }}/shared-media-evidence-collector.tap
+          if-no-files-found: error
+          retention-days: 30
