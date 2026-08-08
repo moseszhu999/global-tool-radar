@@ -37,3 +37,14 @@ test('re-signed source substitution can be internally self-consistent but exact 
     /does not match exact render plan/,
   );
 });
+
+test('re-signed manifest cannot drop a visual input still referenced by the preserved timeline', () => {
+  const manifest=structuredClone(compilePreparationManifestV1(plan));
+  manifest.visualInputs=[];
+  manifest.preparationManifestDigest=computePreparationManifestDigestV1(manifest);
+
+  assert.throws(
+    ()=>validatePreparationManifestV1(manifest),
+    /has no matching visual input/,
+  );
+});
