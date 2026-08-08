@@ -106,6 +106,19 @@ Use the strongest source for each layer:
 - timeline, captions, TTS binding, variants, exact render: Remotion / Shared Media;
 - final media integrity and provenance: Shared Media evidence layer.
 
+### 5a. Route UI design-frame work to the specialist skill
+
+When the product/UI state is accurate but the scene still needs better typography, spacing, component hierarchy, design-system fidelity, or a Figma/code-to-canvas comparison, load `toolradar-video-ui-director` instead of continuing to pile styling logic directly into Remotion.
+
+That specialist skill owns:
+- real-product/code-to-canvas reference capture;
+- design-system inspection and Code Connect reuse;
+- Figma component/variable/style/Auto Layout decisions;
+- video-specific design frames and UI hierarchy;
+- the design-frame handoff back to Remotion.
+
+The creative director remains responsible for the overall story, motion hypothesis, A/B decision, and promotion gate.
+
 ### 6. Apply the ComfyUI bounded-generation policy
 
 Read `references/comfyui-workflow-policy.md` before using ComfyUI.
@@ -170,12 +183,13 @@ User intent:
 Expected skill behavior:
 1. identify the exact current candidate and owner;
 2. keep UI copy, card logic, camera timing, and action timing deterministic;
-3. isolate environment/material treatment as the test variable;
-4. first try a 2-3 second controlled benchmark rather than rerendering the whole short;
-5. if using ComfyUI, select an approved reference-guided workflow with bounded denoise and record model/reference/seed/digests;
-6. render baseline and candidate with the same foreground logic;
-7. reject the generated candidate if it introduces semantic drift or steals focus, even when generation technically succeeds;
-8. promote only a visibly better candidate and still keep human/product/publication flags false until explicitly proven.
+3. if the weakness is UI hierarchy/typography/layout, route the design-frame pass through `toolradar-video-ui-director` before motion polish;
+4. isolate environment/material treatment as a separate test variable;
+5. first try a 2-3 second controlled benchmark rather than rerendering the whole short;
+6. if using ComfyUI, select an approved reference-guided workflow with bounded denoise and record model/reference/seed/digests;
+7. render baseline and candidate with the same foreground logic;
+8. reject the generated candidate if it introduces semantic drift or steals focus, even when generation technically succeeds;
+9. promote only a visibly better candidate and still keep human/product/publication flags false until explicitly proven.
 
 Expected summary:
 - hypothesis;
