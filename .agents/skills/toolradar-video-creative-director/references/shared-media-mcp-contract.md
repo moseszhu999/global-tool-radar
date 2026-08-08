@@ -4,13 +4,15 @@
 
 Expose Shared Media capabilities to agents without exposing raw renderer internals or arbitrary ComfyUI graphs.
 
-Protocol target for a new implementation: MCP 2026-07-28 or a compatible negotiated version supported by the selected client/SDK.
+Protocol target for a new implementation: MCP 2026-07-28, while retaining negotiated legacy compatibility only where the selected official SDK entry supports it safely.
 
 ## Principle
 
 MCP is the capability transport. Skills contain the production SOP and quality rules.
 
 The MCP layer should be small, typed, auditable, and product-neutral.
+
+Shared Media's durable `jobId` is an application/backend contract. It must not depend on the deprecated MCP task wire vocabulary.
 
 ## Proposed tools
 
@@ -47,7 +49,7 @@ Typical inputs:
 - bounded workflow-specific controls such as denoise;
 - output profile.
 
-Returns either a completed result or a job/task handle.
+Returns either a completed result or a durable Shared Media job handle.
 
 It must reject:
 - unknown workflow IDs;
@@ -60,9 +62,9 @@ It must reject:
 
 Read-only.
 
-Returns current generation/render state, timestamps, bounded progress, error model, and immutable workflow/input identifiers.
+Returns current generation/render state, timestamps, bounded progress, error model, and immutable workflow/input identifiers for a durable Shared Media job.
 
-If the MCP client supports a long-running Tasks extension, this function may be complemented or replaced by the negotiated task mechanism. Keep an ordinary job-status path for clients that do not support the extension.
+This ordinary application-level job path is canonical for long-running execution. Do not replace it with MCP `tasks/*` methods on the 2026-07-28 protocol revision: the final v2 SDK documents task wire vocabulary as deprecated interoperability surface for older peers, excludes `tasks/*` from modern typed method maps, and rejects inbound `tasks/*` on a modern connection.
 
 ### `media_get_artifact`
 
@@ -101,11 +103,20 @@ Do not expose the entire local ComfyUI API as MCP tools.
 
 Generation and rendering are naturally long-running. Prefer:
 1. submit bounded request;
-2. return stable task/job handle;
-3. observe status/progress;
-4. retrieve immutable artifact/evidence.
+2. return a stable Shared Media `jobId` when work does not complete inline;
+3. observe status/progress through `media_get_job`;
+4. retrieve immutable artifact/evidence through `media_get_artifact`.
 
-The client should not need a persistent server session for correctness.
+The client should not need a persistent application session for correctness; durable job/evidence identity belongs to Shared Media, not to an MCP session or deprecated task vocabulary.
+
+### Protocol-era note
+
+For the final MCP 2026-07-28 revision:
+- a v2 client must explicitly opt into modern era negotiation (`versionNegotiation`) when that behavior is required;
+- `serveStdio(factory)` is the correct stdio entry for modern/legacy era selection;
+- in-memory linked transports exercise legacy/2025-era behavior only;
+- protocol-level modern stdio coverage requires spawning the `serveStdio` entry or using the modern HTTP handler path;
+- do not design new correctness dependencies around `tasks/*`.
 
 ## Authorization and safety
 
