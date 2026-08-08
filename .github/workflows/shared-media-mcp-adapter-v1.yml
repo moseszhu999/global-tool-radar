@@ -36,12 +36,21 @@ jobs:
           test "$count" = "6"
           ! grep -Eq "registerTool\([^\n]*(execute_arbitrary_graph|shell|publish_social|clear_queue)" packages/shared-media-mcp-adapter/src/server.mjs
 
-      - name: Install pinned direct MCP dependencies
+      - name: Install deterministic MCP dependencies
         working-directory: packages/shared-media-mcp-adapter
         shell: bash
         run: |
           set -euo pipefail
-          npm install --ignore-scripts --no-audit --no-fund
+          if [ -f package-lock.json ]; then
+            printf 'true\n' > "$RUNNER_TEMP/package-lock-present-at-checkout.txt"
+            npm ci --ignore-scripts --no-audit --no-fund
+          else
+            printf 'false\n' > "$RUNNER_TEMP/package-lock-present-at-checkout.txt"
+            npm install --ignore-scripts --no-audit --no-fund
+          fi
+          test -f package-lock.json
+          shasum -a 256 package-lock.json | awk '{print $1}' > "$RUNNER_TEMP/package-lock.sha256"
+          cp package-lock.json "$RUNNER_TEMP/shared-media-mcp-package-lock.json"
           npm ls --depth=0 | tee "$RUNNER_TEMP/shared-media-mcp-dependencies.txt"
           grep -F '@modelcontextprotocol/server@2.0.0' "$RUNNER_TEMP/shared-media-mcp-dependencies.txt"
           grep -F 'zod@4.2.0' "$RUNNER_TEMP/shared-media-mcp-dependencies.txt"
@@ -67,6 +76,8 @@ jobs:
           rt=pathlib.Path(os.environ['RUNNER_TEMP'])
           tap=(rt/'shared-media-mcp-tests.tap').read_text()
           deps=(rt/'shared-media-mcp-dependencies.txt').read_text()
+          lock_sha=(rt/'package-lock.sha256').read_text().strip()
+          lock_present=(rt/'package-lock-present-at-checkout.txt').read_text().strip() == 'true'
           def number(name):
               m=re.search(rf'^# {name}\s+(\d+)\s*$',tap,re.M)
               return int(m.group(1)) if m else None
@@ -79,6 +90,8 @@ jobs:
             'tests':number('tests'),
             'pass':number('pass'),
             'fail':number('fail'),
+            'packageLockPresentAtCheckout':lock_present,
+            'packageLockSha256':lock_sha,
             'arbitraryGraphToolExposed':False,
             'publishingToolExposed':False,
             'realBackendBound':False,
@@ -99,5 +112,6 @@ jobs:
             ${{ runner.temp }}/shared-media-mcp-exact-head-receipt.json
             ${{ runner.temp }}/shared-media-mcp-tests.tap
             ${{ runner.temp }}/shared-media-mcp-dependencies.txt
+            ${{ runner.temp }}/shared-media-mcp-package-lock.json
           if-no-files-found: error
           retention-days: 30
