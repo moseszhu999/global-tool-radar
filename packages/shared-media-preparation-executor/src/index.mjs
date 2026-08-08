@@ -39,7 +39,6 @@ const deepFreeze = (value) => {
 };
 const SHA = /^[a-f0-9]{64}$/;
 const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,199}$/;
-const SECRET_TEXT = /(?:bearer\s+[A-Za-z0-9._~+\/-]+|(?:token|secret|password|api[_-]?key)\s*[:=]\s*\S+)/i;
 const clone = (value) => structuredClone(value);
 const sha256 = (value) => createHash('sha256').update(value).digest('hex');
 
@@ -168,6 +167,27 @@ const captionCues = (manifest) => manifest.narrationSegments.map((segment) => ({
   text: segment.text,
 }));
 
+const deriveReceiptFacts = ({visualArtifacts, voice, captions}) => {
+  const assetResolutionPerformed = visualArtifacts.length > 0 || voice.mode === 'provided' || captions.mode === 'provided';
+  const voiceSynthesisPerformed = voice.mode === 'synthesize' && voice.artifacts.length > 0;
+  const captionCompilationPerformed = captions.mode === 'auto' && captions.cues.length > 0;
+  const preparedArtifactCount = visualArtifacts.length + voice.artifacts.length + captions.artifacts.length;
+  return {
+    actions: {
+      assetResolutionPerformed,
+      voiceSynthesisPerformed,
+      captionCompilationPerformed,
+    },
+    preparedArtifactsProduced: preparedArtifactCount > 0 || captions.cues.length > 0,
+  };
+};
+
+const assertExactSourceArtifact = (artifact, source, path) => {
+  if (artifact.sourceId !== source.assetId || artifact.sha256 !== (source.expectedSha256 ?? source.sha256) || artifact.mediaType !== source.mediaType) {
+    fail('SOURCE_SEMANTICS_MISMATCH', `${path} does not match exact preparation source identity`, path);
+  }
+};
+
 export const validatePreparedInputsReceiptV1 = (receipt, {plan = null, manifest = null} = {}) => {
   const value = object(receipt, '$receipt');
   exactKeys(value, new Set([
@@ -193,7 +213,7 @@ export const validatePreparedInputsReceiptV1 = (receipt, {plan = null, manifest 
     exactKeys(voice, new Set(['mode','artifacts']), '$receipt.voiceResult');
     if (!Array.isArray(voice.artifacts) || voice.artifacts.length < 1) fail('INVALID_RECEIPT', 'voiceResult artifacts required', '$receipt.voiceResult.artifacts');
     voice.artifacts.forEach((artifact, index) => validateArtifactRecord(artifact, `$receipt.voiceResult.artifacts[${index}]`));
-    if (voice.mode === 'provided' && voice.artifacts.some((artifact) => artifact.role !== 'voice-provided')) fail('INVALID_RECEIPT', 'provided voiceResult role mismatch', '$receipt.voiceResult.artifacts');
+    if (voice.mode === 'provided' && (voice.artifacts.length !== 1 || voice.artifacts[0].role !== 'voice-provided')) fail('INVALID_RECEIPT', 'provided voiceResult requires exactly one voice-provided artifact', '$receipt.voiceResult.artifacts');
     if (voice.mode === 'synthesize' && voice.artifacts.some((artifact) => artifact.role !== 'voice-synthesized')) fail('INVALID_RECEIPT', 'synthesize voiceResult role mismatch', '$receipt.voiceResult.artifacts');
   }
 
@@ -222,6 +242,13 @@ export const validatePreparedInputsReceiptV1 = (receipt, {plan = null, manifest 
   exactKeys(actions, new Set(['assetResolutionPerformed','voiceSynthesisPerformed','captionCompilationPerformed']), '$receipt.actions');
   for (const field of ['assetResolutionPerformed','voiceSynthesisPerformed','captionCompilationPerformed']) if (typeof actions[field] !== 'boolean') fail('INVALID_RECEIPT', `${field} must be boolean`, `$receipt.actions.${field}`);
   if (typeof value.preparedArtifactsProduced !== 'boolean') fail('INVALID_RECEIPT', 'preparedArtifactsProduced must be boolean', '$receipt.preparedArtifactsProduced');
+  const derivedFacts = deriveReceiptFacts({visualArtifacts:value.visualArtifacts, voice, captions});
+  if (stableStringifyV1(actions) !== stableStringifyV1(derivedFacts.actions)) {
+    fail('RECEIPT_SEMANTICS_MISMATCH', 'receipt action facts do not match prepared artifacts/cues', '$receipt.actions');
+  }
+  if (value.preparedArtifactsProduced !== derivedFacts.preparedArtifactsProduced) {
+    fail('RECEIPT_SEMANTICS_MISMATCH', 'preparedArtifactsProduced does not match prepared artifacts/cues', '$receipt.preparedArtifactsProduced');
+  }
   for (const field of ['transportSelected','bindingCreated','renderAuthorized','consumerDomainDecisionInferred','businessOutcomeInferred']) {
     if (value[field] !== false) fail('TRUTH_BOUNDARY', `${field} must remain false in prepared inputs receipt`, `$receipt.${field}`);
   }
@@ -234,16 +261,31 @@ export const validatePreparedInputsReceiptV1 = (receipt, {plan = null, manifest 
     if (value.requestId !== plan.requestId || value.inputManifestDigest !== plan.inputManifestDigest || value.renderPlanDigest !== plan.renderPlanDigest || value.preparationManifestDigest !== manifest.preparationManifestDigest) {
       fail('SOURCE_IDENTITY_MISMATCH', 'prepared receipt identity does not match exact plan/manifest', '$receipt');
     }
-    if (stableStringifyV1(value.visualArtifacts.map((artifact) => artifact.sourceId)) !== stableStringifyV1(manifest.visualInputs.map((asset) => asset.assetId))) {
-      fail('SOURCE_SEMANTICS_MISMATCH', 'visual artifact source IDs do not match exact preparation manifest', '$receipt.visualArtifacts');
+    if (value.visualArtifacts.length !== manifest.visualInputs.length) {
+      fail('SOURCE_SEMANTICS_MISMATCH', 'visual artifact count does not match exact preparation manifest', '$receipt.visualArtifacts');
     }
+    value.visualArtifacts.forEach((artifact, index) => assertExactSourceArtifact(artifact, manifest.visualInputs[index], `$receipt.visualArtifacts[${index}]`));
+
     if (voice.mode !== manifest.voicePreparation.mode) fail('SOURCE_SEMANTICS_MISMATCH', 'voiceResult mode does not match preparation manifest', '$receipt.voiceResult.mode');
-    if (voice.mode === 'synthesize') {
-      const expectedSegments = manifest.voicePreparation.segmentIds;
-      if (stableStringifyV1(voice.artifacts.map((artifact) => artifact.segmentId)) !== stableStringifyV1(expectedSegments)) fail('SOURCE_SEMANTICS_MISMATCH', 'synthesized voice artifacts do not match exact segment IDs', '$receipt.voiceResult.artifacts');
+    if (voice.mode === 'provided') {
+      assertExactSourceArtifact(voice.artifacts[0], manifest.voicePreparation.audioAsset, '$receipt.voiceResult.artifacts[0]');
+    } else if (voice.mode === 'synthesize') {
+      if (voice.artifacts.length !== manifest.voicePreparation.segmentIds.length) fail('SOURCE_SEMANTICS_MISMATCH', 'synthesized voice artifact count does not match exact segment IDs', '$receipt.voiceResult.artifacts');
+      voice.artifacts.forEach((artifact, index) => {
+        const segmentId = manifest.voicePreparation.segmentIds[index];
+        const segment = manifest.narrationSegments.find((item) => item.segmentId === segmentId);
+        if (!segment || artifact.segmentId !== segmentId || artifact.sourceId !== segmentId || artifact.sourceShotId !== segment.shotId || artifact.targetStartMs !== segment.startMs || artifact.targetDurationMs !== segment.durationMs) {
+          fail('SOURCE_SEMANTICS_MISMATCH', `synthesized voice artifact ${index} does not match exact narration segment`, `$receipt.voiceResult.artifacts[${index}]`);
+        }
+      });
     }
+
     if (captions.mode !== manifest.captionPreparation.mode || captions.format !== manifest.captionPreparation.format) fail('SOURCE_SEMANTICS_MISMATCH', 'captionResult mode/format does not match preparation manifest', '$receipt.captionResult');
-    if (captions.mode === 'auto' && stableStringifyV1(captions.cues) !== stableStringifyV1(captionCues(manifest))) fail('SOURCE_SEMANTICS_MISMATCH', 'auto caption cues do not match exact narration timeline', '$receipt.captionResult.cues');
+    if (captions.mode === 'provided') {
+      assertExactSourceArtifact(captions.artifacts[0], manifest.captionPreparation.captionAsset, '$receipt.captionResult.artifacts[0]');
+    } else if (captions.mode === 'auto' && stableStringifyV1(captions.cues) !== stableStringifyV1(captionCues(manifest))) {
+      fail('SOURCE_SEMANTICS_MISMATCH', 'auto caption cues do not match exact narration timeline', '$receipt.captionResult.cues');
+    }
   }
   return true;
 };
@@ -292,7 +334,6 @@ export const createPreparationExecutorV1 = ({
 
       const payloadStore = new Map();
       const visualArtifacts = [];
-      let assetResolutionPerformed = false;
       for (const input of manifest.visualInputs) {
         const resolved = await safeOperation(resolveAsset, {
           role: 'visual',
@@ -308,11 +349,9 @@ export const createPreparationExecutorV1 = ({
         const prepared = artifactRecord({artifactId, role:'visual', sourceId:input.assetId, mediaType:input.mediaType, payload, expectedSha256:input.expectedSha256});
         payloadStore.set(artifactId, prepared.snapshot);
         visualArtifacts.push(prepared.record);
-        assetResolutionPerformed = true;
       }
 
       const voiceArtifacts = [];
-      let voiceSynthesisPerformed = false;
       if (manifest.voicePreparation.mode === 'provided') {
         const asset = manifest.voicePreparation.audioAsset;
         const resolved = await safeOperation(resolveAsset, {role:'voice-provided', asset:{...asset, expectedSha256:asset.sha256}}, 'resolveExactAsset');
@@ -321,7 +360,6 @@ export const createPreparationExecutorV1 = ({
         const prepared = artifactRecord({artifactId, role:'voice-provided', sourceId:asset.assetId, mediaType:asset.mediaType, payload, expectedSha256:asset.sha256});
         payloadStore.set(artifactId, prepared.snapshot);
         voiceArtifacts.push(prepared.record);
-        assetResolutionPerformed = true;
       } else if (manifest.voicePreparation.mode === 'synthesize') {
         for (const segmentId of manifest.voicePreparation.segmentIds) {
           const segment = manifest.narrationSegments.find((item) => item.segmentId === segmentId);
@@ -334,13 +372,11 @@ export const createPreparationExecutorV1 = ({
           const prepared = artifactRecord({artifactId, role:'voice-synthesized', sourceId:segment.segmentId, mediaType:synthesized.mediaType, payload:synthesized.payload, segment});
           payloadStore.set(artifactId, prepared.snapshot);
           voiceArtifacts.push(prepared.record);
-          voiceSynthesisPerformed = true;
         }
       }
 
       const captionArtifacts = [];
       let cues = [];
-      let captionCompilationPerformed = false;
       if (manifest.captionPreparation.mode === 'provided') {
         const asset = manifest.captionPreparation.captionAsset;
         const resolved = await safeOperation(resolveAsset, {role:'caption-provided', asset:{...asset, expectedSha256:asset.sha256}}, 'resolveExactAsset');
@@ -349,12 +385,13 @@ export const createPreparationExecutorV1 = ({
         const prepared = artifactRecord({artifactId, role:'caption-provided', sourceId:asset.assetId, mediaType:asset.mediaType, payload, expectedSha256:asset.sha256});
         payloadStore.set(artifactId, prepared.snapshot);
         captionArtifacts.push(prepared.record);
-        assetResolutionPerformed = true;
       } else if (manifest.captionPreparation.mode === 'auto') {
         cues = captionCues(manifest);
-        captionCompilationPerformed = true;
       }
 
+      const voiceResult = {mode: manifest.voicePreparation.mode, artifacts: voiceArtifacts};
+      const captionResult = {mode: manifest.captionPreparation.mode, format: manifest.captionPreparation.format ?? 'none', cues, artifacts: captionArtifacts};
+      const facts = deriveReceiptFacts({visualArtifacts, voice:voiceResult, captions:captionResult});
       const preparedAt = canonicalTimestamp(await clock());
       const receipt = {
         schemaVersion: SHARED_MEDIA_PREPARED_INPUTS_V1,
@@ -364,14 +401,10 @@ export const createPreparationExecutorV1 = ({
         preparationManifestDigest: manifest.preparationManifestDigest,
         preparedAt,
         visualArtifacts,
-        voiceResult: {mode: manifest.voicePreparation.mode, artifacts: voiceArtifacts},
-        captionResult: {mode: manifest.captionPreparation.mode, format: manifest.captionPreparation.format ?? 'none', cues, artifacts: captionArtifacts},
-        actions: {
-          assetResolutionPerformed,
-          voiceSynthesisPerformed,
-          captionCompilationPerformed,
-        },
-        preparedArtifactsProduced: payloadStore.size > 0 || cues.length > 0,
+        voiceResult,
+        captionResult,
+        actions: facts.actions,
+        preparedArtifactsProduced: facts.preparedArtifactsProduced,
         transportSelected: false,
         bindingCreated: false,
         renderAuthorized: false,
