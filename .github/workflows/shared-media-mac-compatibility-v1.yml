@@ -1,0 +1,122 @@
+name: shared-media-mac-compatibility-v1
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - packages/shared-media-mac-compatibility/**
+      - .github/workflows/shared-media-mac-compatibility-v1.yml
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TARGET_SHA: ${{ github.event.pull_request.head.sha }}
+      EXPECTED_SERVER_SHA: bb0de1478cd2ce48ce6bcf0c17c9b7f5e5e811131448b3555dfdcee3a4c8510f
+      EXPECTED_OPENAPI_SHA: 73c31a31861f3cd086ff72ce123ce612e0cd3b9ddb54a15cac8ea52c34b90656
+
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify exact head and isolated scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "$TARGET_SHA"
+          echo "exact_head=$actual"
+          test -f packages/shared-media-render-contract/src/index.mjs
+          test -f packages/mac-remotion-runner-client/src/index.mjs
+          ! grep -RInE 'create_or_update|projectDir' packages/shared-media-mac-compatibility/src/index.mjs | grep -vE "allowedModes|never falls|intentionally omits|mode: 'render_existing'" || {
+            echo 'Unexpected create_or_update/projectDir execution surface.' >&2
+            exit 1
+          }
+
+      - name: Syntax check
+        run: npm --prefix packages/shared-media-mac-compatibility run check
+
+      - name: Run exact compatibility contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --prefix packages/shared-media-mac-compatibility test | tee "$RUNNER_TEMP/shared-media-mac-compatibility.tap"
+          grep -Eq '# tests[[:space:]]+20$' "$RUNNER_TEMP/shared-media-mac-compatibility.tap"
+          grep -Eq '# pass[[:space:]]+20$' "$RUNNER_TEMP/shared-media-mac-compatibility.tap"
+          grep -Eq '# fail[[:space:]]+0$' "$RUNNER_TEMP/shared-media-mac-compatibility.tap"
+          grep -F 'adapter construction requires both external authorizers' "$RUNNER_TEMP/shared-media-mac-compatibility.tap"
+          grep -F 'binding authorization denial occurs before submitRenderJob' "$RUNNER_TEMP/shared-media-mac-compatibility.tap"
+          grep -F 'status authorization denial occurs before getRenderJobStatus' "$RUNNER_TEMP/shared-media-mac-compatibility.tap"
+          grep -F 'cancel authorization denial occurs before cancelRenderJob' "$RUNNER_TEMP/shared-media-mac-compatibility.tap"
+          grep -F 'Mac completed transport status is not upgraded to canonical media.render.v1 succeeded' "$RUNNER_TEMP/shared-media-mac-compatibility.tap"
+
+      - name: Enforce audited runtime and truth boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F "$EXPECTED_SERVER_SHA" packages/shared-media-mac-compatibility/src/index.mjs
+          grep -F "$EXPECTED_OPENAPI_SHA" packages/shared-media-mac-compatibility/src/index.mjs
+          grep -F "mode: 'render_existing'" packages/shared-media-mac-compatibility/src/index.mjs
+          grep -F 'canonicalResultReady: false' packages/shared-media-mac-compatibility/src/index.mjs
+          grep -F 'canonicalEvidenceCollected: false' packages/shared-media-mac-compatibility/src/index.mjs
+          grep -F 'consumerDomainDecisionInferred: false' packages/shared-media-mac-compatibility/src/index.mjs
+          grep -F 'isBindingAuthorized' packages/shared-media-mac-compatibility/src/index.mjs
+          grep -F 'isJobAuthorized' packages/shared-media-mac-compatibility/src/index.mjs
+          ! grep -RInE '(accessToken|refreshToken|clientSecret|password|Authorization[[:space:]]*:|Bearer[[:space:]]+[A-Za-z0-9._-]+)' packages/shared-media-mac-compatibility/src
+          ! grep -RInE 'humanApproved|humanWatchedFullCandidate|socialPlatformBusinessFitApprovedByHuman|publicationAllowed|publicationPerformed|analyticsObserved' packages/shared-media-mac-compatibility/src
+
+      - name: Emit exact-head receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json,os,pathlib,re
+          rt=pathlib.Path(os.environ['RUNNER_TEMP'])
+          tap=(rt/'shared-media-mac-compatibility.tap').read_text()
+          def number(name):
+              m=re.search(rf'^# {name}\s+(\d+)\s*$',tap,re.M)
+              return int(m.group(1)) if m else None
+          receipt={
+            'schemaVersion':'shared-media.mac-compatibility-exact-head.v1',
+            'exactHead':os.environ['TARGET_SHA'],
+            'package':'@shared-media/mac-remotion-compatibility@0.1.0',
+            'tests':number('tests'),
+            'pass':number('pass'),
+            'fail':number('fail'),
+            'auditedServerMjsSha256':os.environ['EXPECTED_SERVER_SHA'],
+            'auditedOpenapiSha256':os.environ['EXPECTED_OPENAPI_SHA'],
+            'mode':'render_existing_only',
+            'preMaterializedBindingRequired':True,
+            'bindingIntegrityRequired':True,
+            'bindingAuthorizationRequired':True,
+            'jobAuthorizationRequired':True,
+            'projectDirCallerControlled':False,
+            'transportCompletedUpgradedToCanonicalSucceeded':False,
+            'canonicalEvidenceCollected':False,
+            'realMacOperationPerformed':False,
+            'consumerDomainDecisionInferred':False,
+            'businessOutcomeInferred':False,
+            'testLogSha256':hashlib.sha256(tap.encode()).hexdigest(),
+          }
+          path=rt/'shared-media-mac-compatibility-exact-head.json'
+          path.write_text(json.dumps(receipt,indent=2)+'\n')
+          print(json.dumps(receipt,indent=2))
+          PY
+
+      - name: Upload exact-head evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: shared-media-mac-compatibility-v1
+          path: |
+            ${{ runner.temp }}/shared-media-mac-compatibility-exact-head.json
+            ${{ runner.temp }}/shared-media-mac-compatibility.tap
+          if-no-files-found: error
+          retention-days: 30
