@@ -78,6 +78,27 @@ The receipt includes only metadata/evidence:
 
 Raw prepared bytes are deliberately absent from the receipt.
 
+## Receipt semantic re-derivation
+
+`preparedInputsDigest` is integrity only. Standalone validation independently re-derives:
+
+- `assetResolutionPerformed` from visual/provided-voice/provided-caption artifacts;
+- `voiceSynthesisPerformed` from synthesized voice artifacts;
+- `captionCompilationPerformed` from auto-caption cues;
+- `preparedArtifactsProduced` from actual prepared artifacts/cues.
+
+Therefore changing those facts and recomputing the receipt digest still fails.
+
+When the exact `{plan, manifest}` is supplied, validation additionally re-binds prepared evidence to source authority:
+
+- each visual artifact must match the exact source `assetId + expectedSha256 + mediaType`;
+- provided voice must match its exact `audioAsset` identity/SHA/type;
+- provided caption must match its exact `captionAsset` identity/SHA/type;
+- every synthesized voice artifact must match its exact narration `segmentId`, source shot, target start and target duration;
+- auto-caption cues must equal the exact narration timeline.
+
+A self-consistent re-signed receipt is therefore not sufficient to substitute source evidence.
+
 ## Payload boundary
 
 The returned execution object exposes `getPayload(artifactId)`, which returns a fresh byte copy on every call. Caller mutation therefore cannot alter the executor-owned snapshot.
@@ -102,4 +123,4 @@ A successful preparation receipt does not prove:
 
 ## Tests
 
-The initial exact-head suite requires 24 contracts covering authorization ordering, exact asset SHA/media type, synthesized-audio type, narration timing, auto cues, provided voice/captions, no-op modes, source mismatch, provider-error sanitization, defensive payload copies, payload verification, receipt integrity/deep-freeze/timestamp, truth boundaries and product-neutral output.
+The hardened exact-head suite requires 30 contracts: the original 24 authorization/provider/payload/receipt cases plus six adversarial re-sign cases for action facts, prepared-artifact truth, visual source SHA, provided voice source, provided caption source, and synthesized segment/source/timing evidence.
