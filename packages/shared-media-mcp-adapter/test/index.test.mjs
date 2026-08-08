@@ -57,13 +57,21 @@ const controllerFor = ({workflows = [workflow()], backend = createBackend()} = {
   backend,
 });
 
-const assertTruthBoundary = (value) => {
-  assert.equal(value.humanApproved, false);
-  assert.equal(value.humanWatchedFullCandidate, false);
-  assert.equal(value.socialPlatformBusinessFitApprovedByHuman, false);
-  assert.equal(value.publicationAllowed, false);
-  assert.equal(value.publicationPerformed, false);
-  assert.equal(value.analyticsObserved, false);
+const legacyConsumerTruthKeys = [
+  'humanApproved',
+  'humanWatchedFullCandidate',
+  'socialPlatformBusinessFitApprovedByHuman',
+  'publicationAllowed',
+  'publicationPerformed',
+  'analyticsObserved',
+];
+
+const assertTechnicalTruthBoundary = (value) => {
+  assert.equal(value.technicalResultOnly, true);
+  assert.equal(value.humanDecisionInferred, false);
+  assert.equal(value.consumerDomainDecisionInferred, false);
+  assert.equal(value.businessOutcomeInferred, false);
+  for (const key of legacyConsumerTruthKeys) assert.equal(key in value, false);
 };
 
 test('workflow registry is deterministic and returns copies', () => {
@@ -88,7 +96,7 @@ test('valid bounded generation binds request and evidence identity', async () =>
   const {controller, backend} = controllerFor();
   const result = await controller.generateAsset({
     workflowId: 'shared-media-image-polish-v1',
-    purpose: 'Polish an already truthful ToolRadar background',
+    purpose: 'Polish an already truthful consumer background',
     parameters: {prompt: 'subtle dark studio material polish', denoise: 0.35, seed: 24080835, preserveLayout: true},
     referenceAssetIds: ['asset:approved-reference'],
     outputProfile: {width: 1080, height: 1920},
@@ -98,7 +106,7 @@ test('valid bounded generation binds request and evidence identity', async () =>
   assert.match(result.requestId, /^[0-9a-f-]{36}$/i);
   assert.equal(result.workflowDigest, digest('workflow-v1'));
   assert.match(result.inputManifestDigest, /^[a-f0-9]{64}$/);
-  assertTruthBoundary(result);
+  assertTechnicalTruthBoundary(result);
   assert.equal(backend.calls.generate.length, 1);
   assert.equal(backend.calls.generate[0].request.parameters.denoise, 0.35);
   assert.equal(backend.calls.references.length, 1);
@@ -187,7 +195,7 @@ test('secret-shaped backend results are rejected instead of echoed', async () =>
   await assert.rejects(() => controller.getJob('job:1'), /authorization is forbidden/);
 });
 
-test('backend job truth claims are overwritten by the MCP truth boundary', async () => {
+test('backend consumer-domain truth claims are rejected instead of normalized by Shared Media', async () => {
   const backend = createBackend();
   backend.getJob = async (jobId) => ({
     jobId,
@@ -198,15 +206,14 @@ test('backend job truth claims are overwritten by the MCP truth boundary', async
     analyticsObserved: true,
   });
   const controller = createSharedMediaMcpController({workflows: [workflow()], backend});
-  const job = await controller.getJob('job:truth-test');
-  assertTruthBoundary(job);
+  await assert.rejects(() => controller.getJob('job:truth-test'), /consumer-domain truth/);
 });
 
-test('ready artifact requires valid SHA-256 and never implies approval/publication', async () => {
+test('ready artifact requires valid SHA-256 and carries technical truth only', async () => {
   const {controller} = controllerFor();
   const artifact = await controller.getArtifact('artifact:1');
   assert.match(artifact.sha256, /^[a-f0-9]{64}$/);
-  assertTruthBoundary(artifact);
+  assertTechnicalTruthBoundary(artifact);
 });
 
 test('ready artifact without valid SHA-256 is rejected', async () => {
@@ -216,19 +223,19 @@ test('ready artifact without valid SHA-256 is rejected', async () => {
   await assert.rejects(() => controller.getArtifact('artifact:1'), /valid sha256/);
 });
 
-test('job polling surface delegates stable job id and stays truth-bounded', async () => {
+test('job polling surface delegates stable job id and stays technically bounded', async () => {
   const {controller, backend} = controllerFor();
   const job = await controller.getJob('job:42');
   assert.equal(job.jobId, 'job:42');
-  assertTruthBoundary(job);
+  assertTechnicalTruthBoundary(job);
   assert.deepEqual(backend.calls.getJob, ['job:42']);
 });
 
-test('cancellation delegates only one explicit job id and stays truth-bounded', async () => {
+test('cancellation delegates only one explicit job id and stays technically bounded', async () => {
   const {controller, backend} = controllerFor();
   const result = await controller.cancelJob('job:42');
   assert.equal(result.status, 'cancelled');
-  assertTruthBoundary(result);
+  assertTechnicalTruthBoundary(result);
   assert.deepEqual(backend.calls.cancelJob, ['job:42']);
 });
 
