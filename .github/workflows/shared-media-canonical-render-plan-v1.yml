@@ -1,0 +1,134 @@
+name: shared-media-canonical-render-plan-v1
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - packages/shared-media-canonical-render-plan/**
+      - .github/workflows/shared-media-canonical-render-plan-v1.yml
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TARGET_SHA: ${{ github.event.pull_request.head.sha }}
+
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify exact head and pure compiler boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "$TARGET_SHA"
+          echo "exact_head=$actual"
+          test -f packages/shared-media-render-contract/src/index.mjs
+          test -f packages/shared-media-canonical-render-plan/src/index.mjs
+          ! grep -RInE "from ['\"](node:fs|node:child_process|node:http|node:https|node:net|node:dgram)|\b(fetch|exec|execFile|spawn|fork)\s*\(" packages/shared-media-canonical-render-plan/src || {
+            echo 'Canonical render-plan compiler must remain pure and transport/provider neutral.' >&2
+            exit 1
+          }
+          ! grep -RInE 'POST /v1/render|create_or_update|render_existing|ACTION_TOKEN|Authorization|Bearer ' packages/shared-media-canonical-render-plan/src || {
+            echo 'Canonical render-plan compiler must not select backend transport or credentials.' >&2
+            exit 1
+          }
+
+      - name: Syntax check
+        run: npm --prefix packages/shared-media-canonical-render-plan run check
+
+      - name: Run exact render-plan contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --prefix packages/shared-media-canonical-render-plan test | tee "$RUNNER_TEMP/shared-media-canonical-render-plan.tap"
+          grep -Eq '# tests[[:space:]]+22$' "$RUNNER_TEMP/shared-media-canonical-render-plan.tap"
+          grep -Eq '# pass[[:space:]]+22$' "$RUNNER_TEMP/shared-media-canonical-render-plan.tap"
+          grep -Eq '# fail[[:space:]]+0$' "$RUNNER_TEMP/shared-media-canonical-render-plan.tap"
+          grep -F 'course-explainer-shaped canonical request compiles without losing media semantics' "$RUNNER_TEMP/shared-media-canonical-render-plan.tap"
+          grep -F 'unknown request semantics fail closed instead of being silently dropped' "$RUNNER_TEMP/shared-media-canonical-render-plan.tap"
+          grep -F 'duration is required for executable timeline planning' "$RUNNER_TEMP/shared-media-canonical-render-plan.tap"
+          grep -F 're-signed derived requirements tampering is rejected by semantic re-derivation' "$RUNNER_TEMP/shared-media-canonical-render-plan.tap"
+          grep -F 're-signed unknown asset reference is rejected by reconstructed canonical request validation' "$RUNNER_TEMP/shared-media-canonical-render-plan.tap"
+          grep -F 're-signed shot order tampering is rejected by reconstructed canonical request validation' "$RUNNER_TEMP/shared-media-canonical-render-plan.tap"
+          grep -F 'exact request-to-plan verification rejects a plan from another canonical request' "$RUNNER_TEMP/shared-media-canonical-render-plan.tap"
+          grep -F 'compiled plan remains product-neutral and contains no TrainingOS or ToolRadar business truth' "$RUNNER_TEMP/shared-media-canonical-render-plan.tap"
+
+      - name: Enforce truth boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F 'validateMediaRenderRequestV1(request)' packages/shared-media-canonical-render-plan/src/index.mjs
+          grep -F 'assertCurrentSemanticsOnly(request)' packages/shared-media-canonical-render-plan/src/index.mjs
+          grep -F 'reconstructCanonicalRequestFromPlan' packages/shared-media-canonical-render-plan/src/index.mjs
+          grep -F 'expectedRequirements = requirementsFor(reconstructedRequest)' packages/shared-media-canonical-render-plan/src/index.mjs
+          grep -F 'computeCanonicalRenderPlanDigestV1' packages/shared-media-canonical-render-plan/src/index.mjs
+          grep -F 'transportSelected: false' packages/shared-media-canonical-render-plan/src/index.mjs
+          grep -F 'bindingCreated: false' packages/shared-media-canonical-render-plan/src/index.mjs
+          grep -F 'renderAuthorized: false' packages/shared-media-canonical-render-plan/src/index.mjs
+          grep -F 'providerExecutionPerformed: false' packages/shared-media-canonical-render-plan/src/index.mjs
+          ! grep -RInE 'unitId|lessonId|studentId|teacherId|publicationAllowed|publicationPerformed|analyticsObserved|humanApproved' packages/shared-media-canonical-render-plan/src
+
+      - name: Emit exact-head receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json,os,pathlib,re
+          root=pathlib.Path(os.environ['RUNNER_TEMP'])
+          tap=(root/'shared-media-canonical-render-plan.tap').read_text()
+          def number(name):
+              m=re.search(rf'^# {name}\s+(\d+)\s*$',tap,re.M)
+              return int(m.group(1)) if m else None
+          receipt={
+            'schemaVersion':'shared-media.canonical-render-plan-exact-head.v1',
+            'exactHead':os.environ['TARGET_SHA'],
+            'package':'@shared-media/canonical-render-plan@0.1.0',
+            'tests':number('tests'),
+            'pass':number('pass'),
+            'fail':number('fail'),
+            'canonicalRequestValidatorRequired':True,
+            'unknownSemanticsFailClosed':True,
+            'explicitShotDurationRequired':True,
+            'narrationPreserved':True,
+            'visualAssetsPreserved':True,
+            'voiceIntentPreserved':True,
+            'captionIntentPreserved':True,
+            'outputProfilePreserved':True,
+            'semanticRequestReconstructionRequired':True,
+            'derivedRequirementsRederived':True,
+            'resignedSemanticTamperRejected':True,
+            'requestPlanTieOutRequired':True,
+            'transportSelected':False,
+            'bindingCreated':False,
+            'renderAuthorized':False,
+            'providerExecutionPerformed':False,
+            'filesystemPerformed':False,
+            'networkPerformed':False,
+            'consumerDomainDecisionInferred':False,
+            'businessOutcomeInferred':False,
+            'testLogSha256':hashlib.sha256(tap.encode()).hexdigest(),
+          }
+          path=root/'shared-media-canonical-render-plan-exact-head.json'
+          path.write_text(json.dumps(receipt,indent=2)+'\n')
+          print(json.dumps(receipt,indent=2))
+          PY
+
+      - name: Upload exact-head evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: shared-media-canonical-render-plan-v1
+          path: |
+            ${{ runner.temp }}/shared-media-canonical-render-plan-exact-head.json
+            ${{ runner.temp }}/shared-media-canonical-render-plan.tap
+          if-no-files-found: error
+          retention-days: 30
