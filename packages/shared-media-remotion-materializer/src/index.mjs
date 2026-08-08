@@ -71,7 +71,9 @@ const text = (value, path, {max = 1000} = {}) => {
 };
 
 const exactKeys = (value, allowed, path) => {
-  for (const key of Object.keys(value)) if (!allowed.has(key)) fail('UNSUPPORTED_FIELD', `${path}.${key} is not supported by blank smoke v1`, `${path}.${key}`);
+  for (const key of Object.keys(value)) {
+    if (!allowed.has(key)) fail('UNSUPPORTED_FIELD', `${path}.${key} is not supported by blank smoke v1`, `${path}.${key}`);
+  }
 };
 
 const deepFreeze = (value) => {
@@ -101,14 +103,17 @@ const computeGeneratedFilesManifestSha256 = (records) => {
 
 const canonicalProjectName = (digest) => `shared-media-${digest.slice(0, 16)}`;
 
-const validateOutputProfileSubset = (profile, path = '$.outputProfile') => {
+const normalizeOutputProfileSubset = (profile, path = '$.outputProfile') => {
   object(profile, path);
+  if (profile.videoCodec !== undefined) fail('SMOKE_SUBSET_UNSUPPORTED', 'v1 smoke materializer requires videoCodec to be omitted until runtime codec is separately evidenced', `${path}.videoCodec`);
+  if (profile.audioCodec !== undefined) fail('SMOKE_SUBSET_UNSUPPORTED', 'v1 smoke materializer requires audioCodec to be omitted because the blank smoke project has no audio track', `${path}.audioCodec`);
   exactKeys(profile, PROFILE_KEYS, path);
-  text(profile.profileId, `${path}.profileId`, {max: 160});
+  const profileId = text(profile.profileId, `${path}.profileId`, {max: 160});
   if (profile.container !== 'mp4') fail('SMOKE_SUBSET_UNSUPPORTED', 'v1 smoke materializer requires mp4 container', `${path}.container`);
   if (!Number.isInteger(profile.width) || profile.width < 320 || profile.width > 7680) fail('SMOKE_SUBSET_UNSUPPORTED', 'width outside audited Mac range 320..7680', `${path}.width`);
   if (!Number.isInteger(profile.height) || profile.height < 240 || profile.height > 4320) fail('SMOKE_SUBSET_UNSUPPORTED', 'height outside audited Mac range 240..4320', `${path}.height`);
   if (!Number.isInteger(profile.fps) || profile.fps < 1 || profile.fps > 120) fail('SMOKE_SUBSET_UNSUPPORTED', 'fps must be integer in audited Mac range 1..120', `${path}.fps`);
+  return Object.freeze({profileId, width: profile.width, height: profile.height, fps: profile.fps, container: 'mp4'});
 };
 
 const validateSmokeSubset = (request) => {
@@ -121,7 +126,7 @@ const validateSmokeSubset = (request) => {
   if (request.voice.mode !== 'none') fail('SMOKE_SUBSET_UNSUPPORTED', 'v1 smoke materializer requires voice.mode=none', '$.voice.mode');
   exactKeys(request.captions, CAPTION_KEYS, '$.captions');
   if (request.captions.mode !== 'none' || request.captions.format !== 'none') fail('SMOKE_SUBSET_UNSUPPORTED', 'v1 smoke materializer requires captions none/none', '$.captions');
-  validateOutputProfileSubset(request.outputProfile);
+  const outputProfile = normalizeOutputProfileSubset(request.outputProfile);
 
   let totalMs = 0;
   let from = 0;
@@ -133,7 +138,7 @@ const validateSmokeSubset = (request) => {
     if (shot.narration.mode !== 'none') fail('SMOKE_SUBSET_UNSUPPORTED', `shot ${index + 1} requires narration.mode=none`, `$.shots[${index}].narration.mode`);
     if ((shot.visualAssetIds ?? []).length !== 0) fail('SMOKE_SUBSET_UNSUPPORTED', `shot ${index + 1} cannot reference visual assets`, `$.shots[${index}].visualAssetIds`);
     if (!Number.isInteger(shot.durationMs) || shot.durationMs <= 0) fail('SMOKE_SUBSET_UNSUPPORTED', `shot ${index + 1} requires positive durationMs`, `$.shots[${index}].durationMs`);
-    const frameNumerator = shot.durationMs * request.outputProfile.fps;
+    const frameNumerator = shot.durationMs * outputProfile.fps;
     if (frameNumerator % 1000 !== 0) fail('SMOKE_SUBSET_UNSUPPORTED', `shot ${index + 1} duration must map to an exact integer frame count`, `$.shots[${index}].durationMs`);
     const durationInFrames = frameNumerator / 1000;
     segmentFrames.push(Object.freeze({from, durationInFrames}));
@@ -142,7 +147,7 @@ const validateSmokeSubset = (request) => {
   }
   const totalSeconds = totalMs / 1000;
   if (totalSeconds < 1 || totalSeconds > 900) fail('SMOKE_SUBSET_UNSUPPORTED', 'total duration outside audited Mac range 1..900 seconds', '$.shots');
-  return Object.freeze({requestId, segmentFrames: Object.freeze(segmentFrames), totalFrames: from, totalSeconds});
+  return Object.freeze({requestId, outputProfile, segmentFrames: Object.freeze(segmentFrames), totalFrames: from, totalSeconds});
 };
 
 const validateSegmentFrames = (segments, totalFrames, path = '$candidate.segmentFrames') => {
@@ -217,10 +222,7 @@ const renderMarker = ({inputManifestDigest, projectName, totalFrames, totalSecon
 }, null, 2) + '\n';
 
 const generateFiles = ({inputManifestDigest, projectName, expectedTotalFrames, expectedDurationSeconds, expectedOutputProfile, segmentFrames}) => [
-  {
-    path: 'shared-media-materialization.json',
-    content: renderMarker({inputManifestDigest, projectName, totalFrames: expectedTotalFrames, totalSeconds: expectedDurationSeconds, profile: expectedOutputProfile, segmentFrames}),
-  },
+  {path: 'shared-media-materialization.json', content: renderMarker({inputManifestDigest, projectName, totalFrames: expectedTotalFrames, totalSeconds: expectedDurationSeconds, profile: expectedOutputProfile, segmentFrames})},
   {path: 'src/index.ts', content: renderIndexSource()},
   {path: 'src/root.tsx', content: renderRootSource({segmentFrames, totalFrames: expectedTotalFrames, profile: expectedOutputProfile})},
 ].sort((a, b) => a.path.localeCompare(b.path));
@@ -253,7 +255,7 @@ export const materializeSharedMediaRemotionSmokeV1 = (request) => {
     projectName,
     expectedTotalFrames: subset.totalFrames,
     expectedDurationSeconds: subset.totalSeconds,
-    expectedOutputProfile: structuredClone(request.outputProfile),
+    expectedOutputProfile: subset.outputProfile,
     segmentFrames: subset.segmentFrames.map((segment) => ({...segment})),
   };
   const files = generateFiles(semantics);
@@ -268,7 +270,7 @@ export const materializeSharedMediaRemotionSmokeV1 = (request) => {
     runtimeRequirements: REMOTION_REFERENCE_RUNTIME_V1,
     expectedDurationSeconds: subset.totalSeconds,
     expectedTotalFrames: subset.totalFrames,
-    expectedOutputProfile: structuredClone(request.outputProfile),
+    expectedOutputProfile: subset.outputProfile,
     segmentFrames: subset.segmentFrames.map((segment) => ({...segment})),
     files: files.map((file) => ({...file})),
     generatedFileManifest,
@@ -299,20 +301,21 @@ export const validateSharedMediaRemotionMaterializationCandidateV1 = (candidate)
   if (value.projectName !== canonicalProjectName(value.inputManifestDigest)) fail('INVALID_CANDIDATE', 'projectName does not match input manifest digest', '$candidate.projectName');
   if (value.compositionId !== SHARED_MEDIA_REMOTION_COMPOSITION_ID) fail('INVALID_CANDIDATE', 'compositionId mismatch', '$candidate.compositionId');
   if (stableStringifyV1(value.runtimeRequirements) !== stableStringifyV1(REMOTION_REFERENCE_RUNTIME_V1)) fail('INVALID_CANDIDATE', 'runtimeRequirements differ from audited reference runtime', '$candidate.runtimeRequirements');
-  validateOutputProfileSubset(value.expectedOutputProfile, '$candidate.expectedOutputProfile');
+  const normalizedProfile = normalizeOutputProfileSubset(value.expectedOutputProfile, '$candidate.expectedOutputProfile');
+  if (stableStringifyV1(normalizedProfile) !== stableStringifyV1(value.expectedOutputProfile)) fail('INVALID_CANDIDATE', 'expectedOutputProfile is not canonicalized', '$candidate.expectedOutputProfile');
   validateSegmentFrames(value.segmentFrames, value.expectedTotalFrames);
-  const expectedSeconds = value.expectedTotalFrames / value.expectedOutputProfile.fps;
+  const expectedSeconds = value.expectedTotalFrames / normalizedProfile.fps;
   if (typeof value.expectedDurationSeconds !== 'number' || !Number.isFinite(value.expectedDurationSeconds) || Math.abs(value.expectedDurationSeconds - expectedSeconds) > 1e-9) fail('INVALID_CANDIDATE', 'expectedDurationSeconds must equal exact frame duration', '$candidate.expectedDurationSeconds');
   if (expectedSeconds < 1 || expectedSeconds > 900) fail('INVALID_CANDIDATE', 'candidate duration outside audited Mac range', '$candidate.expectedDurationSeconds');
   if (value.renderAuthorized !== false || value.bindingCreated !== false || value.consumerDomainDecisionInferred !== false || value.businessOutcomeInferred !== false) fail('TRUTH_BOUNDARY', 'candidate cannot claim authorization, binding or domain outcomes', '$candidate');
-
   if (!Array.isArray(value.files) || !Array.isArray(value.generatedFileManifest) || value.files.length !== FILE_PATHS.length || value.generatedFileManifest.length !== FILE_PATHS.length) fail('INVALID_CANDIDATE', 'unexpected generated file count', '$candidate.files');
+
   const expectedFiles = generateFiles({
     inputManifestDigest: value.inputManifestDigest,
     projectName: value.projectName,
     expectedTotalFrames: value.expectedTotalFrames,
     expectedDurationSeconds: value.expectedDurationSeconds,
-    expectedOutputProfile: value.expectedOutputProfile,
+    expectedOutputProfile: normalizedProfile,
     segmentFrames: value.segmentFrames,
   });
   if (stableStringifyV1(value.files) !== stableStringifyV1(expectedFiles)) fail('CANDIDATE_INTEGRITY_MISMATCH', 'generated files do not match deterministic candidate semantics', '$candidate.files');
