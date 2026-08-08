@@ -1,6 +1,7 @@
 import {
   assertNoForbiddenDomainFieldsV1,
   computeMediaRenderInputManifestDigestV1,
+  sha256CanonicalJsonV1,
   stableStringifyV1,
   validateMediaRenderRequestV1,
 } from '../../shared-media-render-contract/src/index.mjs';
@@ -97,6 +98,24 @@ const noSecrets = (value, path = '$') => {
 
 const exactStableEqual = (left, right) => stableStringifyV1(left) === stableStringifyV1(right);
 
+const bindingIntegrityPayload = (binding) => ({
+  schemaVersion: binding.schemaVersion,
+  bindingId: binding.bindingId,
+  status: binding.status,
+  inputManifestDigest: binding.inputManifestDigest,
+  projectName: binding.projectName,
+  compositionId: binding.compositionId,
+  brief: binding.brief,
+  ...(binding.designNotes !== undefined ? {designNotes: binding.designNotes} : {}),
+  audio: binding.audio,
+  expectedDurationSeconds: binding.expectedDurationSeconds,
+  expectedOutputProfile: binding.expectedOutputProfile,
+  runtimeEvidence: binding.runtimeEvidence,
+  evidenceRefs: binding.evidenceRefs,
+});
+
+export const computeMacPreMaterializedBindingDigestV1 = (binding) => sha256CanonicalJsonV1(bindingIntegrityPayload(binding));
+
 const expectedDurationSeconds = (request) => {
   let totalMs = 0;
   for (let index = 0; index < request.shots.length; index += 1) {
@@ -146,6 +165,7 @@ export const validateMacPreMaterializedBindingV1 = (binding) => {
     'expectedOutputProfile',
     'runtimeEvidence',
     'evidenceRefs',
+    'integrityDigest',
   ]), '$binding');
   noSecrets(value, '$binding');
   assertNoForbiddenDomainFieldsV1(value, '$binding');
@@ -186,7 +206,23 @@ export const validateMacPreMaterializedBindingV1 = (binding) => {
   }
   const refs = value.evidenceRefs.map((ref, index) => text(ref, `$binding.evidenceRefs[${index}]`, {max: 300}));
   if (new Set(refs).size !== refs.length) fail('INVALID_BINDING', '$binding.evidenceRefs must not contain duplicates', '$binding.evidenceRefs');
+
+  const integrityDigest = sha(value.integrityDigest, '$binding.integrityDigest');
+  const expectedIntegrity = computeMacPreMaterializedBindingDigestV1(value);
+  if (integrityDigest !== expectedIntegrity) {
+    fail('BINDING_INTEGRITY_MISMATCH', 'pre-materialized binding integrityDigest does not match its immutable fields', '$binding.integrityDigest');
+  }
   return true;
+};
+
+export const createMacPreMaterializedBindingV1 = (input) => {
+  const source = object(input, '$binding');
+  const value = structuredClone(source);
+  value.schemaVersion = SHARED_MEDIA_MAC_BINDING_V1;
+  delete value.integrityDigest;
+  value.integrityDigest = computeMacPreMaterializedBindingDigestV1(value);
+  validateMacPreMaterializedBindingV1(value);
+  return Object.freeze(value);
 };
 
 const normalizeOutputName = (requestId, override) => {
@@ -260,6 +296,7 @@ export const normalizeMacTransportSnapshotV1 = (snapshot) => {
     renderLogEvidenceCollected: false,
     technicalTransportOnly: true,
     consumerDomainDecisionInferred: false,
+    consumerDomainMutationInferred: false,
     businessOutcomeInferred: false,
   });
 };
@@ -287,8 +324,6 @@ export const createSharedMediaMacTransportAdapterV1 = ({client} = {}) => {
         bindingId: binding.bindingId,
         renderSubmissionPerformed: true,
         mode: 'render_existing',
-        canonicalWritePerformed: false,
-        publicationPerformed: false,
       });
     },
 
