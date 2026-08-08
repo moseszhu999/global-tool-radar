@@ -109,6 +109,7 @@ const normalizeOutputProfileSubset = (profile, path = '$.outputProfile') => {
   if (profile.audioCodec !== undefined) fail('SMOKE_SUBSET_UNSUPPORTED', 'v1 smoke materializer requires audioCodec to be omitted because the blank smoke project has no audio track', `${path}.audioCodec`);
   exactKeys(profile, PROFILE_KEYS, path);
   const profileId = text(profile.profileId, `${path}.profileId`, {max: 160});
+  if (!SAFE_ID.test(profileId) || SECRET_TEXT.test(profileId)) fail('SMOKE_SUBSET_UNSUPPORTED', `${path}.profileId must be a safe non-secret identifier for persisted materialization`, `${path}.profileId`);
   if (profile.container !== 'mp4') fail('SMOKE_SUBSET_UNSUPPORTED', 'v1 smoke materializer requires mp4 container', `${path}.container`);
   if (!Number.isInteger(profile.width) || profile.width < 320 || profile.width > 7680) fail('SMOKE_SUBSET_UNSUPPORTED', 'width outside audited Mac range 320..7680', `${path}.width`);
   if (!Number.isInteger(profile.height) || profile.height < 240 || profile.height > 4320) fail('SMOKE_SUBSET_UNSUPPORTED', 'height outside audited Mac range 240..4320', `${path}.height`);
