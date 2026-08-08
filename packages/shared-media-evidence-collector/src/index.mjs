@@ -13,6 +13,7 @@ export const SHARED_MEDIA_EVIDENCE_COLLECTOR_V1 = 'shared-media.evidence-collect
 const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,199}$/;
 const SHA = /^[a-f0-9]{64}$/;
 const ERROR_STAGES = new Set(MEDIA_RENDER_ERROR_STAGES);
+const SECRET_LOCATOR = /(?:bearer\s+|[?&](?:token|secret|password|api[_-]?key|x-amz-signature|signature|sig)=)/i;
 
 export class SharedMediaEvidenceCollectorError extends TypeError {
   constructor(code, message, {path = null} = {}) {
@@ -49,12 +50,19 @@ const exactKeys = (value, allowed, path) => {
 
 const bytes = (value, path, {allowText = false} = {}) => {
   if (allowText && typeof value === 'string') return Buffer.from(value, 'utf8');
-  if (Buffer.isBuffer(value)) return value;
+  if (Buffer.isBuffer(value)) return Buffer.from(value);
   if (value instanceof Uint8Array) return Buffer.from(value);
   fail('INVALID_FIELD', `${path} must be bytes${allowText ? ' or UTF-8 text' : ''}`, path);
 };
 
 const sha256 = (value) => createHash('sha256').update(value).digest('hex');
+
+const deepFreeze = (value) => {
+  if (!value || typeof value !== 'object' || Object.isFrozen(value) || ArrayBuffer.isView(value)) return value;
+  Object.freeze(value);
+  for (const key of Object.keys(value)) deepFreeze(value[key]);
+  return value;
+};
 
 const requireOperation = (value, name) => {
   if (typeof value !== 'function') fail('OPERATION_REQUIRED', `${name} must be a function`, `$${name}`);
@@ -87,6 +95,9 @@ const canonicalArtifactSource = (value) => {
   }, '$artifactSource.metadata');
   const artifactId = text(artifact.artifactId, '$artifactSource.artifactId', {max: 200});
   const locator = text(artifact.locator, '$artifactSource.locator', {max: 2000});
+  if (SECRET_LOCATOR.test(locator)) {
+    fail('SECRET_SHAPED_LOCATOR', '$artifactSource.locator must not persist credential/signed-query material', '$artifactSource.locator');
+  }
   const mediaType = text(artifact.mediaType, '$artifactSource.mediaType', {max: 160});
   const artifactBytes = bytes(artifact.bytes, '$artifactSource.bytes');
   if (artifactBytes.byteLength < 1) fail('INVALID_FIELD', '$artifactSource.bytes must not be empty', '$artifactSource.bytes');
@@ -139,6 +150,8 @@ const canonicalError = (value) => {
   return error;
 };
 
+const freezeTerminalResult = (result) => deepFreeze(structuredClone(result));
+
 export const createSharedMediaEvidenceCollectorV1 = ({
   readArtifact,
   inspectArtifact,
@@ -178,7 +191,7 @@ export const createSharedMediaEvidenceCollectorV1 = ({
         jobId: normalizedJobId,
         artifactId: source.artifactId,
         locator: source.locator,
-        bytes: source.artifactBytes,
+        bytes: Buffer.from(source.artifactBytes),
       })));
       if (inspectionData.inspection.format.sizeBytes !== source.artifactBytes.byteLength) {
         fail('EVIDENCE_MISMATCH', 'ffprobe size does not match collected artifact bytes', '$mediaInspection.format.sizeBytes');
@@ -228,7 +241,7 @@ export const createSharedMediaEvidenceCollectorV1 = ({
         evidence,
       };
       validateMediaRenderResultV1(result, {request});
-      return Object.freeze(structuredClone(result));
+      return freezeTerminalResult(result);
     },
 
     async collectFailed({request, jobId, error} = {}) {
@@ -263,7 +276,7 @@ export const createSharedMediaEvidenceCollectorV1 = ({
         error: normalizedError,
       };
       validateMediaRenderResultV1(result, {request});
-      return Object.freeze(structuredClone(result));
+      return freezeTerminalResult(result);
     },
   });
 };
