@@ -1,0 +1,113 @@
+name: shared-media-prepared-qualification-v1
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - packages/shared-media-prepared-qualification/**
+      - .github/workflows/shared-media-prepared-qualification-v1.yml
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TARGET_SHA: ${{ github.event.pull_request.head.sha }}
+
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify exact head and package scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          test -f packages/shared-media-preparation-executor/src/index.mjs
+          test -f packages/shared-media-prepared-qualification/src/index.mjs
+
+      - name: Syntax check
+        run: npm --prefix packages/shared-media-prepared-qualification run check
+
+      - name: Run exact qualification contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --prefix packages/shared-media-prepared-qualification test | tee "$RUNNER_TEMP/shared-media-prepared-qualification.tap"
+          grep -Eq '# tests[[:space:]]+27$' "$RUNNER_TEMP/shared-media-prepared-qualification.tap"
+          grep -Eq '# pass[[:space:]]+27$' "$RUNNER_TEMP/shared-media-prepared-qualification.tap"
+          grep -Eq '# fail[[:space:]]+0$' "$RUNNER_TEMP/shared-media-prepared-qualification.tap"
+          grep -F 'prepared payload SHA substitution fails before qualification authorization and inspection' "$RUNNER_TEMP/shared-media-prepared-qualification.tap"
+          grep -F 'short synthesized audio qualifies at original speed with trailing silence budget' "$RUNNER_TEMP/shared-media-prepared-qualification.tap"
+          grep -F 'synthesized audio longer than target window fails closed' "$RUNNER_TEMP/shared-media-prepared-qualification.tap"
+          grep -F 'provided whole-track voice is outside qualification v1 subset' "$RUNNER_TEMP/shared-media-prepared-qualification.tap"
+          grep -F 're-signed source identity substitution is rejected by exact prepared source gate' "$RUNNER_TEMP/shared-media-prepared-qualification.tap"
+
+      - name: Enforce qualification truth policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F 'verifyPreparedPayloadsV1' packages/shared-media-prepared-qualification/src/index.mjs
+          grep -F "action:'qualify_prepared_media'" packages/shared-media-prepared-qualification/src/index.mjs
+          grep -F 'AUDIO_WINDOW_OVERRUN' packages/shared-media-prepared-qualification/src/index.mjs
+          grep -F 'timeStretchApplied:false' packages/shared-media-prepared-qualification/src/index.mjs
+          grep -F 'trimApplied:false' packages/shared-media-prepared-qualification/src/index.mjs
+          grep -F 'materializationAuthorized:false' packages/shared-media-prepared-qualification/src/index.mjs
+          grep -F 'transportSelected:false' packages/shared-media-prepared-qualification/src/index.mjs
+          grep -F 'bindingCreated:false' packages/shared-media-prepared-qualification/src/index.mjs
+          grep -F 'renderAuthorized:false' packages/shared-media-prepared-qualification/src/index.mjs
+
+      - name: Emit exact-head receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json,os,pathlib,re
+          root=pathlib.Path(os.environ['RUNNER_TEMP'])
+          tap=(root/'shared-media-prepared-qualification.tap').read_text()
+          def n(name):
+              m=re.search(rf'^# {name}\s+(\d+)\s*$',tap,re.M)
+              return int(m.group(1)) if m else None
+          receipt={
+            'schemaVersion':'shared-media.prepared-qualification-exact-head.v1',
+            'exactHead':os.environ['TARGET_SHA'],
+            'package':'@shared-media/prepared-qualification@0.1.0',
+            'tests':n('tests'),'pass':n('pass'),'fail':n('fail'),
+            'exactPreparedSourceChainRequired':True,
+            'payloadReverificationBeforeInspection':True,
+            'qualificationAuthorizationRequired':True,
+            'staticImageSubsetOnly':True,
+            'synthesizedVoiceOrNoneOnly':True,
+            'autoCaptionsOrNoneOnly':True,
+            'audioDurationUsesConservativeCeilMilliseconds':True,
+            'audioOverrunFailsClosed':True,
+            'timeStretchApplied':False,
+            'trimApplied':False,
+            'shortAudioTrailingSilenceAllowed':True,
+            'materializationAuthorized':False,
+            'transportSelected':False,
+            'bindingCreated':False,
+            'renderAuthorized':False,
+            'testLogSha256':hashlib.sha256(tap.encode()).hexdigest(),
+          }
+          path=root/'shared-media-prepared-qualification-exact-head.json'
+          path.write_text(json.dumps(receipt,indent=2)+'\n')
+          print(json.dumps(receipt,indent=2))
+          PY
+
+      - name: Upload exact-head evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: shared-media-prepared-qualification-v1
+          path: |
+            ${{ runner.temp }}/shared-media-prepared-qualification-exact-head.json
+            ${{ runner.temp }}/shared-media-prepared-qualification.tap
+          if-no-files-found: error
+          retention-days: 30
