@@ -20,6 +20,10 @@ const VOICE_KEYS = new Set(['mode','provider','voiceId','rate','audioAsset','loc
 const CAPTION_KEYS = new Set(['mode','format','captionAsset','language']);
 const PROFILE_KEYS = new Set(['profileId','width','height','fps','container','videoCodec','audioCodec']);
 const EVIDENCE_KEYS = new Set(['requireMediaInspection','requireSha256','requireRenderLog','requireInputManifestDigest']);
+const REQUIREMENT_KEYS = new Set([
+  'visualAssetResolutionRequired','voiceSynthesisRequired','providedVoiceAssetRequired','captionGenerationRequired',
+  'providedCaptionAssetRequired','timelineMaterializationRequired','canonicalEvidenceCollectionRequired',
+]);
 
 export class SharedMediaCanonicalRenderPlanError extends TypeError {
   constructor(code, message, {path = null} = {}) {
@@ -136,6 +140,30 @@ const digestPayload = (plan) => ({
   businessOutcomeInferred: plan.businessOutcomeInferred,
 });
 
+export const computeCanonicalRenderPlanDigestV1 = (plan) => sha256CanonicalJsonV1(digestPayload(plan));
+
+const reconstructCanonicalRequestFromPlan = (plan) => ({
+  contractVersion: MEDIA_RENDER_V1,
+  messageType: 'request',
+  requestId: plan.requestId,
+  purpose: plan.purpose,
+  ...(plan.title !== null ? {title: plan.title} : {}),
+  language: plan.language,
+  shots: plan.timeline.shots.map((shot) => ({
+    shotId: shot.shotId,
+    order: shot.order,
+    durationMs: shot.durationMs,
+    narration: clone(shot.narration),
+    visualAssetIds: [...shot.visualAssetIds],
+  })),
+  visualAssets: clone(plan.visualAssets),
+  voice: clone(plan.voice),
+  captions: clone(plan.captions),
+  outputProfile: clone(plan.outputProfile),
+  evidenceRequirements: clone(plan.evidenceRequirements),
+  inputManifestDigest: plan.inputManifestDigest,
+});
+
 export const compileCanonicalRenderPlanV1 = (request) => {
   validateMediaRenderRequestV1(request);
   assertNoForbiddenDomainFieldsV1(request, '$');
@@ -163,7 +191,7 @@ export const compileCanonicalRenderPlanV1 = (request) => {
     consumerDomainDecisionInferred: false,
     businessOutcomeInferred: false,
   };
-  plan.renderPlanDigest = sha256CanonicalJsonV1(digestPayload(plan));
+  plan.renderPlanDigest = computeCanonicalRenderPlanDigestV1(plan);
   assertNoForbiddenDomainFieldsV1(plan, '$plan');
   validateCanonicalRenderPlanV1(plan);
   return deepFreeze(plan);
@@ -205,16 +233,25 @@ export const validateCanonicalRenderPlanV1 = (plan, {request = null} = {}) => {
   if (value.captions.captionAsset !== undefined) validateGenericAssetShape(value.captions.captionAsset, '$plan.captions.captionAsset');
   exactKeys(object(value.outputProfile, '$plan.outputProfile'), PROFILE_KEYS, '$plan.outputProfile');
   exactKeys(object(value.evidenceRequirements, '$plan.evidenceRequirements'), EVIDENCE_KEYS, '$plan.evidenceRequirements');
-  exactKeys(object(value.requirements, '$plan.requirements'), new Set([
-    'visualAssetResolutionRequired','voiceSynthesisRequired','providedVoiceAssetRequired','captionGenerationRequired',
-    'providedCaptionAssetRequired','timelineMaterializationRequired','canonicalEvidenceCollectionRequired',
-  ]), '$plan.requirements');
+  exactKeys(object(value.requirements, '$plan.requirements'), REQUIREMENT_KEYS, '$plan.requirements');
+
+  const reconstructedRequest = reconstructCanonicalRequestFromPlan(value);
+  try {
+    validateMediaRenderRequestV1(reconstructedRequest);
+    assertCurrentSemanticsOnly(reconstructedRequest);
+  } catch (error) {
+    fail('PLAN_SEMANTICS_MISMATCH', `render plan cannot reconstruct a valid canonical request: ${error.message}`, '$plan');
+  }
+  const expectedRequirements = requirementsFor(reconstructedRequest);
+  if (stableStringifyV1(value.requirements) !== stableStringifyV1(expectedRequirements)) {
+    fail('PLAN_SEMANTICS_MISMATCH', 'render plan requirements do not match preserved media semantics', '$plan.requirements');
+  }
 
   for (const field of ['transportSelected','bindingCreated','renderAuthorized','providerExecutionPerformed','consumerDomainDecisionInferred','businessOutcomeInferred']) {
     if (value[field] !== false) fail('TRUTH_BOUNDARY', `${field} must remain false in a compiled render plan`, `$plan.${field}`);
   }
   if (!/^[a-f0-9]{64}$/.test(value.renderPlanDigest ?? '')) fail('INVALID_PLAN', 'renderPlanDigest must be lowercase SHA-256', '$plan.renderPlanDigest');
-  if (sha256CanonicalJsonV1(digestPayload(value)) !== value.renderPlanDigest) fail('PLAN_INTEGRITY_MISMATCH', 'renderPlanDigest does not match plan semantics', '$plan.renderPlanDigest');
+  if (computeCanonicalRenderPlanDigestV1(value) !== value.renderPlanDigest) fail('PLAN_INTEGRITY_MISMATCH', 'renderPlanDigest does not match plan semantics', '$plan.renderPlanDigest');
 
   if (request !== null) {
     validateMediaRenderRequestV1(request);
