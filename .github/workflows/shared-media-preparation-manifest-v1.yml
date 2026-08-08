@@ -43,8 +43,8 @@ jobs:
         run: |
           set -euo pipefail
           npm --prefix packages/shared-media-preparation-manifest test | tee "$RUNNER_TEMP/shared-media-preparation-manifest.tap"
-          grep -Eq '# tests[[:space:]]+24$' "$RUNNER_TEMP/shared-media-preparation-manifest.tap"
-          grep -Eq '# pass[[:space:]]+24$' "$RUNNER_TEMP/shared-media-preparation-manifest.tap"
+          grep -Eq '# tests[[:space:]]+25$' "$RUNNER_TEMP/shared-media-preparation-manifest.tap"
+          grep -Eq '# pass[[:space:]]+25$' "$RUNNER_TEMP/shared-media-preparation-manifest.tap"
           grep -Eq '# fail[[:space:]]+0$' "$RUNNER_TEMP/shared-media-preparation-manifest.tap"
           grep -F 'narration segments preserve shot timing and text' "$RUNNER_TEMP/shared-media-preparation-manifest.tap"
           grep -F 'auto captions bind exactly to narration timeline segments without execution' "$RUNNER_TEMP/shared-media-preparation-manifest.tap"
@@ -53,6 +53,7 @@ jobs:
           grep -F 're-signed narration tampering is rejected by timeline re-derivation' "$RUNNER_TEMP/shared-media-preparation-manifest.tap"
           grep -F 're-signed provided asset with invalid SHA is rejected semantically' "$RUNNER_TEMP/shared-media-preparation-manifest.tap"
           grep -F 're-signed source substitution can be internally self-consistent but exact render plan still rejects it' "$RUNNER_TEMP/shared-media-preparation-manifest.tap"
+          grep -F 're-signed manifest cannot drop a visual input still referenced by the preserved timeline' "$RUNNER_TEMP/shared-media-preparation-manifest.tap"
           grep -F 'preparation compiler itself selects no concrete TTS, caption, Remotion or Mac transport implementation' "$RUNNER_TEMP/shared-media-preparation-manifest.tap"
 
       - name: Enforce truth boundary
@@ -61,6 +62,7 @@ jobs:
           set -euo pipefail
           grep -F 'validateCanonicalRenderPlanV1(plan)' packages/shared-media-preparation-manifest/src/index.mjs
           grep -F 'narrationSegmentsFromTimeline' packages/shared-media-preparation-manifest/src/index.mjs
+          grep -F 'has no matching visual input' packages/shared-media-preparation-manifest/src/index.mjs
           grep -F 'generate_captions_from_narration_timeline' packages/shared-media-preparation-manifest/src/index.mjs
           grep -F 'providerSelected: false' packages/shared-media-preparation-manifest/src/index.mjs
           grep -F 'providerExecutionPerformed: false' packages/shared-media-preparation-manifest/src/index.mjs
@@ -88,6 +90,7 @@ jobs:
             'tests':n('tests'),'pass':n('pass'),'fail':n('fail'),
             'renderPlanValidationRequired':True,
             'exactRenderPlanSourceAuthorityRequired':True,
+            'timelineVisualRefsResolve':True,
             'narrationRederivedFromTimeline':True,
             'voiceSegmentTieOutRequired':True,
             'captionSegmentTieOutRequired':True,
