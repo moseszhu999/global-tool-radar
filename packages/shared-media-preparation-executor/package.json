@@ -5,7 +5,7 @@
   "type": "module",
   "engines": {"node": ">=20"},
   "scripts": {
-    "check": "node --check src/index.mjs && node --check test/index.test.mjs",
+    "check": "node --check src/index.mjs && node --check test/index.test.mjs && node --check test/receipt-authority.test.mjs",
     "test": "node --test test/*.test.mjs"
   }
 }
