@@ -36,7 +36,7 @@ media_get_artifact
 media_cancel_job
 ```
 
-There is intentionally no `execute_arbitrary_graph`, generic command execution, queue clearing, credential setter, or social publishing tool.
+There is intentionally no `execute_arbitrary_graph`, generic command execution, queue clearing, credential setter, social publishing tool, or MCP `tasks/*` dependency.
 
 ## Workflow manifest
 
@@ -115,24 +115,49 @@ The module itself may read runtime secrets from its environment. Secrets must ne
 
 The stdio protocol owns stdout. This package logs startup information only to stderr.
 
-## Long-running work
+## Protocol era and long-running work
 
-v1 deliberately exposes durable job polling through `media_get_job`.
+The v2 SDK does not put the 2026-07-28 era on the wire merely because v2 packages are installed. For stdio, this package uses `serveStdio(factory)`, which is the modern/legacy era-selecting entry point. A client that specifically needs 2026-07-28 behavior must opt into modern era negotiation.
 
-This keeps the adapter complete for clients that do not support the MCP Tasks extension. Tasks may later be added as a protocol optimization while preserving the same durable backend job/evidence identity; they must not create a second job model.
+Shared Media long-running correctness deliberately uses its own durable application-level job identity:
+
+```text
+media_generate_asset
+→ completed result OR durable jobId
+→ media_get_job
+→ media_get_artifact
+```
+
+Do **not** redesign this around MCP `tasks/*` for the final 2026-07-28 revision. The final official v2 migration guidance treats the 2025 task wire surface as deprecated interoperability vocabulary, excludes `tasks/*` from modern typed method maps, and rejects inbound `tasks/*` on a modern connection.
+
+If task interoperability with an older peer is ever required, isolate it as compatibility code with explicit schemas. It must not create a second job/evidence identity next to the Shared Media `jobId`.
+
+Testing implications:
+- `InMemoryTransport.createLinkedPair()` is useful for fast 2025-era handler/schema tests only;
+- modern 2026-07-28 stdio coverage should spawn this package's `serveStdio` entry with a client that opts into modern era negotiation;
+- alternatively, modern HTTP behavior can be tested through the modern handler/fetch path;
+- evidence should record which protocol era was actually exercised.
 
 ## Truth boundary
 
-Every generated result force-binds:
+Every generated/job/artifact/cancellation result is fail-closed to:
+
+```text
+humanApproved=false
+humanWatchedFullCandidate=false
+socialPlatformBusinessFitApprovedByHuman=false
+publicationAllowed=false
+publicationPerformed=false
+analyticsObserved=false
+```
+
+Generation additionally binds:
 
 ```text
 requestId
 workflowId
 workflowDigest
 inputManifestDigest
-humanApproved=false
-publicationPerformed=false
-analyticsObserved=false
 ```
 
 A technically valid artifact likewise cannot imply human or publication approval.
@@ -142,9 +167,9 @@ A technically valid artifact likewise cannot imply human or publication approval
 Run inside this package:
 
 ```bash
-npm install --ignore-scripts
+npm ci --ignore-scripts
 npm run check
 npm test
 ```
 
-A dedicated exact-head GitHub workflow installs the pinned direct dependencies and runs the contract suite. MCP Inspector / target-client integration remains a later deployment gate once a real backend module is bound.
+A dedicated exact-head GitHub workflow verifies the lockfile, installs with `npm ci`, runs the contract suite, and uploads a sanitized receipt. Protocol-level client integration should exercise both fast handler coverage and the real stdio serving entry before real backend binding.
