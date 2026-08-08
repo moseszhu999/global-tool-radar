@@ -4,6 +4,14 @@ const SECRET_KEY = /(authorization|bearer|token|secret|password|cookie|api[_-]?k
 const SHA256 = /^[a-f0-9]{64}$/;
 const ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 const PARAM_TYPES = new Set(['string', 'number', 'integer', 'boolean']);
+const TRUTH_BOUNDARY = Object.freeze({
+  humanApproved: false,
+  humanWatchedFullCandidate: false,
+  socialPlatformBusinessFitApprovedByHuman: false,
+  publicationAllowed: false,
+  publicationPerformed: false,
+  analyticsObserved: false,
+});
 
 const requiredText = (value, field) => {
   if (typeof value !== 'string' || value.trim() === '') throw new TypeError(`${field} must be non-empty`);
@@ -39,6 +47,8 @@ const assertNoSecrets = (value, field = 'value') => {
     throw new TypeError(`${field} contains a bearer credential`);
   }
 };
+
+const withTruthBoundary = (value) => Object.freeze({...value, ...TRUTH_BOUNDARY});
 
 const normalizeParameterRule = (name, input) => {
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw new TypeError(`allowedParameters.${name} must be an object`);
@@ -98,7 +108,7 @@ export const normalizeWorkflowManifest = (input) => {
     allowedParameters,
     requiredModels,
     requiredCustomNodes,
-    customNodesApproved: requiredCustomNodes.length === 0 ? true : true,
+    customNodesApproved: requiredCustomNodes.length === 0 || input.customNodesApproved === true,
     available: input.available !== false,
     commercialSafetyApproved: input.commercialSafetyApproved === true,
   });
@@ -132,6 +142,22 @@ const normalizeParameters = (workflow, input) => {
     if (name in params) validateParameterValue(name, params[name], rule);
   }
   return Object.freeze({...params});
+};
+
+const normalizeScalarMap = (input, field) => {
+  if (input === undefined) return null;
+  if (!input || typeof input !== 'object' || Array.isArray(input)) throw new TypeError(`${field} must be an object`);
+  assertNoSecrets(input, field);
+  const entries = Object.entries(input);
+  if (entries.length > 64) throw new TypeError(`${field} has too many fields`);
+  for (const [key, value] of entries) {
+    if (!ID.test(key)) throw new TypeError(`${field}.${key} has invalid field name`);
+    if (!['string', 'number', 'boolean'].includes(typeof value) || (typeof value === 'number' && !Number.isFinite(value))) {
+      throw new TypeError(`${field}.${key} must be a scalar string, finite number, or boolean`);
+    }
+    if (typeof value === 'string' && value.length > 2000) throw new TypeError(`${field}.${key} is too long`);
+  }
+  return Object.freeze({...input});
 };
 
 const normalizeReferenceIds = (input) => {
@@ -184,13 +210,13 @@ export const createSharedMediaMcpController = ({workflows = [], backend} = {}) =
       const normalizedPurpose = requiredText(purpose, 'purpose');
       const normalizedParameters = normalizeParameters(workflow, parameters);
       const normalizedReferences = normalizeReferenceIds(referenceAssetIds);
+      const normalizedOutputProfile = normalizeScalarMap(outputProfile, 'outputProfile');
       if (normalizedReferences.length > 0) {
         if (typeof backend.isReferenceAssetAuthorized !== 'function') throw new TypeError('reference assets require backend.isReferenceAssetAuthorized');
         for (const assetId of normalizedReferences) {
           if (await backend.isReferenceAssetAuthorized(assetId) !== true) throw new RangeError(`reference asset is not authorized: ${assetId}`);
         }
       }
-      if (outputProfile !== undefined) assertNoSecrets(outputProfile, 'outputProfile');
       const requestId = randomUUID();
       const manifest = {
         schemaVersion: 'shared-media.mcp-generation-request.v1',
@@ -201,29 +227,26 @@ export const createSharedMediaMcpController = ({workflows = [], backend} = {}) =
         purpose: normalizedPurpose,
         parameters: normalizedParameters,
         referenceAssetIds: normalizedReferences,
-        outputProfile: outputProfile ?? null,
+        outputProfile: normalizedOutputProfile,
       };
       const inputManifestDigest = sha256Json(manifest);
       const backendResult = safeBackendResult(await backend.generate({workflow: clone(workflow), request: clone(manifest), inputManifestDigest}), 'generate');
-      return Object.freeze({
+      return withTruthBoundary({
         ...backendResult,
         requestId,
         workflowId: workflow.id,
         workflowDigest: workflow.digest,
         inputManifestDigest,
-        publicationPerformed: false,
-        humanApproved: false,
-        analyticsObserved: false,
       });
     },
-    getJob: async (jobId) => safeBackendResult(await backend.getJob(requiredText(jobId, 'jobId')), 'getJob'),
+    getJob: async (jobId) => withTruthBoundary(safeBackendResult(await backend.getJob(requiredText(jobId, 'jobId')), 'getJob')),
     getArtifact: async (artifactId) => {
       const result = safeBackendResult(await backend.getArtifact(requiredText(artifactId, 'artifactId')), 'getArtifact');
       if (result.status === 'ready' || result.sha256 !== undefined) {
         if (typeof result.sha256 !== 'string' || !SHA256.test(result.sha256.toLowerCase())) throw new TypeError('ready artifact must include valid sha256');
       }
-      return Object.freeze({...result, humanApproved: false, publicationPerformed: false, analyticsObserved: false});
+      return withTruthBoundary(result);
     },
-    cancelJob: async (jobId) => safeBackendResult(await backend.cancelJob(requiredText(jobId, 'jobId')), 'cancelJob'),
+    cancelJob: async (jobId) => withTruthBoundary(safeBackendResult(await backend.cancelJob(requiredText(jobId, 'jobId')), 'cancelJob')),
   });
 };
