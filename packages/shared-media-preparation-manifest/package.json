@@ -1,0 +1,11 @@
+{
+  "name": "@shared-media/preparation-manifest",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {"node": ">=20"},
+  "scripts": {
+    "check": "node --check src/index.mjs && node --check test/index.test.mjs && node --check test/plan-authority.test.mjs",
+    "test": "node --test test/*.test.mjs"
+  }
+}
