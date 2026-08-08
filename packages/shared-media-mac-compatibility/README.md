@@ -4,17 +4,17 @@ Product-neutral compatibility layer between the merged `media.render.v1` contrac
 
 ## Why this layer exists
 
-Shared Media already has two separate accepted owners:
+Shared Media already has two accepted owners:
 
 ```text
 media.render.v1 request/result/evidence
 → packages/shared-media-render-contract
 
-bounded MCP workflow transport
+bounded Shared Media MCP workflow surface
 → packages/shared-media-mcp-adapter
 ```
 
-The repository also has a proven Mac transport client:
+The repository also has an existing Mac transport owner:
 
 ```text
 packages/mac-remotion-runner-client
@@ -30,7 +30,9 @@ The missing boundary is semantic compatibility. The real Mac API does not accept
 
 ## Live schema evidence
 
-A disposable read-only Apple-Silicon carrier inspected the currently running Mac service without reading credentials or submitting a render.
+Two disposable read-only Apple-Silicon carriers inspected the current Mac service without reading credentials or submitting a render.
+
+Schema discovery:
 
 ```text
 TrainingOS carrier PR #615 — closed without merge
@@ -42,7 +44,7 @@ openapi.yaml SHA-256:
 73c31a31861f3cd086ff72ce123ce612e0cd3b9ddb54a15cac8ea52c34b90656
 ```
 
-The exact live `POST /v1/render` JSON schema requires:
+The audited `POST /v1/render` request requires:
 
 ```text
 brief
@@ -50,7 +52,7 @@ projectName
 compositionId
 ```
 
-and permits:
+and permits bounded:
 
 ```text
 mode = create_or_update | render_existing
@@ -64,7 +66,7 @@ outputName
 projectDir
 ```
 
-A second disposable source-identity-pinned audit established structural field usage without emitting source lines or literals:
+Field-use audit:
 
 ```text
 TrainingOS carrier PR #618 — closed without merge
@@ -72,7 +74,7 @@ run 31249800726
 job 93084219896
 ```
 
-Important findings:
+It established structurally that:
 
 - `brief` participates in instruction/request/settings flow;
 - `mode` participates in prompt construction/job state/execution args;
@@ -88,11 +90,12 @@ This compatibility version supports only:
 
 ```text
 valid media.render.v1 request
-+ immutable approved pre-materialized Remotion binding
-+ exact same inputManifestDigest
-+ exact same outputProfile
-+ exact same shot-derived duration
++ immutable pre-materialized Remotion binding
++ exact inputManifestDigest
++ exact outputProfile
++ exact shot-derived duration
 + exact audited Mac runtime identity
++ explicit external binding authorization
 → mode=render_existing transport request
 ```
 
@@ -119,7 +122,7 @@ inputManifestDigest
 projectName
 compositionId
 brief
-designNotes? 
+designNotes?
 audio
 expectedDurationSeconds
 expectedOutputProfile
@@ -129,32 +132,66 @@ evidenceRefs[]
 integrityDigest
 ```
 
-The binding has its own SHA-256 integrity digest. Any change to its immutable fields invalidates the binding.
+The binding has its own SHA-256 integrity digest. Any change to immutable fields invalidates it.
 
-`approved_pre_materialized` is a contract input, not something this package independently proves. The owning materialization/review process must create that evidence. This package only verifies structural integrity and exact runtime/input matching before transport.
+`approved_pre_materialized` is descriptive binding state, not authorization proof. This package does not decide whether the current Workspace/Agent/job owner may use that binding. Authorization must be injected separately through `isBindingAuthorized`.
+
+## Authorization boundary
+
+The adapter requires both external authorizers at construction time:
+
+```text
+createSharedMediaMacTransportAdapterV1({
+  client,
+  isBindingAuthorized,
+  isJobAuthorized,
+})
+```
+
+They are intentionally not implemented by this package.
+
+```text
+isBindingAuthorized({
+  binding,
+  requestId,
+  inputManifestDigest,
+  action: 'submit_render_existing'
+})
+
+isJobAuthorized({
+  runnerJobId,
+  action: 'read_status' | 'cancel'
+})
+```
+
+Only the exact boolean `true` authorizes an operation. Missing authorizers, `false`, `null`, `undefined`, or any other value fail closed before transport.
+
+This keeps authority with the upper-layer Workspace / Shared Media job owner instead of turning a valid binding digest or a known job ID into a capability grant.
+
+The compatibility package contains no credential field and does not store tokens. Authentication remains inside the existing `mac-remotion-runner-client` configuration; authorization remains outside this semantic adapter.
 
 ## `projectDir` boundary
 
 v1 intentionally does **not** send caller-selected `projectDir`.
 
-The audited Mac server already owns WORK_ROOT-safe project resolution. The compatibility layer supplies `projectName` and leaves path resolution to that runtime instead of enlarging the filesystem authority surface.
+The audited Mac server already owns WORK_ROOT-safe project resolution. The compatibility layer supplies `projectName` and leaves path resolution to that runtime instead of enlarging caller filesystem authority.
 
 ## Output mapping
 
-The transport request uses only live-audited fields:
+The transport request uses only audited fields:
 
 ```text
-brief            <- approved binding
-projectName      <- approved binding
-compositionId    <- approved binding
+brief            <- binding
+projectName      <- binding
+compositionId    <- binding
 mode             = render_existing
 width            <- canonical outputProfile
 height           <- canonical outputProfile
 fps              <- canonical outputProfile, integer only
 durationSeconds  <- sum(canonical shot.durationMs)
-audio            <- approved binding
+audio            <- binding
 outputName       <- bounded execution value / deterministic requestId fallback
-designNotes      <- approved binding, optional
+designNotes      <- binding, optional
 ```
 
 Every canonical shot must have `durationMs` for this path. Fractional FPS and profiles outside the audited Mac ranges fail before transport.
@@ -167,9 +204,9 @@ The existing Mac backend uses:
 queued | running | completed | failed | cancelled
 ```
 
-This package deliberately does **not** translate Mac `completed` into a valid canonical `media.render.v1 status=succeeded` result.
+This package deliberately does **not** translate Mac `completed` into canonical `media.render.v1 status=succeeded`.
 
-A Mac transport snapshot always reports:
+A transport snapshot always reports:
 
 ```text
 canonicalResultReady=false
@@ -178,7 +215,7 @@ artifactInspectionPerformed=false
 renderLogEvidenceCollected=false
 ```
 
-because canonical success requires all of:
+because canonical success still requires:
 
 ```text
 artifact metadata + SHA-256
@@ -188,11 +225,11 @@ render-log SHA-256
 request/job identity tie-out
 ```
 
-Even canonical failure requires render-log evidence. That evidence collector is a separate next slice.
+Even canonical failure requires render-log evidence. The evidence collector is a separate next slice.
 
 ## Reused transport owner
 
-`createSharedMediaMacTransportAdapterV1({client})` requires only the already-existing Mac client methods:
+The adapter uses only these existing Mac client methods:
 
 ```text
 submitRenderJob
@@ -202,11 +239,22 @@ cancelRenderJob
 
 No second HTTP client, token store, tunnel manager, runner lifecycle manager or job owner is introduced.
 
-The package has no credential field. Authentication remains inside `mac-remotion-runner-client` configuration.
+Authorization is checked before each transport operation:
+
+```text
+binding denied
+→ no submitRenderJob
+
+job status denied
+→ no getRenderJobStatus
+
+job cancel denied
+→ no cancelRenderJob
+```
 
 ## Product-neutral boundary
 
-This package owns technical transport only.
+This package owns technical compatibility/transport only.
 
 It does not infer or emit ToolRadar/TrainingOS consumer decisions such as:
 
@@ -216,7 +264,7 @@ It does not infer or emit ToolRadar/TrainingOS consumer decisions such as:
 - publication permission/state;
 - analytics/business outcome.
 
-Technical receipts instead keep:
+Technical receipts keep:
 
 ```text
 technicalTransportOnly=true
@@ -224,6 +272,25 @@ consumerDomainDecisionInferred=false
 consumerDomainMutationInferred=false
 businessOutcomeInferred=false
 ```
+
+## Exact-head contract coverage
+
+The dedicated gate requires 20/20 focused contracts, including:
+
+- binding integrity and tamper detection;
+- exact `render_existing` mapping;
+- manifest/profile/timing/runtime mismatch failures;
+- consumer-domain field rejection;
+- output-name bounds;
+- transport completion not becoming canonical success;
+- unknown transport status rejection;
+- missing external authorizer rejection;
+- binding authorization denial before submit;
+- validation before authorization/transport;
+- status authorization denial before status read;
+- cancel authorization denial before cancellation;
+- positive status/cancel reuse of the existing Mac client;
+- secret and consumer-approval vocabulary exclusion.
 
 ## What v1 does not prove
 
@@ -242,4 +309,4 @@ ToolRadar creative approval/publication
 Production operation
 ```
 
-A real non-production Mac smoke must be separately authorized/evidenced after the evidence collector is ready; otherwise a completed transport job still cannot close the canonical result gate.
+A real non-production Mac smoke must be separately authorized and evidenced after the evidence collector exists; otherwise a completed transport job still cannot close the canonical result gate.
