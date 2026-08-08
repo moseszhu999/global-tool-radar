@@ -1,0 +1,256 @@
+name: M10 Explainer Radar Scout Cameo A-B v2
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - .github/workflows/m10-explainer-radar-scout-cameo-ab-v2.yml
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  cameo-ab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      BASELINE_ARTIFACT_ID: '9015295116'
+      BASELINE_SHA256: 'eb51fdc12f833cc76e5a5d1a6a298ad56b6f36afbffb23814e43ba96495d6324'
+      BASELINE_EXACT_HEAD: '6b0f97ba9dc1e1e94019109e70d3659a4c9a379a'
+      OVERLAY_SOURCE: apps/remotion-video/src/toolradar-explainer-radar-scout-overlay-v1.tsx
+      CAMEO_WINDOWS: '2.70-4.50,5.55-7.25,14.40-16.50,17.75-19.00'
+    steps:
+      - name: Checkout exact cameo head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify immutable Scout source and cameo schedule
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          test -z "$(git status --porcelain)"
+          grep -F 'RADAR_SCOUT_FRAMES = 576' "$OVERLAY_SOURCE"
+          grep -F 'RADAR_SCOUT_FPS = 30' "$OVERLAY_SOURCE"
+          grep -F "key: '#00ff00'" "$OVERLAY_SOURCE"
+          grep -F 'data-radar-scout' "$OVERLAY_SOURCE"
+          ! grep -E 'https?://|staticFile\(|<img|<Image|<Video|<OffthreadVideo' "$OVERLAY_SOURCE"
+          test "$CAMEO_WINDOWS" = '2.70-4.50,5.55-7.25,14.40-16.50,17.75-19.00'
+
+      - name: Install media tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg unzip
+
+      - name: Download immutable Phase 5 baseline
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/baseline"
+          curl -fsSL \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts/${BASELINE_ARTIFACT_ID}/zip" \
+            -o "$RUNNER_TEMP/baseline.zip"
+          unzip -q "$RUNNER_TEMP/baseline.zip" -d "$RUNNER_TEMP/baseline"
+          base="$(find "$RUNNER_TEMP/baseline" -type f -name 'toolradar-explainer-19s-full-review-v1.mp4' -print -quit)"
+          test -n "$base" && test -s "$base"
+          actual="$(sha256sum "$base" | awk '{print $1}')"
+          test "$actual" = "$BASELINE_SHA256"
+          cp "$base" "$RUNNER_TEMP/full-review-A.mp4"
+
+      - name: Render unchanged Radar Scout overlay
+        working-directory: apps/remotion-video
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f package-lock.json ]; then npm ci --no-audit --no-fund; else npm install --no-audit --no-fund; fi
+          npx remotion browser ensure
+          mkdir -p out
+          npx remotion render \
+            src/toolradar-explainer-radar-scout-overlay-v1.tsx \
+            ToolRadarExplainerRadarScoutOverlayV1 \
+            out/radar-scout-keyed-v1.mp4 \
+            --codec=h264 --crf=10
+          test -s out/radar-scout-keyed-v1.mp4
+
+      - name: Composite only four cameo windows
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="$RUNNER_TEMP/full-review-A.mp4"
+          scout="$GITHUB_WORKSPACE/apps/remotion-video/out/radar-scout-keyed-v1.mp4"
+          out="$GITHUB_WORKSPACE/apps/remotion-video/out/toolradar-explainer-19s-radar-scout-cameo-v2.mp4"
+          enable="between(t,2.70,4.50)+between(t,5.55,7.25)+between(t,14.40,16.50)+between(t,17.75,19.00)"
+          ffmpeg -hide_banner -loglevel error -y \
+            -i "$base" -i "$scout" \
+            -filter_complex "[1:v]colorkey=0x00ff00:0.16:0.055,format=rgba[scout];[0:v][scout]overlay=0:0:format=auto:enable='$enable'[v]" \
+            -map '[v]' -map 0:a:0 \
+            -c:v libx264 -crf 19 -pix_fmt yuv420p \
+            -c:a copy -t 19.2 -movflags +faststart "$out"
+          test -s "$out"
+
+      - name: Verify audio identity, proof safety, and clean no-cameo beats
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="$RUNNER_TEMP/full-review-A.mp4"
+          out="$GITHUB_WORKSPACE/apps/remotion-video/out/toolradar-explainer-19s-radar-scout-cameo-v2.mp4"
+          ffmpeg -hide_banner -loglevel error -y -i "$base" -map 0:a:0 -c copy "$RUNNER_TEMP/a-baseline.aac"
+          ffmpeg -hide_banner -loglevel error -y -i "$out" -map 0:a:0 -c copy "$RUNNER_TEMP/a-cameo.aac"
+          base_audio="$(sha256sum "$RUNNER_TEMP/a-baseline.aac" | awk '{print $1}')"
+          cameo_audio="$(sha256sum "$RUNNER_TEMP/a-cameo.aac" | awk '{print $1}')"
+          test "$base_audio" = "$cameo_audio"
+          printf '%s\n' "$base_audio" > "$RUNNER_TEMP/audio-sha.txt"
+
+          measure_ssim() {
+            local t="$1" crop="$2" outname="$3"
+            ffmpeg -hide_banner -nostats -ss "$t" -i "$base" -ss "$t" -i "$out" \
+              -filter_complex "[0:v]$crop[a];[1:v]$crop[b];[a][b]ssim" \
+              -frames:v 1 -f null - 2> "$RUNNER_TEMP/$outname.log" || true
+            grep -oE 'All:[0-9.]+' "$RUNNER_TEMP/$outname.log" | tail -1 | cut -d: -f2
+          }
+
+          proof_score="$(measure_ssim 6.55 'crop=832:470:124:1242' proof-ssim)"
+          clean_opening="$(measure_ssim 1.20 'null' clean-opening-ssim)"
+          clean_reveal="$(measure_ssim 10.90 'null' clean-reveal-ssim)"
+          python3 - "$proof_score" "$clean_opening" "$clean_reveal" <<'PY'
+          import sys
+          proof,opening,reveal=map(float,sys.argv[1:])
+          if proof < 0.985: raise SystemExit(f'proof SSIM too low: {proof:.6f}')
+          if opening < 0.985: raise SystemExit(f'opening changed outside cameo: {opening:.6f}')
+          if reveal < 0.985: raise SystemExit(f'reveal changed outside cameo: {reveal:.6f}')
+          print(f'proofCropSSIM={proof:.6f}')
+          print(f'openingNoCameoSSIM={opening:.6f}')
+          print(f'revealNoCameoSSIM={reveal:.6f}')
+          PY
+          printf '%s\n' "$proof_score" > "$RUNNER_TEMP/proof-ssim-score.txt"
+          printf '%s\n' "$clean_opening" > "$RUNNER_TEMP/opening-ssim-score.txt"
+          printf '%s\n' "$clean_reveal" > "$RUNNER_TEMP/reveal-ssim-score.txt"
+
+      - name: Inspect exact cameo media
+        shell: bash
+        run: |
+          set -euo pipefail
+          video="$GITHUB_WORKSPACE/apps/remotion-video/out/toolradar-explainer-19s-radar-scout-cameo-v2.mp4"
+          ffprobe -v error -show_streams -show_format -of json "$video" > "$RUNNER_TEMP/ffprobe.json"
+          ffprobe -v error -count_frames -select_streams v:0 -show_entries stream=nb_read_frames -of default=nw=1:nk=1 "$video" > "$RUNNER_TEMP/frame-count.txt"
+          ffmpeg -hide_banner -nostats -i "$video" -vf 'blackdetect=d=0.35:pix_th=0.05' -an -f null - 2> "$RUNNER_TEMP/blackdetect.txt" || true
+          ffmpeg -hide_banner -nostats -i "$video" -af 'silencedetect=noise=-45dB:d=0.75' -vn -f null - 2> "$RUNNER_TEMP/silencedetect.txt" || true
+          ffmpeg -hide_banner -nostats -i "$video" -af 'loudnorm=I=-16:TP=-1.5:LRA=11:print_format=json' -f null - 2> "$RUNNER_TEMP/loudness.txt" || true
+          test "$(cat "$RUNNER_TEMP/frame-count.txt")" = '576'
+          ! grep -F 'black_start:' "$RUNNER_TEMP/blackdetect.txt"
+          ! grep -F 'silence_start:' "$RUNNER_TEMP/silencedetect.txt"
+
+      - name: Generate matched-time controller A-B sheet
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="$RUNNER_TEMP/full-review-A.mp4"
+          out="$GITHUB_WORKSPACE/apps/remotion-video/out/toolradar-explainer-19s-radar-scout-cameo-v2.mp4"
+          review="$RUNNER_TEMP/review"; mkdir -p "$review"
+          times=(1.20 4.00 6.55 10.90 14.80 18.25)
+          for i in "${!times[@]}"; do
+            n="$(printf '%02d' $((i+1)))"
+            ffmpeg -hide_banner -loglevel error -y -ss "${times[$i]}" -i "$base" -frames:v 1 -vf scale=540:960 "$review/${n}-A.jpg"
+            ffmpeg -hide_banner -loglevel error -y -ss "${times[$i]}" -i "$out" -frames:v 1 -vf scale=540:960 "$review/${n}-B.jpg"
+          done
+          python3 - "$review" "$GITHUB_WORKSPACE/apps/remotion-video/out/radar-scout-cameo-v2-ab-contact-sheet.jpg" <<'PY'
+          from PIL import Image,ImageOps,ImageDraw
+          import pathlib,sys
+          d=pathlib.Path(sys.argv[1]); out=sys.argv[2]
+          pairs=[]
+          for i in range(1,7):
+              a=Image.open(d/f'{i:02d}-A.jpg').convert('RGB')
+              b=Image.open(d/f'{i:02d}-B.jpg').convert('RGB')
+              row=Image.new('RGB',(a.width+b.width+8,a.height),(8,16,28))
+              row.paste(a,(0,0)); row.paste(b,(a.width+8,0)); pairs.append(row)
+          sheet=Image.new('RGB',(pairs[0].width,sum(x.height for x in pairs)+8*(len(pairs)-1)),(8,16,28))
+          y=0
+          for row in pairs:
+              sheet.paste(row,(0,y)); y+=row.height+8
+          sheet.save(out,quality=91)
+          PY
+
+      - name: Write cameo v2 receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          video="$GITHUB_WORKSPACE/apps/remotion-video/out/toolradar-explainer-19s-radar-scout-cameo-v2.mp4"
+          VIDEO="$video" HEAD="${{ github.event.pull_request.head.sha }}" python3 - <<'PY'
+          import hashlib,json,os,pathlib,re
+          rt=pathlib.Path(os.environ['RUNNER_TEMP'])
+          probe=json.loads((rt/'ffprobe.json').read_text())
+          vs=next(s for s in probe['streams'] if s['codec_type']=='video')
+          au=next(s for s in probe['streams'] if s['codec_type']=='audio')
+          loud=(rt/'loudness.txt').read_text(errors='ignore')
+          def metric(name):
+              m=re.search(rf'"{name}"\s*:\s*"?(-?\d+(?:\.\d+)?)',loud)
+              return float(m.group(1)) if m else None
+          data=pathlib.Path(os.environ['VIDEO']).read_bytes()
+          receipt={
+            'schemaVersion':'toolradar.m10.radar-scout-cameo-ab.v2',
+            'exactHead':os.environ['HEAD'],
+            'baselineExactHead':os.environ['BASELINE_EXACT_HEAD'],
+            'baselineSha256':os.environ['BASELINE_SHA256'],
+            'cameoSha256':hashlib.sha256(data).hexdigest(),
+            'cameoBytes':len(data),
+            'frames':int((rt/'frame-count.txt').read_text().strip()),
+            'durationSeconds':float(probe['format']['duration']),
+            'videoCodec':vs['codec_name'],
+            'audioCodec':au['codec_name'],
+            'audioBitstreamPreserved':True,
+            'audioBitstreamSha256':(rt/'audio-sha.txt').read_text().strip(),
+            'cameoWindowsSeconds':[[2.70,4.50],[5.55,7.25],[14.40,16.50],[17.75,19.00]],
+            'cameoWindowCount':4,
+            'proofCropSSIMAt6_55s':float((rt/'proof-ssim-score.txt').read_text().strip()),
+            'openingNoCameoSSIMAt1_20s':float((rt/'opening-ssim-score.txt').read_text().strip()),
+            'revealNoCameoSSIMAt10_90s':float((rt/'reveal-ssim-score.txt').read_text().strip()),
+            'originalVectorMascotUsed':True,
+            'mascotName':'Radar Scout',
+            'thirdPartyVisualAssetsUsed':False,
+            'productProofTextModified':False,
+            'generatedFactualUiUsed':False,
+            'firstPayoffSeconds':5.2,
+            'fullRevealSeconds':10.4,
+            'loopStartSeconds':17.6,
+            'integratedLoudnessMeasured':metric('input_i'),
+            'truePeakMeasured':metric('input_tp'),
+            'blackIntervalAtLeast035s':False,
+            'silenceIntervalAtLeast075s':False,
+            'canonicalPR89CandidateReplaced':False,
+            'humanWatchedFullCandidate':False,
+            'socialPlatformBusinessFitApprovedByHuman':False,
+            'publicationAllowed':False,
+            'publicationPerformed':False,
+            'analyticsObserved':False,
+          }
+          (rt/'radar-scout-cameo-v2-receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')
+          print(json.dumps(receipt,indent=2))
+          PY
+
+      - name: Upload exact cameo v2 evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: toolradar-explainer-radar-scout-cameo-ab-v2
+          path: |
+            apps/remotion-video/out/toolradar-explainer-19s-radar-scout-cameo-v2.mp4
+            apps/remotion-video/out/radar-scout-cameo-v2-ab-contact-sheet.jpg
+            ${{ runner.temp }}/radar-scout-cameo-v2-receipt.json
+            ${{ runner.temp }}/proof-ssim-score.txt
+            ${{ runner.temp }}/opening-ssim-score.txt
+            ${{ runner.temp }}/reveal-ssim-score.txt
+            ${{ runner.temp }}/ffprobe.json
+            ${{ runner.temp }}/loudness.txt
+          if-no-files-found: error
+          retention-days: 30
