@@ -23,11 +23,12 @@ width/height in audited Mac range
 every shot has durationMs
 all durationMs map exactly to integer frames
 total duration 1..900 seconds
+no unknown request/shot/output-profile semantics
 ```
 
-Anything else fails `SMOKE_SUBSET_UNSUPPORTED` before project generation.
+Anything else fails `SMOKE_SUBSET_UNSUPPORTED` / `UNSUPPORTED_FIELD` before project generation.
 
-This is intentional. v1 proves infrastructure materialization; it does not invent a lossy compiler for narration, assets, voice or captions.
+This is intentional. v1 proves infrastructure materialization; it does not invent a lossy compiler for narration, assets, voice, captions or unrecognized future fields.
 
 ## Audited runtime basis
 
@@ -81,15 +82,41 @@ src/index.ts
 src/root.tsx
 ```
 
-`src/root.tsx` contains a product-neutral black composition named:
+Composition ID:
 
 ```text
 SharedMediaRenderV1
 ```
 
-Each canonical shot becomes a black Remotion `Sequence` with the exact integer frame range derived from `durationMs × fps`. There is no title, branding, course/social content, narration, asset, audio or caption.
+The composition is product-neutral black output only. Canonical shots become exact black `Sequence` frame ranges; there is no title, branding, course/social content, narration, asset, audio or caption.
 
-The marker file binds the generated project to the exact canonical `inputManifestDigest`, project/composition identity, expected duration/frame count and output profile.
+The marker file binds the generated project to the exact canonical `inputManifestDigest`, project/composition identity, normalized output profile, segment frame plan and exact duration.
+
+## Canonicalization and semantic re-derivation
+
+`outputProfile` is normalized into a fixed five-field shape before any generated JSON/source is emitted:
+
+```text
+profileId
+width
+height
+fps
+container
+```
+
+Therefore two semantically equal canonical requests with a different JavaScript key insertion order generate byte-identical materialization files/candidate digests.
+
+The candidate also carries `segmentFrames[]` explicitly. Candidate validation does not merely trust its SHA values. It revalidates:
+
+- exact audited runtime requirements;
+- normalized output profile;
+- contiguous frame segments starting at zero;
+- total-frame/duration equality;
+- deterministic regeneration of all three files;
+- file-manifest SHA/byte lengths;
+- candidate digest.
+
+`verifyCandidateAgainstRequestV1(candidate, request)` independently rematerializes the exact canonical request and requires the candidate digest/file-manifest digest to match. Later staging must use this check before any binding approval.
 
 ## Deterministic integrity
 
@@ -101,9 +128,9 @@ generatedFilesManifestSha256
 candidateDigest
 ```
 
-Every generated file record has path, SHA-256 and byte length. `verifyObservedMaterializedFilesV1(...)` requires an observed staging manifest to match those exact candidate-owned files before a later owner may even consider creating a pre-materialized binding.
+Every generated file record has path, SHA-256 and byte length. `verifyObservedMaterializedFilesV1(...)` requires an observed staging manifest to match those exact candidate-owned files before a later owner may consider creating a pre-materialized binding.
 
-File-manifest equality proves only that the generated files were staged unchanged. It does **not** prove authorization, binding approval, dependency correctness, runtime success or artifact evidence.
+File equality or candidate digest proves content identity only. It does **not** prove authorization, binding approval, dependency correctness, runtime success or artifact evidence.
 
 ## No approval or transport authority
 
@@ -120,14 +147,16 @@ It never emits `approved_pre_materialized` and never calls `createMacPreMaterial
 
 A later non-production staging/smoke owner must separately:
 
-1. copy/use an audited compatible Remotion template inside the Mac runtime's bounded work root;
-2. write the generated candidate files;
-3. re-hash those exact files and verify them against the candidate;
-4. verify runtime/dependency/layout identity;
-5. obtain explicit external binding/job authorization;
-6. only then create an approved binding through the merged Mac compatibility package;
-7. submit `render_existing`;
-8. collect artifact/ffprobe/render-log through the merged Evidence Collector.
+1. start from the exact canonical request;
+2. run this materializer and `verifyCandidateAgainstRequestV1`;
+3. copy/use an audited compatible Remotion template inside the Mac runtime's bounded work root;
+4. write only the generated candidate files;
+5. re-hash those exact files and verify them with `verifyObservedMaterializedFilesV1`;
+6. verify runtime/dependency/layout identity;
+7. obtain explicit external binding/job authorization;
+8. only then create an approved binding through the merged Mac compatibility package;
+9. submit `render_existing`;
+10. collect artifact/ffprobe/render-log through the merged Evidence Collector.
 
 ## Why codecs are omitted in smoke v1
 
@@ -161,7 +190,7 @@ It only returns deeply frozen strings/metadata for a later explicitly authorized
 
 ## Tests
 
-The exact-head suite requires 21/21 contracts covering deterministic generation, exact frame segments, marker truth, runtime pinning, no approval claim, visual/narration/voice/caption rejection, codec/container/fps constraints, integer-frame timing, safe request identity, file/candidate digest integrity, observed staging manifest equality, deep freeze and product-neutral output.
+The exact-head suite requires 24/24 contracts covering deterministic generation, key-order canonicalization, exact frame segments, marker truth, audited runtime pinning, no approval claim, visual/narration/voice/caption rejection, codec/container/fps constraints, unknown semantic rejection, integer-frame timing, safe request identity, file/candidate digest integrity, semantic/source tamper rejection, exact request↔candidate verification, observed staging manifest equality, deep freeze and product-neutral output.
 
 ## What source/test PASS does not prove
 
