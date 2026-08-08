@@ -59,6 +59,18 @@ try {
       ...ledger,
       project: receipt.updatedProject,
       summary: receipt.summary,
+      creativePreflight: {
+        schemaVersion: receipt.creativePreflight.schemaVersion,
+        status: receipt.creativePreflight.status,
+        truthBoundary: receipt.creativePreflight.truthBoundary,
+        receiptDigest: receipt.creativePreflightDigest,
+        reviewer: receipt.creativePreflight.reviewer,
+        reviewedAt: receipt.creativePreflight.reviewedAt,
+        artGate: receipt.creativePreflight.artGate,
+        animaticGate: receipt.creativePreflight.animaticGate,
+        humanCreativeApprovalClaimed: receipt.creativePreflight.humanCreativeApprovalClaimed,
+        publicationAllowed: receipt.creativePreflight.publicationAllowed,
+      },
       renderAuthorization: {
         receiptDigest: receipt.receiptDigest,
         creativePreflightDigest: receipt.creativePreflightDigest,
