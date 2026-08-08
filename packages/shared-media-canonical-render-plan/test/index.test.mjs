@@ -10,7 +10,7 @@ import {
 
 const sha = (c) => c.repeat(64);
 
-const courseRequest = (overrides = {}) => createMediaRenderRequestV1({
+const courseInput = (overrides = {}) => ({
   requestId: 'render-course-explainer-001',
   purpose: 'course.explainer',
   title: 'Controller and RequestMapping',
@@ -41,6 +41,7 @@ const courseRequest = (overrides = {}) => createMediaRenderRequestV1({
   ...overrides,
 });
 
+const courseRequest = (overrides = {}) => createMediaRenderRequestV1(courseInput(overrides));
 const clone = (value) => structuredClone(value);
 
 test('course-explainer-shaped canonical request compiles without losing media semantics', () => {
@@ -98,40 +99,38 @@ test('unknown request semantics fail closed instead of being silently dropped', 
   assert.throws(() => compileCanonicalRenderPlanV1(request), /renderIntent is not supported/);
 });
 
-test('unknown shot semantics fail closed', () => {
-  const request = clone(courseRequest());
-  request.shots[0].transition = 'fade';
+test('unknown shot semantics fail closed after canonical digest validation', () => {
+  const source = courseInput();
+  source.shots[0].transition = 'fade';
+  const request = createMediaRenderRequestV1(source);
   assert.throws(() => compileCanonicalRenderPlanV1(request), /transition is not supported/);
 });
 
-test('unknown voice semantics fail closed even if the base media validator accepts extra fields', () => {
-  const request = clone(courseRequest());
-  request.voice.style = 'future-style';
+test('unknown voice semantics fail closed after canonical digest validation', () => {
+  const source = courseInput();
+  source.voice.style = 'future-style';
+  const request = createMediaRenderRequestV1(source);
   assert.throws(() => compileCanonicalRenderPlanV1(request), /voice\.style is not supported/);
 });
 
-test('unknown caption semantics fail closed', () => {
-  const request = clone(courseRequest());
-  request.captions.position = 'bottom';
+test('unknown caption semantics fail closed after canonical digest validation', () => {
+  const source = courseInput();
+  source.captions.position = 'bottom';
+  const request = createMediaRenderRequestV1(source);
   assert.throws(() => compileCanonicalRenderPlanV1(request), /captions\.position is not supported/);
 });
 
-test('unknown output-profile semantics fail closed', () => {
-  const request = clone(courseRequest());
-  request.outputProfile.colorSpace = 'bt709';
+test('unknown output-profile semantics fail closed after canonical digest validation', () => {
+  const source = courseInput();
+  source.outputProfile.colorSpace = 'bt709';
+  const request = createMediaRenderRequestV1(source);
   assert.throws(() => compileCanonicalRenderPlanV1(request), /outputProfile\.colorSpace is not supported/);
 });
 
 test('duration is required for executable timeline planning', () => {
-  const request = clone(courseRequest());
-  delete request.shots[0].durationMs;
-  request.inputManifestDigest = createMediaRenderRequestV1({
-    ...request,
-    contractVersion: undefined,
-    messageType: undefined,
-    evidenceRequirements: undefined,
-    inputManifestDigest: undefined,
-  }).inputManifestDigest;
+  const source = courseInput();
+  delete source.shots[0].durationMs;
+  const request = createMediaRenderRequestV1(source);
   assert.throws(() => compileCanonicalRenderPlanV1(request), /durationMs must be a positive integer/);
 });
 
