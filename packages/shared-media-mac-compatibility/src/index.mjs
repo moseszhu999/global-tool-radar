@@ -308,13 +308,40 @@ const requireClient = (client) => {
   return client;
 };
 
-export const createSharedMediaMacTransportAdapterV1 = ({client} = {}) => {
+const requireAuthorizer = (value, name) => {
+  if (typeof value !== 'function') fail('AUTHORIZER_REQUIRED', `${name} must be a function`, `$${name}`);
+  return value;
+};
+
+const requireAuthorized = async (decision, code, message, path) => {
+  if (decision !== true) fail(code, message, path);
+};
+
+export const createSharedMediaMacTransportAdapterV1 = ({
+  client,
+  isBindingAuthorized,
+  isJobAuthorized,
+} = {}) => {
   const runner = requireClient(client);
+  const authorizeBinding = requireAuthorizer(isBindingAuthorized, 'isBindingAuthorized');
+  const authorizeJob = requireAuthorizer(isJobAuthorized, 'isJobAuthorized');
+
   return Object.freeze({
     buildRenderExistingRequest: (input) => createMacRenderExistingRequestV1(input),
 
     async submitPreMaterializedRender({request, binding, outputName} = {}) {
       const transportRequest = createMacRenderExistingRequestV1({request, binding, outputName});
+      await requireAuthorized(
+        await authorizeBinding(Object.freeze({
+          binding: structuredClone(binding),
+          requestId: request.requestId,
+          inputManifestDigest: request.inputManifestDigest,
+          action: 'submit_render_existing',
+        })),
+        'BINDING_NOT_AUTHORIZED',
+        'pre-materialized binding is not authorized for render submission',
+        '$binding',
+      );
       const snapshot = await runner.submitRenderJob(transportRequest);
       const normalized = normalizeMacTransportSnapshotV1(snapshot);
       return Object.freeze({
@@ -329,11 +356,23 @@ export const createSharedMediaMacTransportAdapterV1 = ({client} = {}) => {
 
     async getTransportStatus({runnerJobId} = {}) {
       const normalizedJobId = text(runnerJobId, '$runnerJobId', {max: 200});
+      await requireAuthorized(
+        await authorizeJob(Object.freeze({runnerJobId: normalizedJobId, action: 'read_status'})),
+        'JOB_NOT_AUTHORIZED',
+        'render job is not authorized for status read',
+        '$runnerJobId',
+      );
       return normalizeMacTransportSnapshotV1(await runner.getRenderJobStatus(normalizedJobId));
     },
 
     async cancelTransportJob({runnerJobId} = {}) {
       const normalizedJobId = text(runnerJobId, '$runnerJobId', {max: 200});
+      await requireAuthorized(
+        await authorizeJob(Object.freeze({runnerJobId: normalizedJobId, action: 'cancel'})),
+        'JOB_NOT_AUTHORIZED',
+        'render job is not authorized for cancellation',
+        '$runnerJobId',
+      );
       return normalizeMacTransportSnapshotV1(await runner.cancelRenderJob(normalizedJobId));
     },
   });
