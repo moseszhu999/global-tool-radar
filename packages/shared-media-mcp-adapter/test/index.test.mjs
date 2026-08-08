@@ -57,6 +57,15 @@ const controllerFor = ({workflows = [workflow()], backend = createBackend()} = {
   backend,
 });
 
+const assertTruthBoundary = (value) => {
+  assert.equal(value.humanApproved, false);
+  assert.equal(value.humanWatchedFullCandidate, false);
+  assert.equal(value.socialPlatformBusinessFitApprovedByHuman, false);
+  assert.equal(value.publicationAllowed, false);
+  assert.equal(value.publicationPerformed, false);
+  assert.equal(value.analyticsObserved, false);
+};
+
 test('workflow registry is deterministic and returns copies', () => {
   const backend = createBackend();
   const controller = createSharedMediaMcpController({
@@ -89,9 +98,7 @@ test('valid bounded generation binds request and evidence identity', async () =>
   assert.match(result.requestId, /^[0-9a-f-]{36}$/i);
   assert.equal(result.workflowDigest, digest('workflow-v1'));
   assert.match(result.inputManifestDigest, /^[a-f0-9]{64}$/);
-  assert.equal(result.humanApproved, false);
-  assert.equal(result.publicationPerformed, false);
-  assert.equal(result.analyticsObserved, false);
+  assertTruthBoundary(result);
   assert.equal(backend.calls.generate.length, 1);
   assert.equal(backend.calls.generate[0].request.parameters.denoise, 0.35);
   assert.equal(backend.calls.references.length, 1);
@@ -127,6 +134,17 @@ test('missing required parameter is rejected', async () => {
   assert.equal(backend.calls.generate.length, 0);
 });
 
+test('nested output profile is rejected before backend execution', async () => {
+  const {controller, backend} = controllerFor();
+  await assert.rejects(() => controller.generateAsset({
+    workflowId: 'shared-media-image-polish-v1',
+    purpose: 'test',
+    parameters: {prompt: 'x', denoise: 0.35, seed: 1},
+    outputProfile: {codec: {name: 'h264'}},
+  }), /outputProfile\.codec must be a scalar/);
+  assert.equal(backend.calls.generate.length, 0);
+});
+
 test('unauthorized reference asset fails closed before backend execution', async () => {
   const {controller, backend} = controllerFor();
   await assert.rejects(() => controller.generateAsset({
@@ -155,6 +173,7 @@ test('approved custom-node manifest may be registered explicitly', () => {
     customNodesApproved: true,
   }));
   assert.deepEqual(normalized.requiredCustomNodes, ['reviewed/node@1.0.0']);
+  assert.equal(normalized.customNodesApproved, true);
 });
 
 test('secret-shaped workflow fields are rejected', () => {
@@ -168,13 +187,26 @@ test('secret-shaped backend results are rejected instead of echoed', async () =>
   await assert.rejects(() => controller.getJob('job:1'), /authorization is forbidden/);
 });
 
+test('backend job truth claims are overwritten by the MCP truth boundary', async () => {
+  const backend = createBackend();
+  backend.getJob = async (jobId) => ({
+    jobId,
+    status: 'completed',
+    humanApproved: true,
+    publicationAllowed: true,
+    publicationPerformed: true,
+    analyticsObserved: true,
+  });
+  const controller = createSharedMediaMcpController({workflows: [workflow()], backend});
+  const job = await controller.getJob('job:truth-test');
+  assertTruthBoundary(job);
+});
+
 test('ready artifact requires valid SHA-256 and never implies approval/publication', async () => {
   const {controller} = controllerFor();
   const artifact = await controller.getArtifact('artifact:1');
   assert.match(artifact.sha256, /^[a-f0-9]{64}$/);
-  assert.equal(artifact.humanApproved, false);
-  assert.equal(artifact.publicationPerformed, false);
-  assert.equal(artifact.analyticsObserved, false);
+  assertTruthBoundary(artifact);
 });
 
 test('ready artifact without valid SHA-256 is rejected', async () => {
@@ -184,17 +216,19 @@ test('ready artifact without valid SHA-256 is rejected', async () => {
   await assert.rejects(() => controller.getArtifact('artifact:1'), /valid sha256/);
 });
 
-test('job polling surface delegates stable job id', async () => {
+test('job polling surface delegates stable job id and stays truth-bounded', async () => {
   const {controller, backend} = controllerFor();
   const job = await controller.getJob('job:42');
   assert.equal(job.jobId, 'job:42');
+  assertTruthBoundary(job);
   assert.deepEqual(backend.calls.getJob, ['job:42']);
 });
 
-test('cancellation delegates only one explicit job id', async () => {
+test('cancellation delegates only one explicit job id and stays truth-bounded', async () => {
   const {controller, backend} = controllerFor();
   const result = await controller.cancelJob('job:42');
   assert.equal(result.status, 'cancelled');
+  assertTruthBoundary(result);
   assert.deepEqual(backend.calls.cancelJob, ['job:42']);
 });
 
