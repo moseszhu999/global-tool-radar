@@ -173,11 +173,7 @@ const deriveReceiptFacts = ({visualArtifacts, voice, captions}) => {
   const captionCompilationPerformed = captions.mode === 'auto' && captions.cues.length > 0;
   const preparedArtifactCount = visualArtifacts.length + voice.artifacts.length + captions.artifacts.length;
   return {
-    actions: {
-      assetResolutionPerformed,
-      voiceSynthesisPerformed,
-      captionCompilationPerformed,
-    },
+    actions: {assetResolutionPerformed, voiceSynthesisPerformed, captionCompilationPerformed},
     preparedArtifactsProduced: preparedArtifactCount > 0 || captions.cues.length > 0,
   };
 };
@@ -242,6 +238,13 @@ export const validatePreparedInputsReceiptV1 = (receipt, {plan = null, manifest 
   exactKeys(actions, new Set(['assetResolutionPerformed','voiceSynthesisPerformed','captionCompilationPerformed']), '$receipt.actions');
   for (const field of ['assetResolutionPerformed','voiceSynthesisPerformed','captionCompilationPerformed']) if (typeof actions[field] !== 'boolean') fail('INVALID_RECEIPT', `${field} must be boolean`, `$receipt.actions.${field}`);
   if (typeof value.preparedArtifactsProduced !== 'boolean') fail('INVALID_RECEIPT', 'preparedArtifactsProduced must be boolean', '$receipt.preparedArtifactsProduced');
+  for (const field of ['transportSelected','bindingCreated','renderAuthorized','consumerDomainDecisionInferred','businessOutcomeInferred']) {
+    if (value[field] !== false) fail('TRUTH_BOUNDARY', `${field} must remain false in prepared inputs receipt`, `$receipt.${field}`);
+  }
+
+  // Preserve deterministic failure ordering: a non-resigned mutation is an integrity failure first.
+  if (computePreparedInputsDigestV1(value) !== value.preparedInputsDigest) fail('RECEIPT_INTEGRITY_MISMATCH', 'preparedInputsDigest mismatch', '$receipt.preparedInputsDigest');
+
   const derivedFacts = deriveReceiptFacts({visualArtifacts:value.visualArtifacts, voice, captions});
   if (stableStringifyV1(actions) !== stableStringifyV1(derivedFacts.actions)) {
     fail('RECEIPT_SEMANTICS_MISMATCH', 'receipt action facts do not match prepared artifacts/cues', '$receipt.actions');
@@ -249,10 +252,6 @@ export const validatePreparedInputsReceiptV1 = (receipt, {plan = null, manifest 
   if (value.preparedArtifactsProduced !== derivedFacts.preparedArtifactsProduced) {
     fail('RECEIPT_SEMANTICS_MISMATCH', 'preparedArtifactsProduced does not match prepared artifacts/cues', '$receipt.preparedArtifactsProduced');
   }
-  for (const field of ['transportSelected','bindingCreated','renderAuthorized','consumerDomainDecisionInferred','businessOutcomeInferred']) {
-    if (value[field] !== false) fail('TRUTH_BOUNDARY', `${field} must remain false in prepared inputs receipt`, `$receipt.${field}`);
-  }
-  if (computePreparedInputsDigestV1(value) !== value.preparedInputsDigest) fail('RECEIPT_INTEGRITY_MISMATCH', 'preparedInputsDigest mismatch', '$receipt.preparedInputsDigest');
 
   if ((plan === null) !== (manifest === null)) fail('SOURCE_AUTHORITY_REQUIRED', 'plan and manifest must be supplied together for exact source validation', '$receipt');
   if (plan !== null) {
@@ -337,12 +336,7 @@ export const createPreparationExecutorV1 = ({
       for (const input of manifest.visualInputs) {
         const resolved = await safeOperation(resolveAsset, {
           role: 'visual',
-          asset: {
-            assetId: input.assetId,
-            locator: input.locator,
-            mediaType: input.mediaType,
-            expectedSha256: input.expectedSha256,
-          },
+          asset: {assetId: input.assetId, locator: input.locator, mediaType: input.mediaType, expectedSha256: input.expectedSha256},
         }, 'resolveExactAsset');
         const payload = resolveResultBytes(resolved, '$resolveExactAsset.result', input.mediaType);
         const artifactId = artifactIdFor('visual', input.assetId);
@@ -364,10 +358,7 @@ export const createPreparationExecutorV1 = ({
         for (const segmentId of manifest.voicePreparation.segmentIds) {
           const segment = manifest.narrationSegments.find((item) => item.segmentId === segmentId);
           if (!segment) fail('SOURCE_SEMANTICS_MISMATCH', `voice segment ${segmentId} is missing from narrationSegments`, '$manifest.voicePreparation.segmentIds');
-          const synthesized = synthesizedResult(await safeOperation(synthesize, {
-            segment: clone(segment),
-            voice: clone(manifest.voicePreparation),
-          }, 'synthesizeNarrationSegment'), '$synthesizeNarrationSegment.result');
+          const synthesized = synthesizedResult(await safeOperation(synthesize, {segment: clone(segment), voice: clone(manifest.voicePreparation)}, 'synthesizeNarrationSegment'), '$synthesizeNarrationSegment.result');
           const artifactId = artifactIdFor('voice-synthesized', segment.segmentId);
           const prepared = artifactRecord({artifactId, role:'voice-synthesized', sourceId:segment.segmentId, mediaType:synthesized.mediaType, payload:synthesized.payload, segment});
           payloadStore.set(artifactId, prepared.snapshot);
@@ -421,11 +412,7 @@ export const createPreparationExecutorV1 = ({
         return Buffer.from(payload);
       };
       verifyPreparedPayloadsV1({receipt:frozenReceipt, getPayload});
-      return Object.freeze({
-        receipt: frozenReceipt,
-        artifactIds: Object.freeze([...payloadStore.keys()]),
-        getPayload,
-      });
+      return Object.freeze({receipt: frozenReceipt, artifactIds: Object.freeze([...payloadStore.keys()]), getPayload});
     },
   });
 };
