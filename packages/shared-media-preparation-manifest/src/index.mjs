@@ -188,7 +188,22 @@ export const validatePreparationManifestV1 = (manifest, {plan = null} = {}) => {
     visualIds.add(asset.assetId);
   });
 
-  const expectedSegments = narrationSegmentsFromTimeline(value.timeline);
+  const timeline = object(value.timeline, '$manifest.timeline');
+  if (!Array.isArray(timeline.shots)) fail('INVALID_MANIFEST', '$manifest.timeline.shots must be an array', '$manifest.timeline.shots');
+  timeline.shots.forEach((shot, shotIndex) => {
+    if (!Array.isArray(shot?.visualAssetIds)) fail('INVALID_MANIFEST', `timeline shot ${shotIndex + 1} visualAssetIds must be an array`, `$manifest.timeline.shots[${shotIndex}].visualAssetIds`);
+    shot.visualAssetIds.forEach((assetId, assetIndex) => {
+      if (!visualIds.has(assetId)) {
+        fail(
+          'MANIFEST_SEMANTICS_MISMATCH',
+          `timeline visualAssetId ${assetId} has no matching visual input`,
+          `$manifest.timeline.shots[${shotIndex}].visualAssetIds[${assetIndex}]`,
+        );
+      }
+    });
+  });
+
+  const expectedSegments = narrationSegmentsFromTimeline(timeline);
   if (!Array.isArray(value.narrationSegments) || stableStringifyV1(value.narrationSegments) !== stableStringifyV1(expectedSegments)) {
     fail('MANIFEST_SEMANTICS_MISMATCH', 'narrationSegments must be exactly re-derived from preserved timeline', '$manifest.narrationSegments');
   }
