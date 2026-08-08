@@ -74,7 +74,7 @@ jobs:
             '顺序一变，立刻更清楚。'
             '升级，不是加，是敢删。'
             'Agent 可以提议，但决定要交给人。'
-            '下一轮，继续。'
+            '继续。'
           )
           names=(01-after 02-filter 03-evidence 04-reveal 05-reduce 06-human 07-loop)
           maxes=(2.30 2.90 2.60 2.60 2.90 4.20 1.60)
