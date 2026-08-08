@@ -44,17 +44,22 @@ jobs:
           }
 
       - name: Syntax check
-        run: npm --prefix packages/shared-media-remotion-materializer run check
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check packages/shared-media-remotion-materializer/src/index.mjs
+          for file in packages/shared-media-remotion-materializer/test/*.test.mjs; do node --check "$file"; done
 
       - name: Run exact materializer contracts
         shell: bash
         run: |
           set -euo pipefail
           npm --prefix packages/shared-media-remotion-materializer test | tee "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
-          grep -Eq '# tests[[:space:]]+24$' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
-          grep -Eq '# pass[[:space:]]+24$' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
+          grep -Eq '# tests[[:space:]]+25$' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
+          grep -Eq '# pass[[:space:]]+25$' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
           grep -Eq '# fail[[:space:]]+0$' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
           grep -F 'semantically equal output profile with different key insertion order produces same candidate' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
+          grep -F 'persisted output profile id must be a safe non-secret identifier' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
           grep -F 'candidate never grants render authorization or creates an approved binding' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
           grep -F 'unknown output-affecting request, shot or profile fields fail closed' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
           grep -F 'candidate validation rejects semantic or generated-source tampering' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
@@ -74,6 +79,7 @@ jobs:
           grep -F 'verifyCandidateAgainstRequestV1' packages/shared-media-remotion-materializer/src/index.mjs
           grep -F 'renderAuthorized: false' packages/shared-media-remotion-materializer/src/index.mjs
           grep -F 'bindingCreated: false' packages/shared-media-remotion-materializer/src/index.mjs
+          grep -F 'profileId must be a safe non-secret identifier' packages/shared-media-remotion-materializer/src/index.mjs
           ! grep -RInE 'ToolRadar|GLOBAL TOOL RADAR|TrainingOS|courseId|studentId|teacherId|humanApproved|publicationAllowed|publicationPerformed|analyticsObserved' packages/shared-media-remotion-materializer/src
 
       - name: Emit exact-head receipt
@@ -101,6 +107,7 @@ jobs:
             'referenceReactVersion':'19.2.3',
             'runtimePropsInjectionProven':False,
             'unknownOutputSemanticsRejected':True,
+            'persistedIdentifierSafetyRequired':True,
             'semanticCandidateRederivationRequired':True,
             'candidateMustMatchExactRequest':True,
             'filesystemWritePerformed':False,
