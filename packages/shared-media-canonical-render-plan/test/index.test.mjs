@@ -5,6 +5,7 @@ import {createMediaRenderRequestV1} from '../../shared-media-render-contract/src
 import {
   SHARED_MEDIA_CANONICAL_RENDER_PLAN_V1,
   compileCanonicalRenderPlanV1,
+  computeCanonicalRenderPlanDigestV1,
   validateCanonicalRenderPlanV1,
 } from '../src/index.mjs';
 
@@ -43,6 +44,10 @@ const courseInput = (overrides = {}) => ({
 
 const courseRequest = (overrides = {}) => createMediaRenderRequestV1(courseInput(overrides));
 const clone = (value) => structuredClone(value);
+const resign = (plan) => {
+  plan.renderPlanDigest = computeCanonicalRenderPlanDigestV1(plan);
+  return plan;
+};
 
 test('course-explainer-shaped canonical request compiles without losing media semantics', () => {
   const request = courseRequest();
@@ -174,7 +179,28 @@ test('plan validation rejects timeline tampering', () => {
 test('plan validation rejects semantic digest tampering', () => {
   const plan = clone(compileCanonicalRenderPlanV1(courseRequest()));
   plan.voice.voiceId = 'different-voice';
-  assert.throws(() => validateCanonicalRenderPlanV1(plan), /renderPlanDigest does not match/);
+  assert.throws(() => validateCanonicalRenderPlanV1(plan), /valid canonical request|renderPlanDigest does not match/);
+});
+
+test('re-signed derived requirements tampering is rejected by semantic re-derivation', () => {
+  const plan = clone(compileCanonicalRenderPlanV1(courseRequest()));
+  plan.requirements.voiceSynthesisRequired = false;
+  resign(plan);
+  assert.throws(() => validateCanonicalRenderPlanV1(plan), /requirements do not match preserved media semantics/);
+});
+
+test('re-signed unknown asset reference is rejected by reconstructed canonical request validation', () => {
+  const plan = clone(compileCanonicalRenderPlanV1(courseRequest()));
+  plan.timeline.shots[0].visualAssetIds = ['asset-does-not-exist'];
+  resign(plan);
+  assert.throws(() => validateCanonicalRenderPlanV1(plan), /cannot reconstruct a valid canonical request/);
+});
+
+test('re-signed shot order tampering is rejected by reconstructed canonical request validation', () => {
+  const plan = clone(compileCanonicalRenderPlanV1(courseRequest()));
+  plan.timeline.shots[1].order = 1;
+  resign(plan);
+  assert.throws(() => validateCanonicalRenderPlanV1(plan), /cannot reconstruct a valid canonical request/);
 });
 
 test('compiled plan cannot claim transport selection, binding, authorization or provider execution', () => {
