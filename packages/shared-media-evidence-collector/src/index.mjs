@@ -78,7 +78,11 @@ const canonicalTimestamp = (value) => {
 const canonicalArtifactSource = (value) => {
   const artifact = object(value, '$artifactSource');
   exactKeys(artifact, new Set(['artifactId', 'locator', 'mediaType', 'bytes']), '$artifactSource');
-  assertNoForbiddenDomainFieldsV1(artifact, '$artifactSource');
+  assertNoForbiddenDomainFieldsV1({
+    artifactId: artifact.artifactId,
+    locator: artifact.locator,
+    mediaType: artifact.mediaType,
+  }, '$artifactSource.metadata');
   const artifactId = text(artifact.artifactId, '$artifactSource.artifactId', {max: 200});
   const locator = text(artifact.locator, '$artifactSource.locator', {max: 2000});
   const mediaType = text(artifact.mediaType, '$artifactSource.mediaType', {max: 160});
