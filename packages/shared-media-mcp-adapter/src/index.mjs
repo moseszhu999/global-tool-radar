@@ -1,16 +1,15 @@
 import {createHash, randomUUID} from 'node:crypto';
 
 const SECRET_KEY = /(authorization|bearer|token|secret|password|cookie|api[_-]?key|action_token)/i;
+const LEGACY_CONSUMER_TRUTH_KEY = /^(humanApproved|humanWatchedFullCandidate|socialPlatformBusinessFitApprovedByHuman|publicationAllowed|publicationPerformed|analyticsObserved)$/;
 const SHA256 = /^[a-f0-9]{64}$/;
 const ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 const PARAM_TYPES = new Set(['string', 'number', 'integer', 'boolean']);
-const TRUTH_BOUNDARY = Object.freeze({
-  humanApproved: false,
-  humanWatchedFullCandidate: false,
-  socialPlatformBusinessFitApprovedByHuman: false,
-  publicationAllowed: false,
-  publicationPerformed: false,
-  analyticsObserved: false,
+const TECHNICAL_TRUTH_BOUNDARY = Object.freeze({
+  technicalResultOnly: true,
+  humanDecisionInferred: false,
+  consumerDomainDecisionInferred: false,
+  businessOutcomeInferred: false,
 });
 
 const requiredText = (value, field) => {
@@ -48,7 +47,21 @@ const assertNoSecrets = (value, field = 'value') => {
   }
 };
 
-const withTruthBoundary = (value) => Object.freeze({...value, ...TRUTH_BOUNDARY});
+const assertNoLegacyConsumerTruth = (value, field = 'value') => {
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => assertNoLegacyConsumerTruth(item, `${field}[${index}]`));
+    return;
+  }
+  if (!value || typeof value !== 'object') return;
+  for (const [key, item] of Object.entries(value)) {
+    if (LEGACY_CONSUMER_TRUTH_KEY.test(key)) {
+      throw new TypeError(`${field}.${key} is consumer-domain truth and is forbidden in Shared Media MCP results`);
+    }
+    assertNoLegacyConsumerTruth(item, `${field}.${key}`);
+  }
+};
+
+const withTechnicalTruthBoundary = (value) => Object.freeze({...value, ...TECHNICAL_TRUTH_BOUNDARY});
 
 const normalizeParameterRule = (name, input) => {
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw new TypeError(`allowedParameters.${name} must be an object`);
@@ -179,6 +192,7 @@ const ensureBackendMethod = (backend, method) => {
 const safeBackendResult = (value, field) => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new TypeError(`${field} backend result must be an object`);
   assertNoSecrets(value, field);
+  assertNoLegacyConsumerTruth(value, field);
   return clone(value);
 };
 
@@ -231,7 +245,7 @@ export const createSharedMediaMcpController = ({workflows = [], backend} = {}) =
       };
       const inputManifestDigest = sha256Json(manifest);
       const backendResult = safeBackendResult(await backend.generate({workflow: clone(workflow), request: clone(manifest), inputManifestDigest}), 'generate');
-      return withTruthBoundary({
+      return withTechnicalTruthBoundary({
         ...backendResult,
         requestId,
         workflowId: workflow.id,
@@ -239,14 +253,14 @@ export const createSharedMediaMcpController = ({workflows = [], backend} = {}) =
         inputManifestDigest,
       });
     },
-    getJob: async (jobId) => withTruthBoundary(safeBackendResult(await backend.getJob(requiredText(jobId, 'jobId')), 'getJob')),
+    getJob: async (jobId) => withTechnicalTruthBoundary(safeBackendResult(await backend.getJob(requiredText(jobId, 'jobId')), 'getJob')),
     getArtifact: async (artifactId) => {
       const result = safeBackendResult(await backend.getArtifact(requiredText(artifactId, 'artifactId')), 'getArtifact');
       if (result.status === 'ready' || result.sha256 !== undefined) {
         if (typeof result.sha256 !== 'string' || !SHA256.test(result.sha256.toLowerCase())) throw new TypeError('ready artifact must include valid sha256');
       }
-      return withTruthBoundary(result);
+      return withTechnicalTruthBoundary(result);
     },
-    cancelJob: async (jobId) => withTruthBoundary(safeBackendResult(await backend.cancelJob(requiredText(jobId, 'jobId')), 'cancelJob')),
+    cancelJob: async (jobId) => withTechnicalTruthBoundary(safeBackendResult(await backend.cancelJob(requiredText(jobId, 'jobId')), 'cancelJob')),
   });
 };
