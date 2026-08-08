@@ -117,12 +117,9 @@ test('visual inspection kind mismatch fails closed',async()=>{
 });
 
 test('video visual input is outside prepared qualification v1 subset',async()=>{
-  const video=bytes('video-visual');
-  const {plan,manifest,prepared}=await source({visualAssets:[{assetId:'asset-1',kind:'video',locator:'media://asset-1.mp4',mediaType:'video/mp4',sha256:digest(video)}]});
-  const original=prepared.getPayload;
-  const videoPrepared={...prepared,getPayload:(id)=>prepared.receipt.visualArtifacts.some((a)=>a.artifactId===id)?Buffer.from(video):original(id)};
+  const {plan,manifest,prepared}=await source({visualAssets:[{assetId:'asset-1',kind:'video',locator:'media://asset-1.mp4',mediaType:'video/mp4',sha256:digest(visual)}]});
   const {qualifier,calls}=harness();
-  await assert.rejects(()=>qualifier.qualify({plan,manifest,prepared:videoPrepared}),/static image visuals only/);
+  await assert.rejects(()=>qualifier.qualify({plan,manifest,prepared}),/static image visuals only/);
   assert.equal(calls.authorize,0);
 });
 
