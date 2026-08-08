@@ -100,8 +100,9 @@ const ProductionPolishOverlayV1: React.FC = () => {
       <div
         data-production-polish-mask
         style={{
-          position:'absolute',left:0,right:0,top:0,height:375,
-          background:`linear-gradient(180deg,${C.bg} 0%,${C.bgSoft}f4 78%,${C.bg}00 100%)`,
+          position:'absolute',left:0,right:0,top:0,height:345,
+          background:C.bg,
+          borderBottom:'1px solid #15314f',
         }}
       />
       {beats.map((beat,i)=><HeaderPolish key={i} frame={frame} beat={beat}/>)}
