@@ -1,0 +1,137 @@
+name: shared-media-remotion-materializer-v1
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - packages/shared-media-remotion-materializer/**
+      - .github/workflows/shared-media-remotion-materializer-v1.yml
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TARGET_SHA: ${{ github.event.pull_request.head.sha }}
+
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify exact head and pure source boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "$TARGET_SHA"
+          echo "exact_head=$actual"
+          test -f packages/shared-media-render-contract/src/index.mjs
+          test -f packages/shared-media-remotion-materializer/src/index.mjs
+          ! grep -RInE "from ['\"](node:child_process|node:fs|node:http|node:https|node:net|node:dgram)|\b(fetch|exec|execFile|spawn|fork)\s*\(" packages/shared-media-remotion-materializer/src || {
+            echo 'Materializer must remain pure and must not own I/O/process execution.' >&2
+            exit 1
+          }
+          ! grep -RInE 'createMacPreMaterializedBindingV1|approved_pre_materialized|create_or_update' packages/shared-media-remotion-materializer/src || {
+            echo 'Materializer must not create/approve bindings or use create_or_update.' >&2
+            exit 1
+          }
+
+      - name: Syntax check
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check packages/shared-media-remotion-materializer/src/index.mjs
+          for file in packages/shared-media-remotion-materializer/test/*.test.mjs; do node --check "$file"; done
+
+      - name: Run exact materializer contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --prefix packages/shared-media-remotion-materializer test | tee "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
+          grep -Eq '# tests[[:space:]]+25$' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
+          grep -Eq '# pass[[:space:]]+25$' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
+          grep -Eq '# fail[[:space:]]+0$' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
+          grep -F 'semantically equal output profile with different key insertion order produces same candidate' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
+          grep -F 'persisted output profile id must be a safe non-secret identifier' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
+          grep -F 'candidate never grants render authorization or creates an approved binding' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
+          grep -F 'unknown output-affecting request, shot or profile fields fail closed' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
+          grep -F 'candidate validation rejects semantic or generated-source tampering' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
+          grep -F 'candidate must independently match the exact canonical request before staging approval' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
+          grep -F 'observed generated-file manifest must exactly match candidate before later binding approval' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
+          grep -F 'generated project is product-neutral and contains no ToolRadar or TrainingOS domain vocabulary' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
+
+      - name: Enforce audited runtime and truth boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F "remotion: '4.0.506'" packages/shared-media-remotion-materializer/src/index.mjs
+          grep -F "'@remotion/cli': '4.0.506'" packages/shared-media-remotion-materializer/src/index.mjs
+          grep -F "react: '19.2.3'" packages/shared-media-remotion-materializer/src/index.mjs
+          grep -F "'react-dom': '19.2.3'" packages/shared-media-remotion-materializer/src/index.mjs
+          grep -F 'runtimePropsInjectionProven: false' packages/shared-media-remotion-materializer/src/index.mjs
+          grep -F 'verifyCandidateAgainstRequestV1' packages/shared-media-remotion-materializer/src/index.mjs
+          grep -F 'renderAuthorized: false' packages/shared-media-remotion-materializer/src/index.mjs
+          grep -F 'bindingCreated: false' packages/shared-media-remotion-materializer/src/index.mjs
+          grep -F 'profileId must be a safe non-secret identifier' packages/shared-media-remotion-materializer/src/index.mjs
+          ! grep -RInE 'ToolRadar|GLOBAL TOOL RADAR|TrainingOS|courseId|studentId|teacherId|humanApproved|publicationAllowed|publicationPerformed|analyticsObserved' packages/shared-media-remotion-materializer/src
+
+      - name: Emit exact-head receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json,os,pathlib,re
+          root=pathlib.Path(os.environ['RUNNER_TEMP'])
+          tap=(root/'shared-media-remotion-materializer.tap').read_text()
+          def number(name):
+              m=re.search(rf'^# {name}\s+(\d+)\s*$',tap,re.M)
+              return int(m.group(1)) if m else None
+          receipt={
+            'schemaVersion':'shared-media.remotion-materializer-exact-head.v1',
+            'exactHead':os.environ['TARGET_SHA'],
+            'package':'@shared-media/remotion-materializer@0.1.0',
+            'tests':number('tests'),
+            'pass':number('pass'),
+            'fail':number('fail'),
+            'supportedSubset':'blank_technical_smoke_only',
+            'generatedFileCount':3,
+            'compositionId':'SharedMediaRenderV1',
+            'referenceRemotionVersion':'4.0.506',
+            'referenceReactVersion':'19.2.3',
+            'runtimePropsInjectionProven':False,
+            'unknownOutputSemanticsRejected':True,
+            'persistedIdentifierSafetyRequired':True,
+            'semanticCandidateRederivationRequired':True,
+            'candidateMustMatchExactRequest':True,
+            'filesystemWritePerformed':False,
+            'networkPerformed':False,
+            'processExecutionPerformed':False,
+            'bindingCreated':False,
+            'renderAuthorized':False,
+            'renderSubmitted':False,
+            'realMacOperationPerformed':False,
+            'consumerDomainDecisionInferred':False,
+            'businessOutcomeInferred':False,
+            'testLogSha256':hashlib.sha256(tap.encode()).hexdigest(),
+          }
+          path=root/'shared-media-remotion-materializer-exact-head.json'
+          path.write_text(json.dumps(receipt,indent=2)+'\n')
+          print(json.dumps(receipt,indent=2))
+          PY
+
+      - name: Upload exact-head evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: shared-media-remotion-materializer-v1
+          path: |
+            ${{ runner.temp }}/shared-media-remotion-materializer-exact-head.json
+            ${{ runner.temp }}/shared-media-remotion-materializer.tap
+          if-no-files-found: error
+          retention-days: 30
