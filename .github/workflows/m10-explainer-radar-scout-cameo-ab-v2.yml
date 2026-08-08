@@ -21,6 +21,7 @@ jobs:
       BASELINE_EXACT_HEAD: '6b0f97ba9dc1e1e94019109e70d3659a4c9a379a'
       OVERLAY_SOURCE: apps/remotion-video/src/toolradar-explainer-radar-scout-overlay-v1.tsx
       CAMEO_WINDOWS: '2.70-4.50,5.55-7.25,14.40-16.50,17.75-19.00'
+
     steps:
       - name: Checkout exact cameo head
         uses: actions/checkout@v4
@@ -42,12 +43,16 @@ jobs:
           ! grep -E 'https?://|staticFile\(|<img|<Image|<Video|<OffthreadVideo' "$OVERLAY_SOURCE"
           test "$CAMEO_WINDOWS" = '2.70-4.50,5.55-7.25,14.40-16.50,17.75-19.00'
 
-      - name: Install media tools
+      - name: Install deterministic review dependencies
         shell: bash
         run: |
           set -euo pipefail
           sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends ffmpeg unzip
+          sudo apt-get install -y --no-install-recommends ffmpeg unzip python3-pil
+          python3 - <<'PY'
+          from PIL import Image
+          print('Pillow explicit dependency PASS', Image.__version__)
+          PY
 
       - name: Download immutable Phase 5 baseline
         shell: bash
@@ -100,12 +105,13 @@ jobs:
             -c:a copy -t 19.2 -movflags +faststart "$out"
           test -s "$out"
 
-      - name: Verify audio identity, proof safety, and clean no-cameo beats
+      - name: Verify audio identity and visual safety gates
         shell: bash
         run: |
           set -euo pipefail
           base="$RUNNER_TEMP/full-review-A.mp4"
           out="$GITHUB_WORKSPACE/apps/remotion-video/out/toolradar-explainer-19s-radar-scout-cameo-v2.mp4"
+
           ffmpeg -hide_banner -loglevel error -y -i "$base" -map 0:a:0 -c copy "$RUNNER_TEMP/a-baseline.aac"
           ffmpeg -hide_banner -loglevel error -y -i "$out" -map 0:a:0 -c copy "$RUNNER_TEMP/a-cameo.aac"
           base_audio="$(sha256sum "$RUNNER_TEMP/a-baseline.aac" | awk '{print $1}')"
@@ -114,29 +120,29 @@ jobs:
           printf '%s\n' "$base_audio" > "$RUNNER_TEMP/audio-sha.txt"
 
           measure_ssim() {
-            local t="$1" crop="$2" outname="$3"
+            local t="$1" filter="$2" name="$3"
             ffmpeg -hide_banner -nostats -ss "$t" -i "$base" -ss "$t" -i "$out" \
-              -filter_complex "[0:v]$crop[a];[1:v]$crop[b];[a][b]ssim" \
-              -frames:v 1 -f null - 2> "$RUNNER_TEMP/$outname.log" || true
-            grep -oE 'All:[0-9.]+' "$RUNNER_TEMP/$outname.log" | tail -1 | cut -d: -f2
+              -filter_complex "[0:v]$filter[a];[1:v]$filter[b];[a][b]ssim" \
+              -frames:v 1 -f null - 2> "$RUNNER_TEMP/$name.log" || true
+            grep -oE 'All:[0-9.]+' "$RUNNER_TEMP/$name.log" | tail -1 | cut -d: -f2
           }
 
-          proof_score="$(measure_ssim 6.55 'crop=832:470:124:1242' proof-ssim)"
-          clean_opening="$(measure_ssim 1.20 'null' clean-opening-ssim)"
-          clean_reveal="$(measure_ssim 10.90 'null' clean-reveal-ssim)"
-          python3 - "$proof_score" "$clean_opening" "$clean_reveal" <<'PY'
+          proof="$(measure_ssim 6.55 'crop=832:470:124:1242' proof-ssim)"
+          opening="$(measure_ssim 1.20 'null' opening-ssim)"
+          reveal="$(measure_ssim 10.90 'null' reveal-ssim)"
+          python3 - "$proof" "$opening" "$reveal" <<'PY'
           import sys
           proof,opening,reveal=map(float,sys.argv[1:])
-          if proof < 0.985: raise SystemExit(f'proof SSIM too low: {proof:.6f}')
-          if opening < 0.985: raise SystemExit(f'opening changed outside cameo: {opening:.6f}')
-          if reveal < 0.985: raise SystemExit(f'reveal changed outside cameo: {reveal:.6f}')
+          assert proof >= 0.985, proof
+          assert opening >= 0.985, opening
+          assert reveal >= 0.985, reveal
           print(f'proofCropSSIM={proof:.6f}')
           print(f'openingNoCameoSSIM={opening:.6f}')
           print(f'revealNoCameoSSIM={reveal:.6f}')
           PY
-          printf '%s\n' "$proof_score" > "$RUNNER_TEMP/proof-ssim-score.txt"
-          printf '%s\n' "$clean_opening" > "$RUNNER_TEMP/opening-ssim-score.txt"
-          printf '%s\n' "$clean_reveal" > "$RUNNER_TEMP/reveal-ssim-score.txt"
+          printf '%s\n' "$proof" > "$RUNNER_TEMP/proof-ssim-score.txt"
+          printf '%s\n' "$opening" > "$RUNNER_TEMP/opening-ssim-score.txt"
+          printf '%s\n' "$reveal" > "$RUNNER_TEMP/reveal-ssim-score.txt"
 
       - name: Inspect exact cameo media
         shell: bash
@@ -166,23 +172,23 @@ jobs:
             ffmpeg -hide_banner -loglevel error -y -ss "${times[$i]}" -i "$out" -frames:v 1 -vf scale=540:960 "$review/${n}-B.jpg"
           done
           python3 - "$review" "$GITHUB_WORKSPACE/apps/remotion-video/out/radar-scout-cameo-v2-ab-contact-sheet.jpg" <<'PY'
-          from PIL import Image,ImageOps,ImageDraw
+          from PIL import Image
           import pathlib,sys
           d=pathlib.Path(sys.argv[1]); out=sys.argv[2]
-          pairs=[]
+          rows=[]
           for i in range(1,7):
               a=Image.open(d/f'{i:02d}-A.jpg').convert('RGB')
               b=Image.open(d/f'{i:02d}-B.jpg').convert('RGB')
               row=Image.new('RGB',(a.width+b.width+8,a.height),(8,16,28))
-              row.paste(a,(0,0)); row.paste(b,(a.width+8,0)); pairs.append(row)
-          sheet=Image.new('RGB',(pairs[0].width,sum(x.height for x in pairs)+8*(len(pairs)-1)),(8,16,28))
+              row.paste(a,(0,0)); row.paste(b,(a.width+8,0)); rows.append(row)
+          sheet=Image.new('RGB',(rows[0].width,sum(r.height for r in rows)+8*(len(rows)-1)),(8,16,28))
           y=0
-          for row in pairs:
+          for row in rows:
               sheet.paste(row,(0,y)); y+=row.height+8
           sheet.save(out,quality=91)
           PY
 
-      - name: Write cameo v2 receipt
+      - name: Write exact cameo receipt
         shell: bash
         run: |
           set -euo pipefail
