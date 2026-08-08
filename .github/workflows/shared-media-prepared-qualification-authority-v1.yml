@@ -1,0 +1,105 @@
+name: shared-media-prepared-qualification-authority-v1
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - packages/shared-media-prepared-qualification/**
+      - docs/contracts/shared-media-prepared-qualification-authority-v1.md
+      - .github/workflows/shared-media-prepared-qualification-authority-v1.yml
+
+permissions:
+  contents: read
+
+jobs:
+  authority:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TARGET_SHA: ${{ github.event.pull_request.head.sha }}
+
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify exact head
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          test -f packages/shared-media-prepared-qualification/test/source-authority.contract.mjs
+          test -f docs/contracts/shared-media-prepared-qualification-authority-v1.md
+
+      - name: Re-run core qualification contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --prefix packages/shared-media-prepared-qualification test | tee "$RUNNER_TEMP/core.tap"
+          grep -Eq '# tests[[:space:]]+27$' "$RUNNER_TEMP/core.tap"
+          grep -Eq '# pass[[:space:]]+27$' "$RUNNER_TEMP/core.tap"
+          grep -Eq '# fail[[:space:]]+0$' "$RUNNER_TEMP/core.tap"
+
+      - name: Run detached source and measurement authority contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test packages/shared-media-prepared-qualification/test/source-authority.contract.mjs | tee "$RUNNER_TEMP/authority.tap"
+          grep -Eq '# tests[[:space:]]+4$' "$RUNNER_TEMP/authority.tap"
+          grep -Eq '# pass[[:space:]]+4$' "$RUNNER_TEMP/authority.tap"
+          grep -Eq '# fail[[:space:]]+0$' "$RUNNER_TEMP/authority.tap"
+          grep -F 'detached re-signed visual media-type substitution is internally self-consistent but exact prepared source rejects it' "$RUNNER_TEMP/authority.tap"
+          grep -F 'detached re-signed voice SHA substitution is internally self-consistent but exact prepared source rejects it' "$RUNNER_TEMP/authority.tap"
+          grep -F 'detached re-signed auto-caption qualification can be structurally self-consistent but exact prepared source rejects it' "$RUNNER_TEMP/authority.tap"
+          grep -F 're-signed measured-duration substitution remains structurally and source-chain valid, proving detached receipt is not inspector attestation' "$RUNNER_TEMP/authority.tap"
+
+      - name: Enforce documented trust boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F 'qualificationDigest = integrity' docs/contracts/shared-media-prepared-qualification-authority-v1.md
+          grep -F 'exact prepared source chain = source authority' docs/contracts/shared-media-prepared-qualification-authority-v1.md
+          grep -F 'fresh trusted qualification / future inspector attestation = measurement authority' docs/contracts/shared-media-prepared-qualification-authority-v1.md
+          grep -F 'must not accept detached serialized qualification data alone' docs/contracts/shared-media-prepared-qualification-authority-v1.md
+
+      - name: Emit authority receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json,os,pathlib
+          root=pathlib.Path(os.environ['RUNNER_TEMP'])
+          core=(root/'core.tap').read_text()
+          authority=(root/'authority.tap').read_text()
+          receipt={
+            'schemaVersion':'shared-media.prepared-qualification-authority-exact-head.v1',
+            'exactHead':os.environ['TARGET_SHA'],
+            'coreContracts':27,
+            'authorityContracts':4,
+            'corePass':True,
+            'authorityPass':True,
+            'qualificationDigestIsIntegrityOnly':True,
+            'exactPreparedSourceBindsSourceAuthority':True,
+            'detachedReceiptIsInspectorAttestation':False,
+            'freshQualificationOrFutureInspectorAttestationRequiredForMeasurementAuthority':True,
+            'materializationMayTrustDetachedQualificationAlone':False,
+            'coreLogSha256':hashlib.sha256(core.encode()).hexdigest(),
+            'authorityLogSha256':hashlib.sha256(authority.encode()).hexdigest(),
+          }
+          path=root/'shared-media-prepared-qualification-authority.json'
+          path.write_text(json.dumps(receipt,indent=2)+'\n')
+          print(json.dumps(receipt,indent=2))
+          PY
+
+      - name: Upload authority evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: shared-media-prepared-qualification-authority-v1
+          path: |
+            ${{ runner.temp }}/shared-media-prepared-qualification-authority.json
+            ${{ runner.temp }}/authority.tap
+          if-no-files-found: error
+          retention-days: 30
