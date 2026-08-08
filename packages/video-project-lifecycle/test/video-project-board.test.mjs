@@ -16,13 +16,25 @@ test('Video Projects page is bound to the canonical ledger snapshot', async () =
   assert.equal(validateVideoProject(ledger.project), true);
   assert.match(html, /视频项目看板/);
   assert.match(html, /12 阶段生产链/);
-  assert.match(html, /不确认真实录屏、正式配音、最终视频、发布或分析数据/);
+  assert.match(html, /CREATIVE PREFLIGHT/);
+  assert.match(html, /动画前创意预检/);
+  assert.match(html, /Art Gate/);
+  assert.match(html, /Animatic Gate/);
+  assert.match(html, /Creative Preflight PASS 也只代表允许进入 Render Authorization/);
   assert.match(script, /replit-design-video-project-ledger\.json/);
   assert.match(script, /DOWNSTREAM_CLAIM_CONFLICT/);
+  assert.match(script, /CREATIVE_PREFLIGHT_STAGE_CONFLICT/);
+  assert.match(script, /CREATIVE_PREFLIGHT_RENDER_BINDING_MISMATCH/);
+  assert.match(script, /humanCreativeApprovalClaimed !== false/);
+  assert.match(script, /publicationAllowed !== false/);
+  assert.match(script, /silhouetteReadable/);
+  assert.match(script, /payoffTimingReviewed/);
   assert.match(css, /\.stage\.current/);
+  assert.match(css, /\.creative-grid/);
+  assert.match(css, /\.creative-gate li\.fail/);
 });
 
-test('checked-in project snapshot stays at the real owned-media blocker', async () => {
+test('checked-in project snapshot stays at the real owned-media blocker and cannot imply creative preflight', async () => {
   const ledger = JSON.parse(await read('apps/web/data/replit-design-video-project-ledger.json'));
   assert.equal(ledger.project.stage, 'STORYBOARD_READY');
   assert.equal(ledger.project.status, 'BLOCKED');
@@ -30,6 +42,8 @@ test('checked-in project snapshot stays at the real owned-media blocker', async 
   assert.deepEqual(ledger.project.artifacts.map((item) => item.type), ['topic_brief','production_case','storyboard_package']);
   assert.equal(ledger.project.artifacts.some((item) => item.type === 'mac_remotion_render_run'), false);
   assert.equal(ledger.project.artifacts.some((item) => item.type === 'bound_publication_receipt'), false);
+  assert.equal('creativePreflight' in ledger, false);
+  assert.equal('renderAuthorization' in ledger, false);
   assert.match(ledger.project.blockedReason, /asset:test-recording/);
   assert.match(ledger.project.blockedReason, /asset:build-limit-recording/);
   assert.match(ledger.project.blockedReason, /asset:voiceover/);
