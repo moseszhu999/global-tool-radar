@@ -69,7 +69,10 @@ jobs:
           grep -F 'freezeTerminalResult(result)' packages/shared-media-evidence-collector/src/index.mjs
           grep -F 'SECRET_SHAPED_LOCATOR' packages/shared-media-evidence-collector/src/index.mjs
           ! grep -RInE 'courseId|studentId|teacherId|humanApproved|publicationAllowed|publicationPerformed|socialPlatformBusinessFitApprovedByHuman|analyticsObserved' packages/shared-media-evidence-collector/src
-          ! grep -RInE '(accessToken|refreshToken|clientSecret|password|Authorization[[:space:]]*:|Bearer[[:space:]]+[A-Za-z0-9._-]+)' packages/shared-media-evidence-collector/src
+          if grep -RInE '(accessToken|refreshToken|clientSecret|password|Authorization[[:space:]]*:|Bearer[[:space:]]+[A-Za-z0-9._-]+)' packages/shared-media-evidence-collector/src | grep -v 'const SECRET_LOCATOR ='; then
+            echo 'Unexpected credential-shaped source outside the explicit rejection regex.' >&2
+            exit 1
+          fi
 
       - name: Emit exact-head receipt
         shell: bash
