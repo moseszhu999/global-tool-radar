@@ -36,7 +36,7 @@ jobs:
           test "$count" = "6"
           ! grep -Eq "registerTool\([^\n]*(execute_arbitrary_graph|shell|publish_social|clear_queue)" packages/shared-media-mcp-adapter/src/server.mjs
           ! grep -Eq "registerTool\([^\n]*tasks/" packages/shared-media-mcp-adapter/src/server.mjs
-          ! grep -RInE '@toolradar/shared-media-mcp-adapter|toolradar\.shared-media-mcp-adapter' packages/shared-media-mcp-adapter .github/workflows/shared-media-mcp-adapter-v1.yml
+          ! grep -RInE '@toolradar/shared-media-mcp-adapter|toolradar\.shared-media-mcp-adapter' packages/shared-media-mcp-adapter
 
       - name: Install deterministic MCP dependencies from lock
         working-directory: packages/shared-media-mcp-adapter
