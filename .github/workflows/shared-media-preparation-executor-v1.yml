@@ -1,0 +1,117 @@
+name: shared-media-preparation-executor-v1
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - packages/shared-media-preparation-executor/**
+      - .github/workflows/shared-media-preparation-executor-v1.yml
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TARGET_SHA: ${{ github.event.pull_request.head.sha }}
+
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify exact head and bounded injected-I/O boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          test -f packages/shared-media-canonical-render-plan/src/index.mjs
+          test -f packages/shared-media-preparation-manifest/src/index.mjs
+          test -f packages/shared-media-preparation-executor/src/index.mjs
+          ! grep -RInE "from ['\"](node:fs|node:child_process|node:http|node:https|node:net|node:dgram)|\b(fetch|exec|execFile|spawn|fork)\s*\(" packages/shared-media-preparation-executor/src
+          ! grep -RInE 'POST /v1/render|render_existing|create_or_update|ACTION_TOKEN|Authorization|Bearer |edge-tts' packages/shared-media-preparation-executor/src
+
+      - name: Syntax check
+        run: npm --prefix packages/shared-media-preparation-executor run check
+
+      - name: Run exact executor contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --prefix packages/shared-media-preparation-executor test | tee "$RUNNER_TEMP/shared-media-preparation-executor.tap"
+          grep -Eq '# tests[[:space:]]+24$' "$RUNNER_TEMP/shared-media-preparation-executor.tap"
+          grep -Eq '# pass[[:space:]]+24$' "$RUNNER_TEMP/shared-media-preparation-executor.tap"
+          grep -Eq '# fail[[:space:]]+0$' "$RUNNER_TEMP/shared-media-preparation-executor.tap"
+          grep -F 'authorization denial occurs before resolver or synthesis operations' "$RUNNER_TEMP/shared-media-preparation-executor.tap"
+          grep -F 'wrong visual bytes fail SHA verification before later preparation stages' "$RUNNER_TEMP/shared-media-preparation-executor.tap"
+          grep -F 'provider operation errors are sanitized rather than persisted or surfaced verbatim' "$RUNNER_TEMP/shared-media-preparation-executor.tap"
+          grep -F 'getPayload returns defensive copies so caller mutation cannot alter stored prepared bytes' "$RUNNER_TEMP/shared-media-preparation-executor.tap"
+          grep -F 'payload verification rejects a getter that substitutes bytes' "$RUNNER_TEMP/shared-media-preparation-executor.tap"
+          grep -F 'prepared receipt keeps transport, binding, render and consumer-domain decisions false' "$RUNNER_TEMP/shared-media-preparation-executor.tap"
+
+      - name: Enforce exact source and truth boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F 'validatePreparationManifestV1(manifest, {plan})' packages/shared-media-preparation-executor/src/index.mjs
+          grep -F "action: 'execute_preparation'" packages/shared-media-preparation-executor/src/index.mjs
+          grep -F 'SOURCE_SHA_MISMATCH' packages/shared-media-preparation-executor/src/index.mjs
+          grep -F 'Buffer.from(payload)' packages/shared-media-preparation-executor/src/index.mjs
+          grep -F 'return Buffer.from(payload)' packages/shared-media-preparation-executor/src/index.mjs
+          grep -F 'transportSelected: false' packages/shared-media-preparation-executor/src/index.mjs
+          grep -F 'bindingCreated: false' packages/shared-media-preparation-executor/src/index.mjs
+          grep -F 'renderAuthorized: false' packages/shared-media-preparation-executor/src/index.mjs
+          ! grep -RInE 'unitId|lessonId|studentId|teacherId|publicationAllowed|publicationPerformed|analyticsObserved|humanApproved' packages/shared-media-preparation-executor/src
+
+      - name: Emit exact-head receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json,os,pathlib,re
+          root=pathlib.Path(os.environ['RUNNER_TEMP'])
+          tap=(root/'shared-media-preparation-executor.tap').read_text()
+          def n(name):
+              m=re.search(rf'^# {name}\s+(\d+)\s*$',tap,re.M)
+              return int(m.group(1)) if m else None
+          receipt={
+            'schemaVersion':'shared-media.preparation-executor-exact-head.v1',
+            'exactHead':os.environ['TARGET_SHA'],
+            'package':'@shared-media/preparation-executor@0.1.0',
+            'tests':n('tests'),'pass':n('pass'),'fail':n('fail'),
+            'exactPlanManifestRequired':True,
+            'preparationAuthorizationRequired':True,
+            'sourceAssetShaVerifiedFromBytes':True,
+            'providerErrorsSanitized':True,
+            'payloadSnapshotDefensiveCopy':True,
+            'payloadReverificationRequired':True,
+            'autoCaptionsDeterministicFromNarrationTimeline':True,
+            'concreteProviderOwnedByCore':False,
+            'filesystemOwnedByCore':False,
+            'networkOwnedByCore':False,
+            'transportSelected':False,
+            'bindingCreated':False,
+            'renderAuthorized':False,
+            'consumerDomainDecisionInferred':False,
+            'businessOutcomeInferred':False,
+            'testLogSha256':hashlib.sha256(tap.encode()).hexdigest(),
+          }
+          path=root/'shared-media-preparation-executor-exact-head.json'
+          path.write_text(json.dumps(receipt,indent=2)+'\n')
+          print(json.dumps(receipt,indent=2))
+          PY
+
+      - name: Upload exact-head evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: shared-media-preparation-executor-v1
+          path: |
+            ${{ runner.temp }}/shared-media-preparation-executor-exact-head.json
+            ${{ runner.temp }}/shared-media-preparation-executor.tap
+          if-no-files-found: error
+          retention-days: 30
