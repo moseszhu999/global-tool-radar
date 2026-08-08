@@ -43,8 +43,8 @@ jobs:
         run: |
           set -euo pipefail
           npm --prefix packages/shared-media-preparation-manifest test | tee "$RUNNER_TEMP/shared-media-preparation-manifest.tap"
-          grep -Eq '# tests[[:space:]]+22$' "$RUNNER_TEMP/shared-media-preparation-manifest.tap"
-          grep -Eq '# pass[[:space:]]+22$' "$RUNNER_TEMP/shared-media-preparation-manifest.tap"
+          grep -Eq '# tests[[:space:]]+24$' "$RUNNER_TEMP/shared-media-preparation-manifest.tap"
+          grep -Eq '# pass[[:space:]]+24$' "$RUNNER_TEMP/shared-media-preparation-manifest.tap"
           grep -Eq '# fail[[:space:]]+0$' "$RUNNER_TEMP/shared-media-preparation-manifest.tap"
           grep -F 'narration segments preserve shot timing and text' "$RUNNER_TEMP/shared-media-preparation-manifest.tap"
           grep -F 'auto captions bind exactly to narration timeline segments without execution' "$RUNNER_TEMP/shared-media-preparation-manifest.tap"
@@ -52,6 +52,7 @@ jobs:
           grep -F 'auto captions without narration text fail closed in v1' "$RUNNER_TEMP/shared-media-preparation-manifest.tap"
           grep -F 're-signed narration tampering is rejected by timeline re-derivation' "$RUNNER_TEMP/shared-media-preparation-manifest.tap"
           grep -F 're-signed provided asset with invalid SHA is rejected semantically' "$RUNNER_TEMP/shared-media-preparation-manifest.tap"
+          grep -F 're-signed source substitution can be internally self-consistent but exact render plan still rejects it' "$RUNNER_TEMP/shared-media-preparation-manifest.tap"
           grep -F 'preparation compiler itself selects no concrete TTS, caption, Remotion or Mac transport implementation' "$RUNNER_TEMP/shared-media-preparation-manifest.tap"
 
       - name: Enforce truth boundary
@@ -86,6 +87,7 @@ jobs:
             'package':'@shared-media/preparation-manifest@0.1.0',
             'tests':n('tests'),'pass':n('pass'),'fail':n('fail'),
             'renderPlanValidationRequired':True,
+            'exactRenderPlanSourceAuthorityRequired':True,
             'narrationRederivedFromTimeline':True,
             'voiceSegmentTieOutRequired':True,
             'captionSegmentTieOutRequired':True,
