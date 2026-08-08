@@ -3,6 +3,7 @@ name: replit-render-authorization
 on:
   pull_request:
     paths:
+      - 'packages/video-creative-preflight/**'
       - 'packages/replit-render-authorization/**'
       - 'packages/replit-owned-media-intake/**'
       - 'packages/remotion-media-preflight/**'
@@ -28,11 +29,14 @@ jobs:
           node-version: '22'
       - name: Package and worker syntax
         run: |
+          npm --prefix packages/video-creative-preflight run check
           npm --prefix packages/replit-render-authorization run check
           node --check apps/worker/src/authorize-replit-render.mjs
       - name: Contract tests
-        run: npm --prefix packages/replit-render-authorization test
-      - name: End-to-end intake and authorization contract fixture
+        run: |
+          npm --prefix packages/video-creative-preflight test
+          npm --prefix packages/replit-render-authorization test
+      - name: End-to-end intake, creative preflight and authorization fixture
         run: |
           mkdir -p /tmp/toolradar-render-auth artifacts
           printf 'contract design recording' > /tmp/toolradar-render-auth/design.mp4
@@ -51,31 +55,77 @@ jobs:
           OWNED_MEDIA_INTAKE_RECEIPT_OUTPUT=artifacts/contract-owned-media-intake-receipt.json \
           node apps/worker/src/intake-replit-owned-media.mjs
 
+          cat > artifacts/contract-art-gate.json <<'JSON'
+          {
+            "evidenceType": "toolradar.styleframe-art-gate.v1",
+            "evidenceDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "checks": {
+              "silhouetteReadable": true,
+              "visualHierarchyClear": true,
+              "originalityMaterial": true,
+              "materialFinishSufficient": true,
+              "worldConsistency": true,
+              "phoneScaleReadable": true,
+              "productTruthSafe": true
+            }
+          }
+          JSON
+          cat > artifacts/contract-animatic-gate.json <<'JSON'
+          {
+            "evidenceType": "toolradar.animatic-gate.v1",
+            "evidenceDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "checks": {
+              "shotIntentClear": true,
+              "timingBounded": true,
+              "payoffTimingReviewed": true,
+              "audioTimingReviewed": true,
+              "loopPlanReviewed": true,
+              "productTruthSafe": true
+            }
+          }
+          JSON
+
+          TOOLRADAR_CREATIVE_REVIEWER=ci-creative-controller \
+          TOOLRADAR_CREATIVE_REVIEWED_AT=2026-08-06T13:35:00.000Z \
+          VIDEO_PROJECT_LEDGER_INPUT=artifacts/contract-assets-verified-ledger.json \
+          TOOLRADAR_ART_GATE_INPUT=artifacts/contract-art-gate.json \
+          TOOLRADAR_ANIMATIC_GATE_INPUT=artifacts/contract-animatic-gate.json \
+          TOOLRADAR_CREATIVE_PREFLIGHT_OUTPUT=artifacts/contract-creative-preflight.json \
+          node packages/video-creative-preflight/src/cli.mjs
+
           TOOLRADAR_OPERATOR=ci-render-operator \
           TOOLRADAR_OCCURRED_AT=2026-08-06T13:40:00.000Z \
           VIDEO_PROJECT_LEDGER_INPUT=artifacts/contract-assets-verified-ledger.json \
           VIDEO_PROJECT_LEDGER_OUTPUT=artifacts/contract-render-authorized-ledger.json \
+          TOOLRADAR_CREATIVE_PREFLIGHT_INPUT=artifacts/contract-creative-preflight.json \
           REMOTION_PREFLIGHT_INPUT=artifacts/contract-remotion-media-preflight.json \
           RENDER_AUTHORIZATION_RECEIPT_OUTPUT=artifacts/contract-render-authorization-receipt.json \
           FINAL_RENDER_GATE_OUTPUT=artifacts/contract-final-render-gate.json \
           MAC_REMOTION_RENDER_INTENT_OUTPUT=artifacts/contract-render-intent.json \
           node apps/worker/src/authorize-replit-render.mjs
-      - name: Verify exact authorization boundary
+      - name: Verify exact creative and render authorization boundaries
         run: |
           node --input-type=module <<'NODE'
           import {readFile} from 'node:fs/promises';
           import {validateVideoProject} from './packages/video-project-lifecycle/src/index.mjs';
+          import {validateVideoCreativePreflight} from './packages/video-creative-preflight/src/index.mjs';
           import {validateFinalRenderGateReceipt} from './packages/remotion-final-render-gate/src/index.mjs';
           import {validateMacRemotionRenderIntent} from './packages/mac-remotion-render-job-binding/src/index.mjs';
           import {validateRenderAuthorizationReceipt} from './packages/replit-render-authorization/src/index.mjs';
+          const creative = JSON.parse(await readFile('artifacts/contract-creative-preflight.json', 'utf8'));
           const receipt = JSON.parse(await readFile('artifacts/contract-render-authorization-receipt.json', 'utf8'));
           const ledger = JSON.parse(await readFile('artifacts/contract-render-authorized-ledger.json', 'utf8'));
           const gate = JSON.parse(await readFile('artifacts/contract-final-render-gate.json', 'utf8'));
           const intent = JSON.parse(await readFile('artifacts/contract-render-intent.json', 'utf8'));
+          validateVideoCreativePreflight(creative);
           validateRenderAuthorizationReceipt(receipt);
           validateVideoProject(ledger.project);
           if (validateFinalRenderGateReceipt(gate).length > 0) throw new Error('final render gate invalid');
           validateMacRemotionRenderIntent(intent);
+          if (creative.status !== 'CREATIVE_PREFLIGHT_PASSED') throw new Error('creative preflight did not pass');
+          if (creative.humanCreativeApprovalClaimed !== false) throw new Error('creative preflight inferred human creative approval');
+          if (creative.publicationAllowed !== false) throw new Error('creative preflight inferred publication permission');
+          if (receipt.creativePreflightDigest !== creative.receiptDigest) throw new Error('render authorization did not bind creative preflight');
           if (receipt.status !== 'RENDER_AUTHORIZED') throw new Error('render was not authorized');
           if (ledger.project.stage !== 'RENDER_AUTHORIZED') throw new Error('project did not reach RENDER_AUTHORIZED');
           if (ledger.project.nextEvent !== 'COMPLETE_RENDER') throw new Error('unexpected next lifecycle event');
