@@ -12,12 +12,14 @@ export class SharedMediaPreparationManifestError extends TypeError {
   }
 }
 
-const fail = (code, message, path = null) => {
-  throw new SharedMediaPreparationManifestError(code, message, {path});
-};
+const fail = (code, message, path = null) => { throw new SharedMediaPreparationManifestError(code, message, {path}); };
 const object = (value, path) => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) fail('INVALID_FIELD', `${path} must be an object`, path);
   return value;
+};
+const text = (value, path) => {
+  if (typeof value !== 'string' || value.trim() === '') fail('INVALID_FIELD', `${path} must be non-empty`, path);
+  return value.trim();
 };
 const exactKeys = (value, allowed, path) => {
   for (const key of Object.keys(value)) if (!allowed.has(key)) fail('UNSUPPORTED_FIELD', `${path}.${key} is unsupported`, `${path}.${key}`);
@@ -29,6 +31,18 @@ const deepFreeze = (value) => {
   return value;
 };
 const clone = (value) => structuredClone(value);
+const SHA = /^[a-f0-9]{64}$/;
+const CAPTION_FORMATS = new Set(['burn-in','srt','vtt']);
+
+const validateExactAsset = (asset, path) => {
+  const value = object(asset, path);
+  exactKeys(value, new Set(['assetId','locator','mediaType','sha256']), path);
+  text(value.assetId, `${path}.assetId`);
+  text(value.locator, `${path}.locator`);
+  text(value.mediaType, `${path}.mediaType`);
+  if (!SHA.test(value.sha256 ?? '')) fail('INVALID_MANIFEST', `${path}.sha256 must be lowercase SHA-256`, `${path}.sha256`);
+  return value;
+};
 
 const assetPreparation = (asset) => ({
   assetId: asset.assetId,
@@ -39,21 +53,24 @@ const assetPreparation = (asset) => ({
   action: 'resolve_exact_visual_asset',
 });
 
-const narrationSegments = (plan) => plan.timeline.shots
-  .filter((shot) => shot.narration.mode === 'text')
-  .map((shot) => ({
-    segmentId: `narration-${shot.shotId}`,
-    shotId: shot.shotId,
-    startMs: shot.startMs,
-    durationMs: shot.durationMs,
-    text: shot.narration.text,
-  }));
+const narrationSegmentsFromTimeline = (timeline) => {
+  const shots = object(timeline, '$timeline').shots;
+  if (!Array.isArray(shots)) fail('INVALID_MANIFEST', '$timeline.shots must be an array', '$timeline.shots');
+  return shots
+    .filter((shot) => shot?.narration?.mode === 'text')
+    .map((shot) => ({
+      segmentId: `narration-${shot.shotId}`,
+      shotId: shot.shotId,
+      startMs: shot.startMs,
+      durationMs: shot.durationMs,
+      text: shot.narration.text,
+    }));
+};
 
 const voicePreparation = (plan, segments) => {
   if (plan.voice.mode === 'none') return {mode: 'none', action: 'none'};
-  if (plan.voice.mode === 'provided') {
-    return {mode: 'provided', action: 'resolve_exact_voice_asset', audioAsset: clone(plan.voice.audioAsset)};
-  }
+  if (plan.voice.mode === 'provided') return {mode: 'provided', action: 'resolve_exact_voice_asset', audioAsset: clone(plan.voice.audioAsset)};
+  if (segments.length === 0) fail('VOICE_SYNTHESIS_SOURCE_REQUIRED', 'synthesized voice requires at least one narration text segment', '$plan.voice');
   return {
     mode: 'synthesize',
     action: 'synthesize_narration_segments',
@@ -65,7 +82,7 @@ const voicePreparation = (plan, segments) => {
   };
 };
 
-const captionPreparation = (plan) => {
+const captionPreparation = (plan, segments) => {
   if (plan.captions.mode === 'none') return {mode: 'none', format: 'none', action: 'none'};
   if (plan.captions.mode === 'provided') {
     return {
@@ -76,11 +93,13 @@ const captionPreparation = (plan) => {
       captionAsset: clone(plan.captions.captionAsset),
     };
   }
+  if (segments.length === 0) fail('AUTO_CAPTION_SOURCE_REQUIRED', 'auto captions v1 require narration text segments', '$plan.captions');
   return {
     mode: 'auto',
     format: plan.captions.format,
-    action: 'generate_captions_from_timeline',
+    action: 'generate_captions_from_narration_timeline',
     ...(plan.captions.language !== undefined ? {language: plan.captions.language} : {}),
+    segmentIds: segments.map((segment) => segment.segmentId),
   };
 };
 
@@ -109,7 +128,8 @@ const digestPayload = (manifest) => ({
 export const computePreparationManifestDigestV1 = (manifest) => sha256CanonicalJsonV1(digestPayload(manifest));
 
 const buildPreparationManifest = (plan) => {
-  const segments = narrationSegments(plan);
+  const timeline = clone(plan.timeline);
+  const segments = narrationSegmentsFromTimeline(timeline);
   const manifest = {
     schemaVersion: SHARED_MEDIA_PREPARATION_MANIFEST_V1,
     requestId: plan.requestId,
@@ -118,8 +138,8 @@ const buildPreparationManifest = (plan) => {
     visualInputs: plan.visualAssets.map(assetPreparation),
     narrationSegments: segments,
     voicePreparation: voicePreparation(plan, segments),
-    captionPreparation: captionPreparation(plan),
-    timeline: clone(plan.timeline),
+    captionPreparation: captionPreparation(plan, segments),
+    timeline,
     outputProfile: clone(plan.outputProfile),
     evidenceRequirements: clone(plan.evidenceRequirements),
     providerSelected: false,
@@ -152,33 +172,27 @@ export const validatePreparationManifestV1 = (manifest, {plan = null} = {}) => {
   ]), '$manifest');
   if (value.schemaVersion !== SHARED_MEDIA_PREPARATION_MANIFEST_V1) fail('INVALID_MANIFEST', 'unexpected schemaVersion', '$manifest.schemaVersion');
   for (const [field, item] of [['inputManifestDigest', value.inputManifestDigest], ['renderPlanDigest', value.renderPlanDigest], ['preparationManifestDigest', value.preparationManifestDigest]]) {
-    if (!/^[a-f0-9]{64}$/.test(item ?? '')) fail('INVALID_MANIFEST', `${field} must be lowercase SHA-256`, `$manifest.${field}`);
+    if (!SHA.test(item ?? '')) fail('INVALID_MANIFEST', `${field} must be lowercase SHA-256`, `$manifest.${field}`);
   }
-  if (typeof value.requestId !== 'string' || value.requestId.length === 0) fail('INVALID_MANIFEST', 'requestId must be non-empty', '$manifest.requestId');
+  text(value.requestId, '$manifest.requestId');
 
   if (!Array.isArray(value.visualInputs)) fail('INVALID_MANIFEST', 'visualInputs must be an array', '$manifest.visualInputs');
   const visualIds = new Set();
   value.visualInputs.forEach((asset, index) => {
     const path = `$manifest.visualInputs[${index}]`;
     exactKeys(object(asset, path), new Set(['assetId','kind','locator','mediaType','expectedSha256','action']), path);
+    text(asset.assetId, `${path}.assetId`); text(asset.kind, `${path}.kind`); text(asset.locator, `${path}.locator`); text(asset.mediaType, `${path}.mediaType`);
     if (asset.action !== 'resolve_exact_visual_asset') fail('INVALID_MANIFEST', 'visual input action mismatch', `${path}.action`);
-    if (!/^[a-f0-9]{64}$/.test(asset.expectedSha256 ?? '')) fail('INVALID_MANIFEST', 'visual expectedSha256 invalid', `${path}.expectedSha256`);
+    if (!SHA.test(asset.expectedSha256 ?? '')) fail('INVALID_MANIFEST', 'visual expectedSha256 invalid', `${path}.expectedSha256`);
     if (visualIds.has(asset.assetId)) fail('INVALID_MANIFEST', 'duplicate visual assetId', `${path}.assetId`);
     visualIds.add(asset.assetId);
   });
 
-  if (!Array.isArray(value.narrationSegments)) fail('INVALID_MANIFEST', 'narrationSegments must be an array', '$manifest.narrationSegments');
-  const segmentIds = [];
-  const seenSegments = new Set();
-  value.narrationSegments.forEach((segment, index) => {
-    const path = `$manifest.narrationSegments[${index}]`;
-    exactKeys(object(segment, path), new Set(['segmentId','shotId','startMs','durationMs','text']), path);
-    if (!Number.isInteger(segment.startMs) || segment.startMs < 0 || !Number.isInteger(segment.durationMs) || segment.durationMs <= 0) fail('INVALID_MANIFEST', 'narration segment timing invalid', path);
-    if (typeof segment.text !== 'string' || segment.text.length === 0) fail('INVALID_MANIFEST', 'narration text required', `${path}.text`);
-    if (seenSegments.has(segment.segmentId)) fail('INVALID_MANIFEST', 'duplicate narration segmentId', `${path}.segmentId`);
-    seenSegments.add(segment.segmentId);
-    segmentIds.push(segment.segmentId);
-  });
+  const expectedSegments = narrationSegmentsFromTimeline(value.timeline);
+  if (!Array.isArray(value.narrationSegments) || stableStringifyV1(value.narrationSegments) !== stableStringifyV1(expectedSegments)) {
+    fail('MANIFEST_SEMANTICS_MISMATCH', 'narrationSegments must be exactly re-derived from preserved timeline', '$manifest.narrationSegments');
+  }
+  const segmentIds = expectedSegments.map((segment) => segment.segmentId);
 
   const voice = object(value.voicePreparation, '$manifest.voicePreparation');
   if (!['none','provided','synthesize'].includes(voice.mode)) fail('INVALID_MANIFEST', 'voicePreparation.mode unsupported', '$manifest.voicePreparation.mode');
@@ -188,10 +202,12 @@ export const validatePreparationManifestV1 = (manifest, {plan = null} = {}) => {
   } else if (voice.mode === 'provided') {
     exactKeys(voice, new Set(['mode','action','audioAsset']), '$manifest.voicePreparation');
     if (voice.action !== 'resolve_exact_voice_asset') fail('INVALID_MANIFEST', 'provided voice action mismatch', '$manifest.voicePreparation.action');
-    object(voice.audioAsset, '$manifest.voicePreparation.audioAsset');
+    validateExactAsset(voice.audioAsset, '$manifest.voicePreparation.audioAsset');
   } else {
     exactKeys(voice, new Set(['mode','action','provider','voiceId','locale','rate','segmentIds']), '$manifest.voicePreparation');
     if (voice.action !== 'synthesize_narration_segments') fail('INVALID_MANIFEST', 'synthesize voice action mismatch', '$manifest.voicePreparation.action');
+    text(voice.provider, '$manifest.voicePreparation.provider'); text(voice.voiceId, '$manifest.voicePreparation.voiceId');
+    if (segmentIds.length === 0) fail('VOICE_SYNTHESIS_SOURCE_REQUIRED', 'synthesized voice requires narration segments', '$manifest.voicePreparation.segmentIds');
     if (!Array.isArray(voice.segmentIds) || stableStringifyV1(voice.segmentIds) !== stableStringifyV1(segmentIds)) fail('INVALID_MANIFEST', 'voice segmentIds must exactly match narration segments', '$manifest.voicePreparation.segmentIds');
   }
 
@@ -202,14 +218,15 @@ export const validatePreparationManifestV1 = (manifest, {plan = null} = {}) => {
     if (captions.action !== 'none' || captions.format !== 'none') fail('INVALID_MANIFEST', 'none captions mismatch', '$manifest.captionPreparation');
   } else if (captions.mode === 'provided') {
     exactKeys(captions, new Set(['mode','format','action','language','captionAsset']), '$manifest.captionPreparation');
-    if (captions.action !== 'resolve_exact_caption_asset') fail('INVALID_MANIFEST', 'provided caption action mismatch', '$manifest.captionPreparation.action');
-    object(captions.captionAsset, '$manifest.captionPreparation.captionAsset');
+    if (captions.action !== 'resolve_exact_caption_asset' || !CAPTION_FORMATS.has(captions.format)) fail('INVALID_MANIFEST', 'provided caption preparation mismatch', '$manifest.captionPreparation');
+    validateExactAsset(captions.captionAsset, '$manifest.captionPreparation.captionAsset');
   } else {
-    exactKeys(captions, new Set(['mode','format','action','language']), '$manifest.captionPreparation');
-    if (captions.action !== 'generate_captions_from_timeline') fail('INVALID_MANIFEST', 'auto caption action mismatch', '$manifest.captionPreparation.action');
+    exactKeys(captions, new Set(['mode','format','action','language','segmentIds']), '$manifest.captionPreparation');
+    if (captions.action !== 'generate_captions_from_narration_timeline' || !CAPTION_FORMATS.has(captions.format)) fail('INVALID_MANIFEST', 'auto caption preparation mismatch', '$manifest.captionPreparation');
+    if (segmentIds.length === 0) fail('AUTO_CAPTION_SOURCE_REQUIRED', 'auto captions require narration segments', '$manifest.captionPreparation.segmentIds');
+    if (!Array.isArray(captions.segmentIds) || stableStringifyV1(captions.segmentIds) !== stableStringifyV1(segmentIds)) fail('INVALID_MANIFEST', 'caption segmentIds must exactly match narration segments', '$manifest.captionPreparation.segmentIds');
   }
 
-  object(value.timeline, '$manifest.timeline');
   object(value.outputProfile, '$manifest.outputProfile');
   object(value.evidenceRequirements, '$manifest.evidenceRequirements');
 
