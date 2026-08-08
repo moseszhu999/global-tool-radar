@@ -1,0 +1,18 @@
+{
+  "requestId": "example-request-001",
+  "purpose": "demo.explainer",
+  "title": "Shared media contract example",
+  "language": "zh-CN",
+  "shots": [
+    {"shotId": "shot-01", "order": 1, "durationMs": 4000, "narration": {"mode": "text", "text": "这是一个产品无关的共享媒体渲染示例。"}, "visualAssetIds": ["visual-01"]},
+    {"shotId": "shot-02", "order": 2, "durationMs": 3000, "narration": {"mode": "text", "text": "渲染成功不代表人工审核或发布。"}, "visualAssetIds": []}
+  ],
+  "visualAssets": [{"assetId": "visual-01", "kind": "graphic", "locator": "media://inputs/example.png", "mediaType": "image/png", "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}],
+  "voice": {"mode": "synthesize", "provider": "example-tts", "voiceId": "zh-voice-01", "locale": "zh-CN", "rate": 1},
+  "captions": {"mode": "auto", "format": "burn-in", "language": "zh-CN"},
+  "outputProfile": {"profileId": "landscape-standard", "width": 1920, "height": 1080, "fps": 30, "container": "mp4", "videoCodec": "h264", "audioCodec": "aac"},
+  "contractVersion": "media.render.v1",
+  "messageType": "request",
+  "evidenceRequirements": {"requireMediaInspection": true, "requireSha256": true, "requireRenderLog": true, "requireInputManifestDigest": true},
+  "inputManifestDigest": "a8bb4025b25fe620bdf5f957af09ed8c17e6233ea2aad8994899710b67dfbe34"
+}
