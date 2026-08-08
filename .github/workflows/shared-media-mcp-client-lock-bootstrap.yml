@@ -1,0 +1,65 @@
+name: shared-media-mcp-client-lock-bootstrap
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/shared-media-mcp-client-lock-bootstrap.yml
+
+permissions:
+  contents: read
+
+jobs:
+  lock:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TARGET_SHA: ${{ github.event.pull_request.head.sha }}
+
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Generate proposed client-test package lock in scratch copy
+        shell: bash
+        run: |
+          set -euo pipefail
+          src="$GITHUB_WORKSPACE/packages/shared-media-mcp-adapter"
+          scratch="$RUNNER_TEMP/mcp-client-lock"
+          cp -R "$src" "$scratch"
+          rm -rf "$scratch/node_modules" "$scratch/package-lock.json"
+          python3 - "$scratch/package.json" <<'PY'
+          import json,pathlib,sys
+          p=pathlib.Path(sys.argv[1])
+          data=json.loads(p.read_text())
+          data.setdefault('devDependencies', {})['@modelcontextprotocol/client']='2.0.0'
+          p.write_text(json.dumps(data,indent=2)+'\n')
+          PY
+          cd "$scratch"
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          test -f package-lock.json
+          grep -F '"@modelcontextprotocol/client": "2.0.0"' package.json
+          grep -F 'node_modules/@modelcontextprotocol/client' package-lock.json
+          npm install --ignore-scripts --no-audit --no-fund
+          npm ls --depth=0 | tee "$RUNNER_TEMP/mcp-client-lock-dependencies.txt"
+          grep -F '@modelcontextprotocol/client@2.0.0' "$RUNNER_TEMP/mcp-client-lock-dependencies.txt"
+          grep -F '@modelcontextprotocol/server@2.0.0' "$RUNNER_TEMP/mcp-client-lock-dependencies.txt"
+          shasum -a 256 package-lock.json | tee "$RUNNER_TEMP/mcp-client-package-lock.sha256"
+          cp package.json "$RUNNER_TEMP/shared-media-mcp-package-with-client.json"
+          cp package-lock.json "$RUNNER_TEMP/shared-media-mcp-package-lock-with-client.json"
+
+      - name: Upload proposed lock
+        uses: actions/upload-artifact@v4
+        with:
+          name: shared-media-mcp-client-lock-bootstrap
+          path: |
+            ${{ runner.temp }}/shared-media-mcp-package-with-client.json
+            ${{ runner.temp }}/shared-media-mcp-package-lock-with-client.json
+            ${{ runner.temp }}/mcp-client-package-lock.sha256
+            ${{ runner.temp }}/mcp-client-lock-dependencies.txt
+          if-no-files-found: error
+          retention-days: 7
