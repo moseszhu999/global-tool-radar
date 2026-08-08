@@ -36,6 +36,7 @@ jobs:
           test "$count" = "6"
           ! grep -Eq "registerTool\([^\n]*(execute_arbitrary_graph|shell|publish_social|clear_queue)" packages/shared-media-mcp-adapter/src/server.mjs
           ! grep -Eq "registerTool\([^\n]*tasks/" packages/shared-media-mcp-adapter/src/server.mjs
+          ! grep -RInE '@toolradar/shared-media-mcp-adapter|toolradar\.shared-media-mcp-adapter' packages/shared-media-mcp-adapter .github/workflows/shared-media-mcp-adapter-v1.yml
 
       - name: Install deterministic MCP dependencies from lock
         working-directory: packages/shared-media-mcp-adapter
@@ -62,9 +63,22 @@ jobs:
         run: |
           set -euo pipefail
           npm test | tee "$RUNNER_TEMP/shared-media-mcp-tests.tap"
-          grep -Eq '# fail 0|# fail[[:space:]]+0' "$RUNNER_TEMP/shared-media-mcp-tests.tap"
+          grep -Eq '# tests[[:space:]]+20$' "$RUNNER_TEMP/shared-media-mcp-tests.tap"
+          grep -Eq '# pass[[:space:]]+20$' "$RUNNER_TEMP/shared-media-mcp-tests.tap"
+          grep -Eq '# fail[[:space:]]+0$' "$RUNNER_TEMP/shared-media-mcp-tests.tap"
           grep -F 'legacy in-memory client lists and calls the six bounded MCP tools' "$RUNNER_TEMP/shared-media-mcp-tests.tap"
           grep -F 'modern stdio client negotiates 2026-07-28 and uses durable Shared Media jobs without tasks' "$RUNNER_TEMP/shared-media-mcp-tests.tap"
+          grep -F 'backend consumer-domain truth claims are rejected instead of normalized by Shared Media' "$RUNNER_TEMP/shared-media-mcp-tests.tap"
+
+      - name: Enforce product-neutral runtime boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F 'technicalResultOnly: true' packages/shared-media-mcp-adapter/src/index.mjs
+          grep -F 'consumerDomainDecisionInferred: false' packages/shared-media-mcp-adapter/src/index.mjs
+          grep -F 'businessOutcomeInferred: false' packages/shared-media-mcp-adapter/src/index.mjs
+          ! grep -F 'humanWatchedFullCandidate: false' packages/shared-media-mcp-adapter/src/index.mjs
+          ! grep -F 'socialPlatformBusinessFitApprovedByHuman: false' packages/shared-media-mcp-adapter/src/index.mjs
 
       - name: Emit exact-head receipt
         shell: bash
@@ -80,8 +94,9 @@ jobs:
               m=re.search(rf'^# {name}\s+(\d+)\s*$',tap,re.M)
               return int(m.group(1)) if m else None
           receipt={
-            'schemaVersion':'toolradar.shared-media-mcp-adapter-exact-head.v2',
+            'schemaVersion':'shared-media.mcp-adapter-exact-head.v3',
             'exactHead':os.environ['TARGET_SHA'],
+            'package':'@shared-media/mcp-adapter@0.1.0',
             'mcpClientPackage':'@modelcontextprotocol/client@2.0.0',
             'mcpServerPackage':'@modelcontextprotocol/server@2.0.0',
             'zod':'4.2.0',
@@ -96,9 +111,12 @@ jobs:
             'modernTasksDependency':False,
             'arbitraryGraphToolExposed':False,
             'publishingToolExposed':False,
+            'technicalResultOnly':True,
+            'humanDecisionInferred':False,
+            'consumerDomainDecisionInferred':False,
+            'businessOutcomeInferred':False,
             'realBackendBound':False,
             'realMacOperationPerformed':False,
-            'humanApprovalInferred':False,
             'testLogSha256':hashlib.sha256(tap.encode()).hexdigest(),
             'dependencyLogSha256':hashlib.sha256(deps.encode()).hexdigest(),
           }
