@@ -36,13 +36,15 @@ type Beat = {
   accentColor: string;
 };
 
+// Header ownership is intentionally non-overlapping. These windows only control
+// the polish overlay; the underlying animatic timing and retention anchors stay unchanged.
 const beats: Beat[] = [
   {start:0,end:70,eyebrow:'TOOLRADAR · 先看结果',lead:'5 个焦点，',accent:'先留下来。',subtitle:'不是先加更多，而是先把注意力收拢。',accentColor:C.cyan},
-  {start:70,end:154,eyebrow:'01 · 发现',lead:'先看到',accent:'14 个信号。',subtitle:'然后再决定，哪些值得继续看。',accentColor:C.amber},
-  {start:148,end:236,eyebrow:'02 · 证据',lead:'不是盯着热度，',accent:'先看证据。',subtitle:'碎片汇聚到候选，未知仍然保持未知。',accentColor:C.cyan},
-  {start:226,end:322,eyebrow:'03 · 对比',lead:'一边更吵，',accent:'一边更清楚。',subtitle:'差别来自信息顺序，而不是多堆一层界面。',accentColor:C.cyan},
-  {start:304,end:406,eyebrow:'04 · 收敛',lead:'真正的升级，',accent:'是敢于减少。',subtitle:'噪声退出，未知待审，焦点保留。',accentColor:C.amber},
-  {start:394,end:528,eyebrow:'05 · AGENT + HUMAN GATE',lead:'Agent 提议，',accent:'人来决定。',subtitle:'技术完成 ≠ 人工批准 ≠ 已发布。',accentColor:C.amber},
+  {start:70,end:151,eyebrow:'01 · 发现',lead:'先看到',accent:'14 个信号。',subtitle:'然后再决定，哪些值得继续看。',accentColor:C.amber},
+  {start:151,end:231,eyebrow:'02 · 证据',lead:'不是盯着热度，',accent:'先看证据。',subtitle:'碎片汇聚到候选，未知仍然保持未知。',accentColor:C.cyan},
+  {start:231,end:313,eyebrow:'03 · 对比',lead:'一边更吵，',accent:'一边更清楚。',subtitle:'差别来自信息顺序，而不是多堆一层界面。',accentColor:C.cyan},
+  {start:313,end:400,eyebrow:'04 · 收敛',lead:'真正的升级，',accent:'是敢于减少。',subtitle:'噪声退出，未知待审，焦点保留。',accentColor:C.amber},
+  {start:400,end:528,eyebrow:'05 · AGENT + HUMAN GATE',lead:'Agent 提议，',accent:'人来决定。',subtitle:'技术完成 ≠ 人工批准 ≠ 已发布。',accentColor:C.amber},
   {start:528,end:576,eyebrow:'LOOP',lead:'5 个焦点，',accent:'先留下来。',subtitle:'下一轮扫描，从这里继续。',accentColor:C.cyan},
 ];
 
