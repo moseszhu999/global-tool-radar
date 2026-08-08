@@ -24,6 +24,7 @@ export const createSharedMediaMcpServer = ({controller, name = 'shared-media', v
       instructions: [
         'Use approved Shared Media workflows only.',
         'List or inspect a workflow before requesting generation when its parameter contract is unknown.',
+        'Long-running work uses durable Shared Media job IDs and media_get_job; do not depend on deprecated MCP tasks vocabulary.',
         'Generation/render success is technical evidence only; never infer human approval, publication, or analytics.',
         'Do not request arbitrary ComfyUI graphs, credentials, social accounts, or custom-node installation through this server.',
       ].join(' '),
@@ -56,7 +57,7 @@ export const createSharedMediaMcpServer = ({controller, name = 'shared-media', v
     'media_generate_asset',
     {
       title: 'Generate Media Asset',
-      description: 'Submit one bounded generation/render request using an approved workflow. Parameters outside the workflow allowlist, unauthorized references, and unapproved custom-node workflows are rejected before backend execution.',
+      description: 'Submit one bounded generation/render request using an approved workflow. Parameters outside the workflow allowlist, unauthorized references, and unapproved custom-node workflows are rejected before backend execution. Long-running work returns a durable Shared Media job identity.',
       inputSchema: z.object({
         workflowId: z.string().min(1).max(128),
         purpose: z.string().min(1).max(1000),
@@ -73,7 +74,7 @@ export const createSharedMediaMcpServer = ({controller, name = 'shared-media', v
     'media_get_job',
     {
       title: 'Get Media Job',
-      description: 'Read the current state of one durable Shared Media generation/render job. This is the compatibility path for clients that do not use MCP Tasks.',
+      description: 'Read the current state of one durable Shared Media generation/render job. This is the canonical application-level long-running-work surface and does not depend on MCP tasks/* methods.',
       inputSchema: z.object({jobId: z.string().min(1).max(256)}).strict(),
       annotations: {readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false},
     },
