@@ -51,12 +51,15 @@ jobs:
         run: |
           set -euo pipefail
           npm --prefix packages/shared-media-canonical-render-plan test | tee "$RUNNER_TEMP/shared-media-canonical-render-plan.tap"
-          grep -Eq '# tests[[:space:]]+19$' "$RUNNER_TEMP/shared-media-canonical-render-plan.tap"
-          grep -Eq '# pass[[:space:]]+19$' "$RUNNER_TEMP/shared-media-canonical-render-plan.tap"
+          grep -Eq '# tests[[:space:]]+22$' "$RUNNER_TEMP/shared-media-canonical-render-plan.tap"
+          grep -Eq '# pass[[:space:]]+22$' "$RUNNER_TEMP/shared-media-canonical-render-plan.tap"
           grep -Eq '# fail[[:space:]]+0$' "$RUNNER_TEMP/shared-media-canonical-render-plan.tap"
           grep -F 'course-explainer-shaped canonical request compiles without losing media semantics' "$RUNNER_TEMP/shared-media-canonical-render-plan.tap"
           grep -F 'unknown request semantics fail closed instead of being silently dropped' "$RUNNER_TEMP/shared-media-canonical-render-plan.tap"
           grep -F 'duration is required for executable timeline planning' "$RUNNER_TEMP/shared-media-canonical-render-plan.tap"
+          grep -F 're-signed derived requirements tampering is rejected by semantic re-derivation' "$RUNNER_TEMP/shared-media-canonical-render-plan.tap"
+          grep -F 're-signed unknown asset reference is rejected by reconstructed canonical request validation' "$RUNNER_TEMP/shared-media-canonical-render-plan.tap"
+          grep -F 're-signed shot order tampering is rejected by reconstructed canonical request validation' "$RUNNER_TEMP/shared-media-canonical-render-plan.tap"
           grep -F 'exact request-to-plan verification rejects a plan from another canonical request' "$RUNNER_TEMP/shared-media-canonical-render-plan.tap"
           grep -F 'compiled plan remains product-neutral and contains no TrainingOS or ToolRadar business truth' "$RUNNER_TEMP/shared-media-canonical-render-plan.tap"
 
@@ -66,7 +69,9 @@ jobs:
           set -euo pipefail
           grep -F 'validateMediaRenderRequestV1(request)' packages/shared-media-canonical-render-plan/src/index.mjs
           grep -F 'assertCurrentSemanticsOnly(request)' packages/shared-media-canonical-render-plan/src/index.mjs
-          grep -F 'renderPlanDigest = sha256CanonicalJsonV1' packages/shared-media-canonical-render-plan/src/index.mjs
+          grep -F 'reconstructCanonicalRequestFromPlan' packages/shared-media-canonical-render-plan/src/index.mjs
+          grep -F 'expectedRequirements = requirementsFor(reconstructedRequest)' packages/shared-media-canonical-render-plan/src/index.mjs
+          grep -F 'computeCanonicalRenderPlanDigestV1' packages/shared-media-canonical-render-plan/src/index.mjs
           grep -F 'transportSelected: false' packages/shared-media-canonical-render-plan/src/index.mjs
           grep -F 'bindingCreated: false' packages/shared-media-canonical-render-plan/src/index.mjs
           grep -F 'renderAuthorized: false' packages/shared-media-canonical-render-plan/src/index.mjs
@@ -99,6 +104,9 @@ jobs:
             'voiceIntentPreserved':True,
             'captionIntentPreserved':True,
             'outputProfilePreserved':True,
+            'semanticRequestReconstructionRequired':True,
+            'derivedRequirementsRederived':True,
+            'resignedSemanticTamperRejected':True,
             'requestPlanTieOutRequired':True,
             'transportSelected':False,
             'bindingCreated':False,
