@@ -117,11 +117,11 @@ test('visual assets and shot asset references are outside blank smoke subset', (
 });
 
 test('narration text is outside blank smoke subset', () => {
-  assert.throws(() => candidateFixture({shots: [{shotId: 'shot-01', order: 1, durationMs: 1000, narration: {mode: 'text', text: 'Do not materialize creative content in smoke v1.'}, visualAssetIds: []}]}), /requires narration.mode=none/);
+  assert.throws(() => candidateFixture({shots: [{shotId: 'shot-01', order: 1, durationMs: 1000, narration: {mode: 'text', text: 'Do not materialize creative content in smoke v1.'}, visualAssetIds: []}]}), /narration\.text is not supported|requires narration\.mode=none/);
 });
 
 test('voice and caption generation are outside blank smoke subset', () => {
-  assert.throws(() => candidateFixture({voice: {mode: 'synthesize', provider: 'example', voiceId: 'v1'}}), /requires voice.mode=none/);
+  assert.throws(() => candidateFixture({voice: {mode: 'synthesize', provider: 'example', voiceId: 'v1'}}), /voice\.(provider|voiceId) is not supported|requires voice\.mode=none/);
   assert.throws(() => candidateFixture({captions: {mode: 'auto', format: 'burn-in'}}), /requires captions none\/none/);
 });
 
