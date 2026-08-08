@@ -44,12 +44,15 @@ Auto captions v1 also require narration text segments and bind to those exact se
 
 Provided voice/caption assets retain exact `assetId + locator + mediaType + sha256` identity.
 
+Every visual asset ID referenced by the preserved timeline must resolve to a corresponding `visualInputs` entry. A re-signed manifest cannot drop a referenced visual input and remain internally valid.
+
 ## Semantic re-derivation and source authority
 
 The manifest SHA is integrity, not semantic authority.
 
 Standalone validation:
 
+- requires every timeline visual reference to resolve to preparation input;
 - re-derives narration segments from the preserved timeline;
 - requires synthesis segment IDs to equal the narration segments exactly;
 - requires auto-caption segment IDs to equal the narration segments exactly;
@@ -87,6 +90,6 @@ A future Shared Media provider adapter may implement the preparation actions fro
 
 ## Tests
 
-The exact-head suite requires 24 contracts covering course-shaped plans, exact visual SHA requirements, narration timing, synthesized/provided voice, auto/provided captions, none modes, missing synthesis/caption source fail-closed, deterministic digest, exact plan tie-out, re-signed narration/action/segment/asset tamper rejection, explicit exact-plan source-authority rejection after a valid source substitution, execution truth boundaries, deep freeze and product-neutral output.
+The exact-head suite requires 25 contracts covering course-shaped plans, exact visual SHA requirements, visual-reference closure, narration timing, synthesized/provided voice, auto/provided captions, none modes, missing synthesis/caption source fail-closed, deterministic digest, exact plan tie-out, re-signed narration/action/segment/asset tamper rejection, explicit exact-plan source-authority rejection after a valid source substitution, execution truth boundaries, deep freeze and product-neutral output.
 
 A PASS does not prove provider availability, TTS/caption execution, prepared files, Remotion materialization, Mac render, artifact evidence, human review or publication.
