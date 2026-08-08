@@ -1,6 +1,6 @@
 # Shared Media MCP Contract Test Matrix
 
-Use this when the Shared Media MCP adapter is implemented. Run automated SDK/in-memory tests where possible and exercise the server with MCP Inspector before integration approval.
+Use this when the Shared Media MCP adapter is implemented. Run automated SDK tests and exercise the actual stdio/HTTP serving entry before integration approval.
 
 ## Discovery / read-only
 
@@ -33,7 +33,7 @@ Expect a typed not-found error; no fallback to arbitrary graph execution.
 Call `media_generate_asset` with an approved workflow and allowed parameters.
 
 Expect:
-- stable job/task handle or completed result;
+- stable Shared Media job handle or completed result;
 - workflow digest and input-manifest identity bound to the job;
 - no publication side effect.
 
@@ -69,13 +69,25 @@ After a long-running generation, call `media_get_job` repeatedly.
 
 Expect monotonic state transitions and stable immutable request/workflow identifiers.
 
-### T10 Tasks-capable client
+### T10 modern protocol does not depend on MCP Tasks
 
-When negotiated support exists for the MCP Tasks extension, verify task creation/status flow maps to the same durable job and evidence identity as ordinary polling.
+Exercise the 2026-07-28 serving/client path and verify a long-running `media_generate_asset` result remains a normal tool result carrying the durable Shared Media job identity.
 
-### T11 client without Tasks
+Expect:
+- no `tasks/*` dependency in the normal MCP contract;
+- no second task/job identifier layered over the Shared Media `jobId`;
+- `media_get_job` remains the canonical application-level polling surface.
 
-Verify the ordinary job-handle + `media_get_job` path remains complete and correct.
+If legacy task vocabulary is ever needed for interoperability with an older peer, treat that as compatibility code with explicit schemas, not as the v1 Shared Media job architecture.
+
+### T11 modern and legacy protocol coverage are distinguished
+
+Verify tests do not mistake in-memory linked transport coverage for 2026-era coverage.
+
+Expect:
+- in-memory linked transport may be used for fast 2025-era handler/schema tests;
+- modern stdio coverage spawns the `serveStdio` entry with a client that opts into 2026-07-28 negotiation, or uses the modern HTTP handler path;
+- evidence records which era was exercised.
 
 ### T12 concurrent jobs
 
@@ -137,8 +149,10 @@ Verify each compute request has a stable request/job ID in structured logs and t
 ## Tooling
 
 During development:
-1. run unit/contract tests through the selected official MCP SDK or in-memory client;
-2. run MCP Inspector against the local server;
-3. test invalid inputs, concurrency, and error handling;
-4. test in the actual target client after Inspector passes;
-5. retain sanitized exact-head evidence for the server revision being accepted.
+1. run unit/controller tests;
+2. run protocol-level client tests against the real serving entry;
+3. distinguish legacy/in-memory coverage from 2026-07-28 modern-era coverage;
+4. run MCP Inspector against the local server where useful;
+5. test invalid inputs, concurrency, and error handling;
+6. test in the actual target client after protocol smoke passes;
+7. retain sanitized exact-head evidence for the server revision being accepted.
