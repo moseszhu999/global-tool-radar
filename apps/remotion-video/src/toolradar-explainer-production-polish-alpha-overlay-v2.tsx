@@ -84,8 +84,10 @@ const AnchorPulse: React.FC<{frame:number; at:number; color:string}> = ({frame,a
 
 const ProductionPolishAlphaOverlayV2: React.FC = () => {
   const frame=useCurrentFrame();
+  const loopGuardOpacity=interpolate(frame,[540,550,560,569],[0,0.66,0.66,0],clamp);
   return (
     <AbsoluteFill data-alpha-production-polish style={{background:'transparent',overflow:'hidden'}}>
+      <div data-loop-luminance-guard style={{position:'absolute',inset:0,background:C.bg,opacity:loopGuardOpacity}} />
       <div data-production-polish-shelf style={{position:'absolute',left:0,right:0,top:0,height:345,background:C.bg,borderBottom:'1px solid #15314f'}} />
       {beats.map((beat,i)=><HeaderPolish key={i} frame={frame} beat={beat}/>)}
       <AnchorPulse frame={frame} at={156} color={C.cyan}/>
