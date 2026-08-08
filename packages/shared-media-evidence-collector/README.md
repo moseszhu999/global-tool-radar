@@ -35,35 +35,19 @@ createSharedMediaEvidenceCollectorV1({
 })
 ```
 
-Backend-specific code supplies those operations. The same evidence gate can therefore sit behind Mac or future cloud transport without moving canonical truth.
+Backend-specific code supplies those operations. The same evidence gate can sit behind Mac or future cloud transport without moving canonical truth.
 
 ## Authorization
 
-Knowing a `jobId` is not authority. Before any evidence read, the collector requires exact boolean `true` from:
-
-```text
-isJobAuthorized({
-  requestId,
-  inputManifestDigest,
-  jobId,
-  action: collect_succeeded_evidence | collect_failed_evidence
-})
-```
+Knowing a `jobId` is not authority. Before any evidence read, the collector requires exact boolean `true` from `isJobAuthorized({requestId,inputManifestDigest,jobId,action})`, where action is `collect_succeeded_evidence` or `collect_failed_evidence`.
 
 Anything else fails before I/O. No token, Workspace grant or backend credential is stored here.
 
 ## Success closure
 
-`readArtifact` may provide only:
+`readArtifact` may provide only `artifactId + locator + mediaType + bytes`. Caller-supplied SHA/evidence fields are rejected.
 
-```text
-artifactId
-locator
-mediaType
-bytes
-```
-
-Caller-supplied SHA/evidence fields are rejected. Credential-bearing/signed-query locators are rejected so ephemeral secrets do not become canonical evidence.
+Artifact locators are canonical evidence and therefore may not embed URL userinfo, signed-query credentials, Bearer material or token/secret/password/API-key query parameters. Ephemeral signed download URLs must stay inside the backend adapter, not persist as canonical artifact locators.
 
 Artifact bytes are copied into a collector-owned snapshot. The inspector receives a separate copy, so an inspector cannot mutate the bytes later hashed into canonical evidence.
 
@@ -75,15 +59,9 @@ The final canonical validator then checks request/job/inputManifestDigest, outpu
 
 ## Failure closure
 
-A failed result does not claim artifact or ffprobe evidence. It still requires:
+A failed result does not claim artifact or ffprobe evidence. It still requires request/job/inputManifestDigest, exact render-log SHA evidence and canonical `{code,stage,message,retryable}` error data.
 
-```text
-requestId/jobId/inputManifestDigest
-exact render-log SHA evidence
-canonical error {code, stage, message, retryable}
-```
-
-Invalid error fields/stages are rejected before authorization and I/O.
+Invalid error fields/stages are rejected before authorization/I/O. Credential-shaped error messages such as Bearer tokens or `token=...` / `secret=...` / `password=...` / API-key material are also rejected instead of being persisted into canonical terminal evidence.
 
 ## Immutable terminal receipts
 
@@ -123,26 +101,7 @@ This is a bounded contract/runtime adapter v1, **not** a claim of production-gra
 
 ## Exact-head tests
 
-The dedicated gate requires 22/22 contracts covering:
-
-- required injected operations and authorization;
-- byte-derived artifact/log SHA;
-- canonical request/job/manifest tie-out;
-- ffprobe-derived artifact metadata;
-- authorization denial before I/O;
-- caller-supplied evidence rejection;
-- signed/credential locator rejection;
-- empty artifact rejection;
-- non-passed/missing-video/size-mismatched inspection;
-- inspector mutation isolation;
-- canonical output-profile mismatch;
-- artifact/inspection/log operation failures;
-- failed-result log-only behavior;
-- failure authorization;
-- invalid error stage/fields;
-- invalid collection timestamp;
-- deep-frozen terminal receipts;
-- consumer-domain truth exclusion.
+The dedicated gate requires 22/22 contracts covering required operations/authorization, byte-derived SHA, canonical tie-out, inspection-derived metadata, denial before I/O, caller-evidence rejection, signed/userinfo locator rejection, empty artifact, invalid ffprobe/video/size, inspector mutation isolation, canonical output-profile mismatch, injected operation failures, failed-result log-only behavior, failure authorization, invalid/credential-bearing error evidence, invalid timestamp, deep-frozen terminal receipts and consumer-domain truth exclusion.
 
 ## What source/test PASS does not prove
 
