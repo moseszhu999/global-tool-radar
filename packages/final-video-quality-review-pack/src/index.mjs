@@ -6,16 +6,24 @@ import {
 
 const GRANULAR_CHECKS = Object.freeze([
   ['visual_integrity', '画面无黑帧、花屏、卡顿、异常裁切或明显压缩损伤'],
-  ['owned_media_match', '两段自有录屏与脚本对应，不含未授权第三方素材'],
-  ['narration_sync', '中文配音与画面节奏同步，无明显抢拍、拖拍或断句错误'],
-  ['subtitle_accuracy', '字幕无错别字、截断、遮挡和超出安全区'],
-  ['claim_accuracy', '功能、限制、价格与结论均与已绑定证据一致'],
-  ['privacy_redaction', '账号、邮箱、密钥、Cookie、通知和个人信息均已遮挡'],
-  ['audio_quality', '人声清晰，响度稳定，无爆音、底噪或明显削波'],
-  ['platform_framing', '1080×1920 竖屏构图适合抖音和 B 站竖版播放'],
-  ['cta_and_branding', '片尾 CTA、品牌名和免责声明完整且可读'],
-  ['full_playback', '审片人已从头到尾完整播放最终 MP4'],
+  ['owned_media_match', '画面、配音、音乐、音效和 UI 证据与已声明来源一致，素材来源清楚可追溯'],
+  ['narration_sync', '旁白或对白与画面节奏同步，无明显抢拍、拖拍、断句错误或语义错位'],
+  ['subtitle_accuracy', '字幕和屏幕文字无错别字、截断、遮挡、错误事实或超出安全区'],
+  ['claim_accuracy', '产品事实、功能、限制、价格与结论和可见证据一致，不把未知状态写成已确认事实'],
+  ['privacy_redaction', '最终画面中不包含不应公开的个人信息、账号信息或通知内容'],
+  ['audio_quality', '人声、音乐和音效清晰且层次合理，响度稳定，无爆音、底噪或明显削波'],
+  ['platform_framing', '1080×1920 竖屏构图在手机观看速度下仍保持主体、文字和关键动作可读'],
+  ['cta_and_branding', '品牌名、CTA、免责声明或 Human Gate（若设计中存在）准确、完整、可读；不存在的元素不强制添加'],
+  ['full_playback', '审片人已从头到尾完整播放最终 MP4，并重点检查开场、关键转场、Human Gate 和结尾循环'],
 ]);
+
+const BOUNDED_VERTICAL_REVIEW_PROFILE = Object.freeze({
+  width: 1080,
+  height: 1920,
+  fps: 30,
+  minDurationSeconds: 5,
+  maxDurationSeconds: 180,
+});
 
 export const officialQualityCheckMap = Object.freeze({
   visualContinuity: Object.freeze(['visual_integrity', 'full_playback']),
@@ -105,7 +113,7 @@ export function createQualityReviewPack({
   finalVideoPath,
   renderCommandManifestSha256,
   expectedProfile,
-  reviewerInstructionsVersion = '2026-08-06',
+  reviewerInstructionsVersion = '2026-08-09',
   createdAt,
 }) {
   if (!projectId?.trim()) throw new Error('projectId is required');
@@ -120,8 +128,14 @@ export function createQualityReviewPack({
     fps: Number(expectedProfile?.fps),
     durationSeconds: Number(expectedProfile?.durationSeconds),
   };
-  if (profile.width !== 1080 || profile.height !== 1920 || profile.fps !== 30 || profile.durationSeconds !== 89) {
-    throw new Error('expectedProfile must be the canonical 1080x1920, 30fps, 89s profile');
+  const profileMatches = profile.width === BOUNDED_VERTICAL_REVIEW_PROFILE.width
+    && profile.height === BOUNDED_VERTICAL_REVIEW_PROFILE.height
+    && profile.fps === BOUNDED_VERTICAL_REVIEW_PROFILE.fps
+    && Number.isFinite(profile.durationSeconds)
+    && profile.durationSeconds >= BOUNDED_VERTICAL_REVIEW_PROFILE.minDurationSeconds
+    && profile.durationSeconds <= BOUNDED_VERTICAL_REVIEW_PROFILE.maxDurationSeconds;
+  if (!profileMatches) {
+    throw new Error('expectedProfile must be the bounded 1080x1920, 30fps, 5-180s vertical review profile');
   }
 
   const pack = {
