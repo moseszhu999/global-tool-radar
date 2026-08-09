@@ -1,0 +1,152 @@
+name: M10 Material Finish Benchmark v1
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - apps/remotion-video/src/toolradar-material-finish-benchmark-v1.tsx
+      - .github/workflows/m10-material-finish-benchmark-v1.yml
+      - docs/video/evidence/m10-human-rejection-material-finish-2026-08-10.md
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      EXPECTED_FRAMES: '150'
+      EXPECTED_FPS: '30'
+      EXPECTED_WIDTH: '1080'
+      EXPECTED_HEIGHT: '1920'
+      SOURCE_FILE: apps/remotion-video/src/toolradar-material-finish-benchmark-v1.tsx
+      OUTPUT_FILE: apps/remotion-video/out/toolradar-material-finish-benchmark-v1.mp4
+    steps:
+      - name: Checkout exact benchmark head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify exact head and benchmark boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "${{ github.event.pull_request.head.sha }}"
+          test -z "$(git status --porcelain)"
+          grep -F 'MATERIAL_FINISH_BENCHMARK_FRAMES = 150' "$SOURCE_FILE"
+          grep -F 'MATERIAL_FINISH_BENCHMARK_FPS = 30' "$SOURCE_FILE"
+          grep -F 'ToolRadarMaterialFinishBenchmarkV1' "$SOURCE_FILE"
+          grep -F 'MATERIAL FINISH ONLY · NOT CANONICAL' "$SOURCE_FILE"
+          ! grep -Eq '(<Video|<Img|staticFile\(|https?://|execute_arbitrary_graph)' "$SOURCE_FILE"
+          python3 - <<'PY'
+          frames=150; fps=30
+          assert frames/fps == 5.0
+          print({'durationSeconds':frames/fps,'experiment':'material-finish-only','thirdPartyVisualAssets':False,'canonicalCandidateModified':False})
+          PY
+
+      - name: Install media and fonts
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg fontconfig fonts-noto-cjk
+          sudo fc-cache -f
+          fc-match 'Noto Sans CJK SC' | tee "$RUNNER_TEMP/font-match.txt"
+          grep -F 'NotoSansCJK' "$RUNNER_TEMP/font-match.txt" >/dev/null
+
+      - name: Install Remotion dependencies
+        working-directory: apps/remotion-video
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f package-lock.json ]; then
+            npm ci --no-audit --no-fund
+          else
+            npm install --no-audit --no-fund
+          fi
+          npx remotion browser ensure
+          npx remotion compositions src/toolradar-material-finish-benchmark-v1.tsx | tee "$RUNNER_TEMP/compositions.txt"
+          grep -F 'ToolRadarMaterialFinishBenchmarkV1' "$RUNNER_TEMP/compositions.txt"
+          grep -F "$EXPECTED_FRAMES" "$RUNNER_TEMP/compositions.txt"
+
+      - name: Render benchmark
+        working-directory: apps/remotion-video
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          npx remotion render \
+            src/toolradar-material-finish-benchmark-v1.tsx \
+            ToolRadarMaterialFinishBenchmarkV1 \
+            out/toolradar-material-finish-benchmark-v1.mp4 \
+            --codec=h264 \
+            --crf=16
+          test -s out/toolradar-material-finish-benchmark-v1.mp4
+
+      - name: Inspect exact media
+        shell: bash
+        run: |
+          set -euo pipefail
+          video="$GITHUB_WORKSPACE/$OUTPUT_FILE"
+          ffprobe -v error -show_streams -show_format -of json "$video" > "$RUNNER_TEMP/ffprobe.json"
+          ffprobe -v error -count_frames -select_streams v:0 -show_entries stream=nb_read_frames -of default=nw=1:nk=1 "$video" > "$RUNNER_TEMP/frame-count.txt"
+          ffmpeg -hide_banner -nostats -i "$video" -vf 'blackdetect=d=0.35:pix_th=0.10' -an -f null - 2> "$RUNNER_TEMP/blackdetect.txt" || true
+          ffmpeg -hide_banner -loglevel error -y -i "$video" -vf 'fps=1,scale=270:480,tile=5x1:padding=8:margin=8' -frames:v 1 "$RUNNER_TEMP/contact-sheet.jpg"
+          VIDEO="$video" PR_HEAD="${{ github.event.pull_request.head.sha }}" python3 - <<'PY'
+          import hashlib,json,os,pathlib
+          rt=pathlib.Path(os.environ['RUNNER_TEMP'])
+          probe=json.loads((rt/'ffprobe.json').read_text())
+          video=next(s for s in probe['streams'] if s['codec_type']=='video')
+          frames=int((rt/'frame-count.txt').read_text().strip())
+          assert frames == int(os.environ['EXPECTED_FRAMES']), frames
+          assert int(video['width']) == int(os.environ['EXPECTED_WIDTH'])
+          assert int(video['height']) == int(os.environ['EXPECTED_HEIGHT'])
+          data=pathlib.Path(os.environ['VIDEO']).read_bytes()
+          black=(rt/'blackdetect.txt').read_text(errors='ignore')
+          assert 'black_start:' not in black, black
+          receipt={
+            'schemaVersion':'toolradar.m10.material-finish-benchmark.v1',
+            'exactHead':os.environ['PR_HEAD'],
+            'compositionId':'ToolRadarMaterialFinishBenchmarkV1',
+            'controlledVariable':'material_finish_only',
+            'assetClasses':['signal_module','evidence_card','radar_scout'],
+            'durationSeconds':frames/int(os.environ['EXPECTED_FPS']),
+            'frames':frames,
+            'fps':int(os.environ['EXPECTED_FPS']),
+            'width':int(video['width']),
+            'height':int(video['height']),
+            'videoCodec':video['codec_name'],
+            'audioIncluded':False,
+            'thirdPartyVisualAssetsUsed':False,
+            'generatedFactualUiUsed':False,
+            'canonicalCandidateModified':False,
+            'outputSha256':hashlib.sha256(data).hexdigest(),
+            'outputBytes':len(data),
+            'controllerCreativeApproved':False,
+            'humanSelectedForCanonical':False,
+            'publicationAllowed':False,
+            'publicationPerformed':False,
+            'analyticsObserved':False,
+          }
+          (rt/'receipt.json').write_text(json.dumps(receipt,indent=2,ensure_ascii=False)+'\n')
+          print(json.dumps(receipt,indent=2,ensure_ascii=False))
+          PY
+
+      - name: Upload benchmark evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: toolradar-m10-material-finish-benchmark-v1
+          path: |
+            apps/remotion-video/out/toolradar-material-finish-benchmark-v1.mp4
+            ${{ runner.temp }}/contact-sheet.jpg
+            ${{ runner.temp }}/receipt.json
+            ${{ runner.temp }}/ffprobe.json
+            ${{ runner.temp }}/blackdetect.txt
+            ${{ runner.temp }}/font-match.txt
+          if-no-files-found: error
+          retention-days: 30
