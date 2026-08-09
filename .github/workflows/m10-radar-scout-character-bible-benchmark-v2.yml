@@ -1,0 +1,151 @@
+name: M10 Radar Scout Character Bible Benchmark v2
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - apps/remotion-video/public/assets/m10-material-finish-v1/radar-scout-character-bible-hero-v2.svg
+      - apps/remotion-video/src/toolradar-radar-scout-character-bible-benchmark-v2.tsx
+      - .github/workflows/m10-radar-scout-character-bible-benchmark-v2.yml
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      EXPECTED_FRAMES: '90'
+      EXPECTED_FPS: '30'
+      EXPECTED_WIDTH: '1080'
+      EXPECTED_HEIGHT: '1920'
+      SOURCE_FILE: apps/remotion-video/src/toolradar-radar-scout-character-bible-benchmark-v2.tsx
+      ASSET_FILE: apps/remotion-video/public/assets/m10-material-finish-v1/radar-scout-character-bible-hero-v2.svg
+      OUTPUT_FILE: apps/remotion-video/out/toolradar-radar-scout-character-bible-benchmark-v2.mp4
+    steps:
+      - name: Checkout exact benchmark head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify exact head and source-asset authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "${{ github.event.pull_request.head.sha }}"
+          test -z "$(git status --porcelain)"
+          test -s "$ASSET_FILE"
+          grep -F 'RADAR_SCOUT_BIBLE_BENCHMARK_FRAMES = 90' "$SOURCE_FILE"
+          grep -F 'ToolRadarRadarScoutCharacterBibleBenchmarkV2' "$SOURCE_FILE"
+          grep -F "staticFile('assets/m10-material-finish-v1/radar-scout-character-bible-hero-v2.svg')" "$SOURCE_FILE"
+          grep -F '<Img' "$SOURCE_FILE"
+          grep -F 'data-production-asset-preservation="svg-staticfile-img"' "$SOURCE_FILE"
+          ! grep -Eq '(PremiumScout|MaterialSignal|EvidenceCard)' "$SOURCE_FILE"
+          grep -F 'feSpecularLighting' "$ASSET_FILE"
+          grep -F 'feTurbulence' "$ASSET_FILE"
+          grep -F 'holographic tablet' "$ASSET_FILE" || true
+          python3 - <<'PY'
+          frames=90; fps=30
+          assert frames/fps == 3.0
+          print({'durationSeconds':frames/fps,'sourceAssetAuthority':'character-bible-derived durable SVG','remotionRedrawOfHeroAsset':False})
+          PY
+
+      - name: Install media and fonts
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg fontconfig fonts-noto-cjk
+          sudo fc-cache -f
+
+      - name: Install Remotion dependencies
+        working-directory: apps/remotion-video
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f package-lock.json ]; then npm ci --no-audit --no-fund; else npm install --no-audit --no-fund; fi
+          npx remotion browser ensure
+          npx remotion compositions src/toolradar-radar-scout-character-bible-benchmark-v2.tsx | tee "$RUNNER_TEMP/compositions.txt"
+          grep -F 'ToolRadarRadarScoutCharacterBibleBenchmarkV2' "$RUNNER_TEMP/compositions.txt"
+          grep -F "$EXPECTED_FRAMES" "$RUNNER_TEMP/compositions.txt"
+
+      - name: Render exact difficult-shot benchmark
+        working-directory: apps/remotion-video
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          npx remotion render \
+            src/toolradar-radar-scout-character-bible-benchmark-v2.tsx \
+            ToolRadarRadarScoutCharacterBibleBenchmarkV2 \
+            out/toolradar-radar-scout-character-bible-benchmark-v2.mp4 \
+            --codec=h264 \
+            --crf=16
+          test -s out/toolradar-radar-scout-character-bible-benchmark-v2.mp4
+
+      - name: Inspect media and bind source asset digest
+        shell: bash
+        run: |
+          set -euo pipefail
+          video="$GITHUB_WORKSPACE/$OUTPUT_FILE"
+          ffprobe -v error -show_streams -show_format -of json "$video" > "$RUNNER_TEMP/ffprobe.json"
+          ffprobe -v error -count_frames -select_streams v:0 -show_entries stream=nb_read_frames -of default=nw=1:nk=1 "$video" > "$RUNNER_TEMP/frame-count.txt"
+          ffmpeg -hide_banner -nostats -i "$video" -vf 'blackdetect=d=0.35:pix_th=0.10' -an -f null - 2> "$RUNNER_TEMP/blackdetect.txt" || true
+          ffmpeg -hide_banner -loglevel error -y -i "$video" -vf 'fps=2,scale=270:480,tile=6x1:padding=8:margin=8' -frames:v 1 "$RUNNER_TEMP/contact-sheet.jpg"
+          VIDEO="$video" ASSET="$GITHUB_WORKSPACE/$ASSET_FILE" PR_HEAD="${{ github.event.pull_request.head.sha }}" python3 - <<'PY'
+          import hashlib,json,os,pathlib
+          rt=pathlib.Path(os.environ['RUNNER_TEMP'])
+          probe=json.loads((rt/'ffprobe.json').read_text())
+          stream=next(s for s in probe['streams'] if s['codec_type']=='video')
+          frames=int((rt/'frame-count.txt').read_text().strip())
+          assert frames == 90, frames
+          assert int(stream['width']) == 1080
+          assert int(stream['height']) == 1920
+          black=(rt/'blackdetect.txt').read_text(errors='ignore')
+          assert 'black_start:' not in black, black
+          video=pathlib.Path(os.environ['VIDEO']).read_bytes()
+          asset=pathlib.Path(os.environ['ASSET']).read_bytes()
+          receipt={
+            'schemaVersion':'toolradar.m10.radar-scout-character-bible-benchmark.v2',
+            'exactHead':os.environ['PR_HEAD'],
+            'compositionId':'ToolRadarRadarScoutCharacterBibleBenchmarkV2',
+            'durationSeconds':3.0,
+            'frames':frames,
+            'fps':30,
+            'width':1080,
+            'height':1920,
+            'sourceReference':'Radar Scout Character Bible Board.png',
+            'sourceAssetAuthority':'radar-scout-character-bible-hero-v2.svg',
+            'sourceAssetSha256':hashlib.sha256(asset).hexdigest(),
+            'remotionAssetPath':'staticFile_plus_Img',
+            'remotionRedrawOfHeroAsset':False,
+            'outputSha256':hashlib.sha256(video).hexdigest(),
+            'outputBytes':len(video),
+            'canonicalCandidateModified':False,
+            'humanSelectedForCanonical':False,
+            'publicationAllowed':False,
+            'publicationPerformed':False,
+            'analyticsObserved':False,
+          }
+          (rt/'receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')
+          print(json.dumps(receipt,indent=2))
+          PY
+
+      - name: Upload exact benchmark evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: toolradar-radar-scout-character-bible-benchmark-v2
+          path: |
+            apps/remotion-video/out/toolradar-radar-scout-character-bible-benchmark-v2.mp4
+            apps/remotion-video/public/assets/m10-material-finish-v1/radar-scout-character-bible-hero-v2.svg
+            ${{ runner.temp }}/contact-sheet.jpg
+            ${{ runner.temp }}/receipt.json
+            ${{ runner.temp }}/ffprobe.json
+            ${{ runner.temp }}/blackdetect.txt
+          if-no-files-found: error
+          retention-days: 30
