@@ -1,0 +1,71 @@
+{
+  "schemaVersion": "toolradar.m10.render-command-provenance-snapshot.v1",
+  "truthBoundary": "post_render_provenance_snapshot_not_execution_input",
+  "sourceExactHead": "a5ac58e0ea05c5d8d8ca6861e1001b044bde44e0",
+  "mergedByPr": 104,
+  "workflow": {
+    "path": ".github/workflows/m10-explainer-production-polish-alpha-ab-v2.yml",
+    "runId": 31304399179,
+    "artifactId": 9035504064,
+    "artifactZipSha256": "cbb0a4b97201a3999b819486682d023d0d93061f1d97920c13a8c34fe51e4a3b"
+  },
+  "inputs": {
+    "baselineArtifactId": 9015703667,
+    "baselineMp4Sha256": "7081bd479d082dd3bbc18860de4005740c81f1e8420baef9ea8e1887c03a7add",
+    "baselineExactHead": "41b01578f5bd2a3c5ac6a9e3dc3993c6dc40608c",
+    "overlaySource": "apps/remotion-video/src/toolradar-explainer-production-polish-alpha-overlay-v2.tsx",
+    "animaticSource": "apps/remotion-video/src/toolradar-explainer-19s-animatic-v1.tsx",
+    "workspaceSource": "apps/web/workspace.html"
+  },
+  "commands": {
+    "overlayRender": [
+      "npx remotion render",
+      "src/toolradar-explainer-production-polish-alpha-overlay-v2.tsx",
+      "ToolRadarExplainerProductionPolishAlphaOverlayV2",
+      "out/production-polish-alpha-v2.webm",
+      "--codec=vp9",
+      "--pixel-format=yuva420p",
+      "--image-format=png"
+    ],
+    "finalComposite": [
+      "ffmpeg",
+      "-i <baseline-mp4>",
+      "-c:v libvpx-vp9 -i <true-alpha-overlay-webm>",
+      "-filter_complex [0:v][1:v]overlay=0:0:format=auto[v]",
+      "-map [v] -map 0:a:0",
+      "-c:v libx264 -crf 19 -pix_fmt yuv420p",
+      "-c:a copy -t 19.2 -movflags +faststart",
+      "apps/remotion-video/out/toolradar-explainer-19s-production-polish-alpha-v2.mp4"
+    ]
+  },
+  "output": {
+    "path": "apps/remotion-video/out/toolradar-explainer-19s-production-polish-alpha-v2.mp4",
+    "sha256": "1de5e8a6e25b8e25ef4f7a7db8a628941794687432ba0420eb956fdc0ba6f598",
+    "bytes": 3662040,
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "frames": 576,
+    "durationSeconds": 19.2,
+    "videoCodec": "h264",
+    "audioCodec": "aac",
+    "audioBitstreamPreserved": true
+  },
+  "inspection": {
+    "blackIntervalAtLeast035s": false,
+    "silenceIntervalAtLeast075s": false,
+    "integratedLoudnessMeasured": -16.0,
+    "truePeakMeasured": -1.5,
+    "productProofTextModified": false,
+    "generatedFactualUiUsed": false,
+    "thirdPartyVisualAssetsUsed": false
+  },
+  "nonClaims": {
+    "executionWasDrivenByThisSnapshot": false,
+    "humanWatchedFullCandidate": false,
+    "socialPlatformBusinessFitApprovedByHuman": false,
+    "publicationAllowed": false,
+    "publicationPerformed": false,
+    "analyticsObserved": false
+  }
+}
