@@ -44,13 +44,14 @@ jobs:
         run: |
           set -euo pipefail
           npm --prefix packages/shared-media-remotion-materializer test | tee "$RUNNER_TEMP/shared-media-remotion-materializer-v2.tap"
-          grep -Eq '# tests[[:space:]]+40$' "$RUNNER_TEMP/shared-media-remotion-materializer-v2.tap"
-          grep -Eq '# pass[[:space:]]+40$' "$RUNNER_TEMP/shared-media-remotion-materializer-v2.tap"
+          grep -Eq '# tests[[:space:]]+41$' "$RUNNER_TEMP/shared-media-remotion-materializer-v2.tap"
+          grep -Eq '# pass[[:space:]]+41$' "$RUNNER_TEMP/shared-media-remotion-materializer-v2.tap"
           grep -Eq '# fail[[:space:]]+0$' "$RUNNER_TEMP/shared-media-remotion-materializer-v2.tap"
           grep -F 'materializes course-shaped prepared inputs into four deterministic project files' "$RUNNER_TEMP/shared-media-remotion-materializer-v2.tap"
           grep -F 'candidate re-signing does not make a modified root source authoritative' "$RUNNER_TEMP/shared-media-remotion-materializer-v2.tap"
           grep -F 'exact verifier rejects a candidate from a different prepared source chain' "$RUNNER_TEMP/shared-media-remotion-materializer-v2.tap"
           grep -F 'observed generated files and prepared asset manifest must match exactly' "$RUNNER_TEMP/shared-media-remotion-materializer-v2.tap"
+          grep -F 'generated audio track uses exact prepared start and target window instead of segment naming conventions' "$RUNNER_TEMP/shared-media-remotion-materializer-v2.tap"
           grep -F 'candidate is deeply frozen' "$RUNNER_TEMP/shared-media-remotion-materializer-v2.tap"
       - name: Enforce runtime and truth boundary
         shell: bash
