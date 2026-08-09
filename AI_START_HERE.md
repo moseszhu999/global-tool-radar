@@ -1,137 +1,76 @@
-# AI_START_HERE — 下一次会话第一读
+# AI_START_HERE — Video Operation 当前第一读
 
-> 这是 `global-tool-radar` 的跨会话执行记忆入口。新的 AI / 窗口继续项目之前，**先读本文件，再重新读取 GitHub 最新 `main`、开放 PR、changed files、CI 和 artifact 状态**。这里的 SHA/PR 只记录最近交接点，不得替代实时核验。
+> 这是 `global-tool-radar` 的跨会话执行入口。新 AI / 新窗口继续项目之前，先读本文件，再实时刷新 GitHub `main`、开放 PR、changed files、CI、artifact 和 owner。本文中的 SHA/PR 只记录最近交接点，不能替代当前 tick 的实时状态。
 
-## 1. 每轮固定启动顺序
+## 1. 固定启动顺序
 
-1. 先读本文件。
-2. 刷新 `main` 最新 SHA、开放 PR、活跃分支、changed files / ownership / mergeability，避免与并发窗口冲突。
-3. 当前业务顺序：M9 真成片 → M10 成片质量/业务适配真人审核 → M11 抖音/Bilibili 真发布 → M12 真数据反馈。
-4. 每轮必须产生可验证实际进展：代码、测试、workflow、receipt、commit、PR、merge、artifact 或真实媒体之一；不能只写计划。
-5. 人工登录、验证码、账号授权、人工审核、付款等边界，只自动化到边界前，绝不伪造已完成。
+1. 读本文件。
+2. 读 `.agents/skills/toolradar-video-creative-director/SKILL.md`；涉及产品/UI 设计帧时再读 `toolradar-video-ui-director`。
+3. 刷新 latest main exact SHA、open PR exact heads、changed paths、owner、mergeability、CI 和真实媒体 artifact。
+4. 当前业务顺序保持：**M9 真成片 → M10 成片质量/业务适配真人审核 → M11 抖音/Bilibili 真发布 → M12 真数据反馈**。
+5. 每轮必须产生可验证实际进展；禁止为了“有进展”制造第二 owner、cosmetic commit 或无关基础设施。
 
-## 2. 防跑偏硬规则
+## 2. 当前最新交接（2026-08-09）
 
-默认判定为跑偏，除非是解除当前 M9→M12 阻塞的直接必要条件：
-
-- 新增与当前成片闭环无关的基础设施、抽象层、runner/orchestration/receipt 框架；
-- 已有可用链路时继续造第二套同类链路；
-- 为“以后可能有用”而新增与当前成片、质检、发布、数据回收无直接关系的代码；
-- 把测试、mock、preview、receipt、技术 render 当成真人批准或真实发布；
-- 在 M10 未通过时提前做 M11/M12 的形式完成；
-- 把“技术可播 / 教学清楚”的课件式视频误当成社交平台原生内容。
-
-发现跑偏时：记录下来 → 停止扩大 → 回到最早未完成业务步骤。
-
-## 3. 永久真实性边界
-
-绝不伪造或暗示：
-
-- 真实录屏 / 真人素材 / 真实旁白文件；
-- 最终 MP4（除非真实文件 + hash / ffprobe 等证据存在）；
-- 真人 M10 已看完 / 已批准；
-- 抖音或 Bilibili 已登录、上传、发布；
-- 平台内容 ID / URL / 发布时间 / API 验证；
-- 播放、点赞、评论、收藏、完播等真实指标；
-- 本地模型或第三方工具实际运行（除非有真实运行证据）。
-
-## 4. 已确认产品方向
-
-### Training OS / 教材培训视频
-
-`Remotion + 晓晓旁白 + PPT/界面演示` 已验证适合课程、教材、培训、SOP、产品说明、结构化教学。目标是清楚、稳定、可控、低成本批量生产。
-
-### ToolRadar / 社交视频运营
-
-旧 PPT/课件式候选被真人明确判定不适合直接作为抖音 / YouTube / Bilibili 社交运营成片。ToolRadar 当前方向已经明确为：
-
-**Social-native story structure + 2.5D/3D character storytelling + richer scene/material layer + UI/motion graphics as supporting props.**
-
-不要退回“更漂亮的 PPT”。
-
-社交视频优先级：
-
-1. 前 1–3 秒 hook；
-2. 冲突 / 挑战 / before-after / 反转；
-3. 人物、场景、动作、真实/自有素材、UI 道具等多来源画面；
-4. 角色与场景质感；
-5. BGM / SFX / ducking / 声音变化；
-6. 镜头密度与遮挡切换；
-7. 最后才是更多特效。
-
-## 5. 历史 social-native 基线
-
-### v1
-
-旧 Draft PR `#87` 证明：social-native 结构比 PPT 明显更对，但制作质量/素材丰富度不足。它不作为发布候选。
-
-### v2
-
-Draft PR `#89` 早期 v2 首次加入卡通主持人、前中后景、透视 UI 道具、人物参与砍卡片/收颜色/按 CTA、camera push/pull、parallax、impact/whoosh/click。
-
-v2 曾真实发现 scene 4→5 `0.77375s` 长静音，超过 `0.75s` social pacing gate。没有放宽门槛，而是候选输出删除 authored frames `511..526` 共 16 帧 / `0.533333s`，最终 884 帧。这个节奏修复已在 v3 正式写回 source timeline，不再依赖后处理删除。
-
-## 6. 当前 M10 候选：richer 2.5D character studio v3
-
-当前 Draft PR：`#89` — `M10 prototype richer 2.5D character studio social short v3`
-
-最近核验 exact candidate：
+最近观察到的 main：
 
 ```text
-head: 6288c9723428a449505c73e2399273860d2f0b29
-workflow: M10 Social Native 2.5D Character v3
-run/job: 31178102893 / 92864635407
-artifact: toolradar-social-native-25d-character-v3
-artifact id: 8993722523
-artifact digest: sha256:a7ab6ef01cb23d4d489c1151a51f08be22ad3e4e3d254564690317ded3b4fbf2
-MP4: toolradar-social-native-25d-character-v3.mp4
-MP4 SHA-256: 92e4c5af234a75c8e9da4aa2d67d9faa70af65b62b11713a0a273acec57d2c63
-bytes: 24,039,696
-1080x1920 · 30fps · 884 frames
-video timeline: 29.466667s
-container/audio: 29.600000s
-voice: zh-CN-XiaoxiaoNeural +10%
-narrationTimeStretchApplied=false
-authoredDeadAirCutBakedIntoTimeline=true
-proceduralMusicIncluded=true
-procedural SFX: impact / whoosh / click / sparkle
-finalMixLoudnessNormalized=true
-loudness target: -16 LUFS
-true-peak target: -1.5 dBTP
-measured integrated loudness: -15.66 LUFS
-measured true peak: -2.22 dBTP
-thirdPartyVisualAssetsUsed=false
+0eb4a4ee1bdf27567edc4e2c6cf2dd6a5daa3a42
+video: rebase promoted explainer v2 onto current main (#104)
 ```
 
-v3 相比 v2 的真实升级：
+重要收口：
 
-- 角色增加眉眼、眨眼、口型变化、耳朵/鼻子、夹克层次、鞋和边缘光；
-- 空舞台升级为持续存在的 `ToolRadar Design Rescue Lab` 环境；
-- 增加实验室招牌、工具架、植物、地面透视、灯光扫射、空气粒子和更厚的空间阴影；
-- 前景/中景/后景、遮挡、透视和飞出镜头的卡片更明显；
-- 原创程序化 116 BPM 轻电子 BGM；
-- impact / whoosh / click / sparkle 四层 SFX；
-- 16 帧节奏修复直接 baked into 884-frame authored timeline；
-- 最终混音从早期 `-19.71 LUFS / -6.37 dBTP` 提升并标准化到当前实测 `-15.66 LUFS / -2.22 dBTP`，只重编码音轨，不重编码 H.264 视频流。
+- PR #90 已 squash merge：ToolRadar Video Creative Director、Video UI Director、creative-quality gate、bounded ComfyUI policy、Shared Media MCP guardrails 正式进入 main。
+- PR #104 已 squash merge：将原 #93 的 14 个 explainer v2 文件按 immutable blob 原样 rebased 到现代 main；exact-head 12/12 workflows SUCCESS 后合并。
+- PR #93 已关闭且未合并：被 #104 干净 successor 取代。
+- PR #89 已关闭且未合并：旧 2.5D full-time-host 候选保留为历史比较/回滚证据，不再占当前 creative owner。
 
-技术/节奏检查：
+每个新窗口仍必须重新读取 open PR，不能仅凭以上交接判断 owner 空闲。
+
+## 3. 当前 M10 内部候选
+
+当前主干中的方向是 **flat-geometric explainer + deterministic real Workspace proof + four bounded Radar Scout cameos + true-alpha production typography/micro-motion polish v2**。
+
+#104 exact-head render evidence：
 
 ```text
-ci: 31178102885 SUCCESS
-remotion-final-composition: 31178102971 SUCCESS
-publication-feedback-report: 31178102895 SUCCESS
-M10 Social Native 2.5D Character v3: 31178102893 SUCCESS
+source exact head: a5ac58e0ea05c5d8d8ca6861e1001b044bde44e0
+workflow: M10 Explainer Production Polish Alpha A-B v2
+run: 31304399179
+artifact: 9035504064
+artifact ZIP digest: sha256:cbb0a4b97201a3999b819486682d023d0d93061f1d97920c13a8c34fe51e4a3b
+MP4: toolradar-explainer-19s-production-polish-alpha-v2.mp4
+MP4 SHA-256: 1de5e8a6e25b8e25ef4f7a7db8a628941794687432ba0420eb956fdc0ba6f598
+bytes: 3,662,040
+1080x1920 · 30fps · 576 frames · 19.2s
+video: H.264
+audio: AAC 48kHz stereo
+integrated loudness: -16.0 LUFS
+true peak: -1.5 dBTP
+chromaKeyApplied=false
+intermediateTransparency=vp9-alpha
+fourCameoStrategyPreserved=true
+productProofTextModified=false
+generatedFactualUiUsed=false
+thirdPartyVisualAssetsUsed=false
 black >=0.35s: 0
 silence >=0.75s @ -45dB: 0
-technicalMediaIntegrityPassed=true
-socialPacingSilenceGatePassed=true
 ```
 
-代表帧第一次复核时真实发现：`三个问题`、`看前后`、`AI 不替你审美` 三处未显式设色，浏览器默认黑色导致深背景可读性差。该 artifact 不作为当前候选。source 随后修为根容器继承浅色文字，重新 render 后代表帧已复核，三处均清楚可见。
+同一 exact head 的 12 个 observed workflows 全部 SUCCESS：generic CI、publication-feedback-report、remotion-final-composition、14→5 benchmark、structural animatic、audio review、product proof、full review、Radar Scout warmth A/B、four-cameo A/B、production polish A/B、true-alpha production polish A/B v2。
 
-## 7. 当前真实性状态 / M10 边界
+## 4. 当前 creative/controller 结论
 
-即使 v3 technical CI 全绿、代表帧已复核、响度已标准化，也仍然不能宣称真人 M10 通过：
+`toolradar-video-creative-director` 的原则已经成为主干规则：先诊断 story / static visual development / UI / storyboard / motion / sound / render infrastructure，再选择工具；不要用更多 glow、particles、camera movement 或 Remotion code 掩盖静态视觉问题。
+
+当前 v2 已通过技术媒体检查；controller 对时间线抽样和关键 Human Gate / loop 窗口的动态复核未发现明显 headline flicker、Human Gate 语义丢失、portal→opening 断裂或 real Workspace proof 可读性回退。
+
+这些结论只允许写成 controller-level technical/dynamic review，**不能升级成人类已完整观看或平台适配已批准**。
+
+## 5. 现在唯一最早业务阻塞：M10 人工完整审片
+
+当前 truth 必须保持：
 
 ```text
 humanWatchedFullCandidate=false
@@ -141,40 +80,65 @@ publicationPerformed=false
 analyticsObserved=false
 ```
 
-当前真正的下一阻塞点：**真人完整观看 exact v3 MP4，并明确接受或拒绝。**
+下一真实业务动作：由真人完整观看 exact MP4 `1de5e8...`，明确给出 ACCEPT 或 REJECT。
 
-如果接受：
+### 若 ACCEPT
 
-- 把 #89 的一次性 render carrier 清理掉，只保留可复用 production code / evidence；
-- 再决定是否进入 M11 真发布。
+- 记录 exact artifact / MP4 SHA 与人工接受结论；
+- 将 M10 标记为人类通过；
+- 才允许进入 M11 发布准备；
+- 真正登录、上传、发布仍是独立 consequential action，不从 CI/render/merge 自动推断授权。
 
-如果拒绝：
+### 若 REJECT
 
-- 只按真人反馈改画面/角色/声音/节奏，不另造基础设施；
-- 继续保持 M11 blocked。
+- 只针对具体反馈选择一个最主要缺陷层；
+- 按 Creative Director Skill 从最便宜验证阶段开始；
+- 尽量单变量 A/B；
+- 不新增另一套候选 owner，不盲目堆 v3 特效。
 
-## 8. 并发 PR 边界（继续前实时重验）
+## 6. Shared Media 当前可复用主干能力
 
-最近核验开放 PR：
+已合并主线覆盖：
 
-- `#88` — shared `media.render.v1` contract，独立 owner；不要把视频样片工作混入；
-- `#89` — 当前 ToolRadar social-native 2.5D v3，Draft。
+```text
+media.render.v1 canonical contract
+→ Shared Media MCP adapter
+→ canonical render-plan compiler
+→ preparation manifest
+→ authorized preparation executor
+→ prepared media qualification
+→ Remotion materializer v2
+→ Mac staging bridge v1
+→ fail-closed Mac compatibility
+→ canonical Evidence Collector
+```
 
-最近核验 #88 与 #89 无 changed-file overlap。任何新窗口仍必须重新检查。
+这些是共享技术能力，不拥有 ToolRadar creative / human approval / publication / analytics 真相。不要再造第二套 render schema、TTS、caption timing、Mac transport 或 evidence collector。
 
-## 9. 跑偏 / 复盘记忆
+## 7. 防跑偏硬规则
 
-- 项目曾多次向 runner/orchestration/receipt 基础设施扩张；以后新基础设施必须证明是当前成片闭环的直接必要条件。
-- 旧 M10 曾把系统 TTS 强压固定时长导致声音断续；以后自然语音决定时间线，不使用全局硬拉伸。
-- Ubuntu render 曾缺 CJK 字体导致中文 tofu 方框；真人审片前必须实际检查代表帧，不得只看 ffprobe/render success。
-- AAC 尾部几十毫秒 padding 是正常编码现象；用有界校验，不用脆弱容器时长等式。
-- 技术可播 ≠ 教学可用 ≠ 社交平台可运营。
-- 代表帧检查确实抓到过 CI 无法发现的黑字/深背景可读性问题，因此后续每个发布候选都必须保留视觉帧复核。
-- 当前最重要的判断不是“能不能播”，而是：**v3 的 richer character + studio environment 是否达到真人愿意继续精修并最终发布的方向。**
+除非直接解除当前最早业务阻塞，否则默认不做：
 
-## 10. 每轮结束格式
+- 新 runner/orchestration/receipt 框架；
+- 第二套 Shared Media/render/Mac 实现；
+- 与当前候选、人审、发布或反馈闭环无关的“以后可能有用”抽象；
+- 把 mock、Preview、CI、render success、controller review 当真人批准；
+- 在 M10 人工门未通过时假装完成 M11/M12；
+- 把平台登录、上传、发布、账号、验证码、付款等 consequential action 当作普通代码步骤。
 
-最终汇报尽量只用：
+## 8. 永久真实性边界
+
+绝不伪造或暗示：
+
+- 真人完整观看/批准；
+- 抖音、Bilibili、YouTube 登录/上传/发布；
+- 内容 ID、URL、发布时间；
+- 播放、点赞、评论、收藏、完播、转化等真实指标；
+- 本地/第三方工具已执行，除非有真实执行证据。
+
+## 9. 每轮结束格式
+
+优先只汇报：
 
 - `### 本轮实际完成`
 - `### 验证证据`
@@ -182,4 +146,4 @@ analyticsObserved=false
 - `### 整体进度变化`
 - `### 下一阻塞点`
 
-每轮生成一个新的、可点击的独立 HTML 进度文件放在 `/mnt/data`，并在最终回复给出链接。
+每轮生成一个新的、可点击的独立 HTML 进度/审片文件放在 `/mnt/data` 并给出链接。
