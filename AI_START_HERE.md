@@ -15,30 +15,31 @@
 最近观察到的 main：
 
 ```text
-0eb4a4ee1bdf27567edc4e2c6cf2dd6a5daa3a42
-video: rebase promoted explainer v2 onto current main (#104)
+7f86239d6e56522d2cec2138defae32116380dc9
+video: import verified rendered candidates into canonical M10 lifecycle (#108)
 ```
 
 重要收口：
 
 - PR #90 已 squash merge：ToolRadar Video Creative Director、Video UI Director、creative-quality gate、bounded ComfyUI policy、Shared Media MCP guardrails 正式进入 main。
-- PR #104 已 squash merge：将原 #93 的 14 个 explainer v2 文件按 immutable blob 原样 rebased 到现代 main；exact-head 12/12 workflows SUCCESS 后合并。
-- PR #93 已关闭且未合并：被 #104 干净 successor 取代。
-- PR #89 已关闭且未合并：旧 2.5D full-time-host 候选保留为历史比较/回滚证据，不再占当前 creative owner。
+- PR #104 已 squash merge：将 promoted explainer v2 的 14 个文件按 immutable blob rebased 到现代 main；exact-head 12/12 observed workflows SUCCESS 后合并。
+- PR #106 已合并：M10 bounded social-native review profile 可被 canonical quality approval 正确处理。
+- PR #107 已合并：canonical evidence 绑定 exact render provenance snapshot。
+- PR #108 已 squash merge：允许已验证的 GitHub Actions render 以 `render_execution_evidence` 进入 canonical M10 lifecycle，同时明确 `originalRenderGateProven=false`、`historicalStagesProven=false`、`publicationAllowed=false`；公开 event API 绕过已 fail-closed 修复。
+- 最近刷新时 open PR = 0；每个新窗口仍必须重新读取，不能仅凭此交接判断 owner 空闲。
 
-每个新窗口仍必须重新读取 open PR，不能仅凭以上交接判断 owner 空闲。
-
-## 3. 当前 M10 内部候选
+## 3. 当前 M10 exact candidate
 
 当前主干中的方向是 **flat-geometric explainer + deterministic real Workspace proof + four bounded Radar Scout cameos + true-alpha production typography/micro-motion polish v2**。
 
-#104 exact-head render evidence：
+Exact render evidence：
 
 ```text
 source exact head: a5ac58e0ea05c5d8d8ca6861e1001b044bde44e0
 workflow: M10 Explainer Production Polish Alpha A-B v2
-run: 31304399179
-artifact: 9035504064
+workflow run: 31304399179
+artifact id: 9035504064
+artifact name: toolradar-explainer-production-polish-alpha-ab-v2
 artifact ZIP digest: sha256:cbb0a4b97201a3999b819486682d023d0d93061f1d97920c13a8c34fe51e4a3b
 MP4: toolradar-explainer-19s-production-polish-alpha-v2.mp4
 MP4 SHA-256: 1de5e8a6e25b8e25ef4f7a7db8a628941794687432ba0420eb956fdc0ba6f598
@@ -58,19 +59,42 @@ black >=0.35s: 0
 silence >=0.75s @ -45dB: 0
 ```
 
-同一 exact head 的 12 个 observed workflows 全部 SUCCESS：generic CI、publication-feedback-report、remotion-final-composition、14→5 benchmark、structural animatic、audio review、product proof、full review、Radar Scout warmth A/B、four-cameo A/B、production polish A/B、true-alpha production polish A/B v2。
+Fresh controller re-verification receipt:
 
-## 4. 当前 creative/controller 结论
+```text
+docs/video/evidence/m10-explainer-v2-controller-reverification-2026-08-09.md
+```
 
-`toolradar-video-creative-director` 的原则已经成为主干规则：先诊断 story / static visual development / UI / storyboard / motion / sound / render infrastructure，再选择工具；不要用更多 glow、particles、camera movement 或 Remotion code 掩盖静态视觉问题。
+That receipt records a fresh GitHub Actions artifact retrieval, recomputed MP4 SHA-256, fresh ffprobe, artifact receipt inspection, and ten-point controller frame sampling. It remains controller-level evidence only.
 
-当前 v2 已通过技术媒体检查；controller 对时间线抽样和关键 Human Gate / loop 窗口的动态复核未发现明显 headline flicker、Human Gate 语义丢失、portal→opening 断裂或 real Workspace proof 可读性回退。
+## 4. Canonical M10 lifecycle state
 
-这些结论只允许写成 controller-level technical/dynamic review，**不能升级成人类已完整观看或平台适配已批准**。
+PR #108 committed project-bound evidence:
+
+```text
+docs/video/evidence/m10-explainer-v2-render-completed-import-ledger.json
+docs/video/evidence/m10-explainer-v2-quality-review-pack.json
+```
+
+The exact candidate is now truthfully lifecycle-bound at `RENDER_COMPLETED` without pretending the historical render authorization path ran through MacRunner.
+
+The current quality-review pack is derived from the canonical render-completed ledger and keeps all ten human-review verdicts unset until real review.
+
+Do not confuse any of the following layers:
+
+```text
+product fact
+creative framing
+technical render evidence
+controller creative/visual judgment
+human creative approval
+publication authorization / publication action
+observed analytics
+```
 
 ## 5. 现在唯一最早业务阻塞：M10 人工完整审片
 
-当前 truth 必须保持：
+Current truth must remain:
 
 ```text
 humanWatchedFullCandidate=false
@@ -80,21 +104,21 @@ publicationPerformed=false
 analyticsObserved=false
 ```
 
-下一真实业务动作：由真人完整观看 exact MP4 `1de5e8...`，明确给出 ACCEPT 或 REJECT。
+下一真实业务动作：由真人从头到尾完整观看 exact MP4 `1de5e8...`，对 committed 10-item M10 review pack 给出明确 `ACCEPT` 或 `REJECT`。
 
 ### 若 ACCEPT
 
 - 记录 exact artifact / MP4 SHA 与人工接受结论；
-- 将 M10 标记为人类通过；
-- 才允许进入 M11 发布准备；
-- 真正登录、上传、发布仍是独立 consequential action，不从 CI/render/merge 自动推断授权。
+- 才允许 canonical lifecycle 进入 `QUALITY_APPROVED`；
+- 随后可进入 M11 发布准备；
+- 真正登录、上传、发布仍是独立 consequential action，不能从 CI/render/merge 自动推断授权。
 
 ### 若 REJECT
 
 - 只针对具体反馈选择一个最主要缺陷层；
-- 按 Creative Director Skill 从最便宜验证阶段开始；
-- 尽量单变量 A/B；
-- 不新增另一套候选 owner，不盲目堆 v3 特效。
+- 按 Creative Director Skill 先分类：story/hook、static visual development、product UI hierarchy、storyboard/coverage、motion/timing、sound、render/evidence infrastructure；
+- 从最便宜验证阶段开始，尽量单变量 A/B；
+- 不新增另一套候选 owner，不盲目堆 glow、particles、camera movement 或更多 Remotion code。
 
 ## 6. Shared Media 当前可复用主干能力
 
