@@ -1,0 +1,105 @@
+{
+  "schemaVersion": "toolradar.final-video-quality-review-pack.v1",
+  "truthBoundary": "granular_human_review_tasks_prepared",
+  "projectId": "video-project:toolradar-explainer-v2:2026-08-09",
+  "finalVideo": {
+    "path": "apps/remotion-video/out/toolradar-explainer-19s-production-polish-alpha-v2.mp4",
+    "sha256": "1de5e8a6e25b8e25ef4f7a7db8a628941794687432ba0420eb956fdc0ba6f598",
+    "receiptDigest": "56ff8a2f3f8738facb7e86c656159e7c149036abf324f82a48e82881e8359be5",
+    "renderCommandManifestSha256": "b3a0f5c823af4be875510d27ebbd65dc6de9907463d1b9e10eea682397060991",
+    "expectedProfile": {
+      "width": 1080,
+      "height": 1920,
+      "fps": 30,
+      "durationSeconds": 19.2
+    }
+  },
+  "reviewerInstructionsVersion": "2026-08-09",
+  "checks": [
+    {
+      "id": "visual_integrity",
+      "instruction": "画面无黑帧、花屏、卡顿、异常裁切或明显压缩损伤",
+      "required": true,
+      "allowedVerdicts": ["PASS", "FAIL", "NOT_REVIEWED"],
+      "verdict": null,
+      "note": null
+    },
+    {
+      "id": "owned_media_match",
+      "instruction": "画面、配音、音乐、音效和 UI 证据与已声明来源一致，素材来源清楚可追溯",
+      "required": true,
+      "allowedVerdicts": ["PASS", "FAIL", "NOT_REVIEWED"],
+      "verdict": null,
+      "note": null
+    },
+    {
+      "id": "narration_sync",
+      "instruction": "旁白或对白与画面节奏同步，无明显抢拍、拖拍、断句错误或语义错位",
+      "required": true,
+      "allowedVerdicts": ["PASS", "FAIL", "NOT_REVIEWED"],
+      "verdict": null,
+      "note": null
+    },
+    {
+      "id": "subtitle_accuracy",
+      "instruction": "字幕和屏幕文字无错别字、截断、遮挡、错误事实或超出安全区",
+      "required": true,
+      "allowedVerdicts": ["PASS", "FAIL", "NOT_REVIEWED"],
+      "verdict": null,
+      "note": null
+    },
+    {
+      "id": "claim_accuracy",
+      "instruction": "产品事实、功能、限制、价格与结论和可见证据一致，不把未知状态写成已确认事实",
+      "required": true,
+      "allowedVerdicts": ["PASS", "FAIL", "NOT_REVIEWED"],
+      "verdict": null,
+      "note": null
+    },
+    {
+      "id": "privacy_redaction",
+      "instruction": "最终画面中不包含不应公开的个人信息、账号信息或通知内容",
+      "required": true,
+      "allowedVerdicts": ["PASS", "FAIL", "NOT_REVIEWED"],
+      "verdict": null,
+      "note": null
+    },
+    {
+      "id": "audio_quality",
+      "instruction": "人声、音乐和音效清晰且层次合理，响度稳定，无爆音、底噪或明显削波",
+      "required": true,
+      "allowedVerdicts": ["PASS", "FAIL", "NOT_REVIEWED"],
+      "verdict": null,
+      "note": null
+    },
+    {
+      "id": "platform_framing",
+      "instruction": "1080×1920 竖屏构图在手机观看速度下仍保持主体、文字和关键动作可读",
+      "required": true,
+      "allowedVerdicts": ["PASS", "FAIL", "NOT_REVIEWED"],
+      "verdict": null,
+      "note": null
+    },
+    {
+      "id": "cta_and_branding",
+      "instruction": "品牌名、CTA、免责声明或 Human Gate（若设计中存在）准确、完整、可读；不存在的元素不强制添加",
+      "required": true,
+      "allowedVerdicts": ["PASS", "FAIL", "NOT_REVIEWED"],
+      "verdict": null,
+      "note": null
+    },
+    {
+      "id": "full_playback",
+      "instruction": "审片人已从头到尾完整播放最终 MP4，并重点检查开场、关键转场、Human Gate 和结尾循环",
+      "required": true,
+      "allowedVerdicts": ["PASS", "FAIL", "NOT_REVIEWED"],
+      "verdict": null,
+      "note": null
+    }
+  ],
+  "officialReviewSchema": "toolradar.final-render-quality-review.v1",
+  "officialReviewCreated": false,
+  "publicationAllowed": false,
+  "createdAt": "2026-08-09T14:02:00.000Z",
+  "digest": "5e444ceb20cab43669045eefd384bc9f31b793bc769fffe84c176597c1d40641"
+}
