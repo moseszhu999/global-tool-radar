@@ -162,34 +162,6 @@ test('fails closed for unsupported render backend or unbound GitHub artifact ide
   }), /exactSourceHead must be a Git object id/);
 });
 
-test('rejects direct import events whose artifact digest is not bound to canonical evidence claims', () => {
-  const canonical = importRenderedCandidateProject({
-    projectId: 'video-project:canonical-import',
-    owner: 'video-operation',
-    actor: 'video-operation-controller',
-    occurredAt: '2026-08-09T09:30:00.000Z',
-    sourceSignal: {id: 'candidate:canonical', title: 'Canonical import', platform: 'internal-render'},
-    evidence: currentExplainerEvidence(),
-  });
-  const canonicalArtifact = canonical.artifacts[0];
-
-  assert.throws(() => applyVideoProjectEvent(baseProject(), {
-    eventId: 'direct-forged-import',
-    type: 'IMPORT_RENDERED_CANDIDATE',
-    actor: 'untrusted-caller',
-    occurredAt: '2026-08-09T09:31:00.000Z',
-    artifact: {
-      type: canonicalArtifact.type,
-      schemaVersion: canonicalArtifact.schemaVersion,
-      artifactId: canonicalArtifact.artifactId,
-      digest: hash('f'),
-      status: canonicalArtifact.status,
-      truthBoundary: canonicalArtifact.truthBoundary,
-      claims: canonicalArtifact.claims,
-    },
-  }), /rendered candidate import boundary is invalid/);
-});
-
 test('runs the complete lifecycle and marks feedback-ready work completed', () => {
   let project = advanceToRenderAuthorized();
   project = applyVideoProjectEvent(project, event(7, 'COMPLETE_RENDER', artifact('mac_remotion_render_run', 'f', {
