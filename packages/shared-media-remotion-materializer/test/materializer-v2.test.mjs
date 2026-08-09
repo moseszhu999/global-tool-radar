@@ -47,7 +47,7 @@ const makeSourceChain = ({voiceMode='synthesize', captionMode='auto', visualKind
     renderPlanDigest:plan.renderPlanDigest, preparationManifestDigest:manifest.preparationManifestDigest, preparedInputsDigest:prepared.preparedInputsDigest,
     qualifiedAt:'2026-08-09T00:00:01.000Z',
     visualInspections:[{artifactId:'prepared-visual-1', sha256:imageSha, mediaType:request.visualAssets[0].mediaType, kind:'image', width:1920, height:1080, qualified:true}],
-    voiceTiming:voiceMode === 'synthesize' ? [{artifactId:'prepared-voice-1', sha256:audioSha, mediaType:'audio/wav', kind:'audio', actualDurationSeconds:0.75, actualDurationMsCeil:750, targetDurationMs:narration.durationMs, trailingSilenceMs:narration.durationMs-750, fitsWindow:true, segmentId:narration.segmentId, sourceShotId:narration.shotId, playbackStartMs:narration.startMs}] : [],
+    voiceTiming:voiceMode === 'synthesize' ? [{artifactId:'prepared-voice-1', sha256:audioSha, mediaType:'audio/wav', kind:'audio', actualDurationSeconds:0.2, actualDurationMsCeil:200, targetDurationMs:narration.durationMs, trailingSilenceMs:narration.durationMs-200, fitsWindow:true, segmentId:narration.segmentId, sourceShotId:narration.shotId, playbackStartMs:narration.startMs}] : [],
     captionQualification:{mode:captionMode, format:captionMode==='auto'?'burn-in':'none', cueCount:prepared.captionResult.cues.length, cuesBoundToExactTimeline:captionMode==='auto', providedCaptionPayloadSupported:false},
     policy:{timeStretchApplied:false, trimApplied:false, audioOverrunAllowed:false, shortAudioTrailingSilenceAllowed:true},
     qualificationPassed:true, materializationAuthorized:false, transportSelected:false, bindingCreated:false, renderAuthorized:false, consumerDomainDecisionInferred:false, businessOutcomeInferred:false,
@@ -63,11 +63,8 @@ test('materializes course-shaped prepared inputs into four deterministic project
   assert.equal(candidate.schemaVersion, 'shared-media.remotion-materialization-candidate.v2');
   assert.equal(candidate.compositionId, 'SharedMediaRenderV2');
   assert.deepEqual(candidate.files.map((f)=>f.path).sort(), ['shared-media-materialization.json','src/index.ts','src/media-manifest.ts','src/root.tsx']);
-  assert.equal(candidate.expectedTotalFrames, 30);
-  assert.equal(candidate.expectedDurationSeconds, 1);
-  assert.equal(candidate.preparedAssetManifest.length, 2);
-  assert.equal(candidate.captionCues.length, 1);
-  assert.equal(candidate.renderAuthorized, false);
+  assert.equal(candidate.expectedTotalFrames, 30); assert.equal(candidate.expectedDurationSeconds, 1);
+  assert.equal(candidate.preparedAssetManifest.length, 2); assert.equal(candidate.captionCues.length, 1); assert.equal(candidate.renderAuthorized, false);
   validateSharedMediaRemotionMaterializationV2(candidate);
 });
 
@@ -80,18 +77,18 @@ test('same canonical source chain produces byte-identical candidate', () => {
 
 test('candidate verifies against exact plan, manifest, prepared receipt and qualification', () => {
   const source = makeSourceChain();
-  const candidate = materializeSharedMediaRemotionV2(source);
+  const candidate = materializeSharedMediaRemotionV2({plan:source.plan, manifest:source.manifest, preparedReceipt:source.prepared, qualificationReceipt:source.qualification});
   assert.equal(verifySharedMediaRemotionMaterializationV2({candidate, plan:source.plan, manifest:source.manifest, preparedReceipt:source.prepared, qualificationReceipt:source.qualification}), true);
 });
 
 test('candidate re-signing does not make a modified root source authoritative', () => {
-  const source = makeSourceChain(); const candidate = materializeSharedMediaRemotionV2(source); const tampered = structuredClone(candidate);
+  const source = makeSourceChain(); const candidate = materializeSharedMediaRemotionV2({plan:source.plan, manifest:source.manifest, preparedReceipt:source.prepared, qualificationReceipt:source.qualification}); const tampered = structuredClone(candidate);
   tampered.files.find((f)=>f.path==='src/root.tsx').content += '\n// tampered';
   expectCode(()=>validateSharedMediaRemotionMaterializationV2(tampered), 'CANDIDATE_INTEGRITY_MISMATCH');
 });
 
 test('exact verifier rejects a candidate from a different prepared source chain', () => {
-  const source = makeSourceChain(); const candidate = materializeSharedMediaRemotionV2(source); const changed = makeSourceChain({durationMs:2000});
+  const source = makeSourceChain(); const candidate = materializeSharedMediaRemotionV2({plan:source.plan, manifest:source.manifest, preparedReceipt:source.prepared, qualificationReceipt:source.qualification}); const changed = makeSourceChain({durationMs:2000});
   expectCode(()=>verifySharedMediaRemotionMaterializationV2({candidate, plan:changed.plan, manifest:changed.manifest, preparedReceipt:changed.prepared, qualificationReceipt:changed.qualification}), 'SOURCE_SEMANTICS_MISMATCH');
 });
 
@@ -104,32 +101,31 @@ test('provided voice fails closed in v2', () => {
 
 test('video visual is rejected by the existing qualification boundary', () => {
   const source = makeSourceChain({visualKind:'video'});
-  expectCode(()=>materializeSharedMediaRemotionV2(source), 'VISUAL_MEDIA_UNSUPPORTED_V1');
+  expectCode(()=>materializeSharedMediaRemotionV2({plan:source.plan, manifest:source.manifest, preparedReceipt:source.prepared, qualificationReceipt:source.qualification}), 'VISUAL_MEDIA_UNSUPPORTED_V1');
 });
 
 test('non-integer frame mapping fails closed', () => {
   const source = makeSourceChain({durationMs:333});
-  expectCode(()=>materializeSharedMediaRemotionV2(source), 'NON_INTEGER_FRAME_MAPPING');
+  expectCode(()=>materializeSharedMediaRemotionV2({plan:source.plan, manifest:source.manifest, preparedReceipt:source.prepared, qualificationReceipt:source.qualification}), 'NON_INTEGER_FRAME_MAPPING');
 });
 
 test('caption cue timing is mapped deterministically to frames', () => {
-  const source = makeSourceChain(); const candidate = materializeSharedMediaRemotionV2(source);
+  const source = makeSourceChain(); const candidate = materializeSharedMediaRemotionV2({plan:source.plan, manifest:source.manifest, preparedReceipt:source.prepared, qualificationReceipt:source.qualification});
   assert.deepEqual(candidate.captionCues[0], {cueId:'caption-narration-shot-1', segmentId:'narration-shot-1', shotId:'shot-1', startMs:0, endMs:1000, text:'这是一个确定性的测试片段。', from:0, durationInFrames:30});
 });
 
 test('generated source uses staticFile for staged assets and has no product domain vocabulary', () => {
-  const source = makeSourceChain(); const candidate = materializeSharedMediaRemotionV2(source); const root = candidate.files.find((f)=>f.path==='src/root.tsx').content;
+  const source = makeSourceChain(); const candidate = materializeSharedMediaRemotionV2({plan:source.plan, manifest:source.manifest, preparedReceipt:source.prepared, qualificationReceipt:source.qualification}); const root = candidate.files.find((f)=>f.path==='src/root.tsx').content;
   assert.match(root, /staticFile\(/); assert.match(root, /<Img/); assert.match(root, /<Audio/); assert.doesNotMatch(root, /TrainingOS|ToolRadar|courseId|studentId|publicationAllowed/);
 });
 
 test('candidate remains pure and contains no authorization or transport operation', () => {
-  const source = makeSourceChain(); const candidate = materializeSharedMediaRemotionV2(source);
-  assert.equal(candidate.renderAuthorized, false); assert.equal(candidate.bindingCreated, false);
-  assert.doesNotMatch(candidate.files.find((f)=>f.path==='src/root.tsx').content, /create_or_update|render_existing|Authorization|Bearer /);
+  const source = makeSourceChain(); const candidate = materializeSharedMediaRemotionV2({plan:source.plan, manifest:source.manifest, preparedReceipt:source.prepared, qualificationReceipt:source.qualification});
+  assert.equal(candidate.renderAuthorized, false); assert.equal(candidate.bindingCreated, false); assert.doesNotMatch(candidate.files.find((f)=>f.path==='src/root.tsx').content, /create_or_update|render_existing|Authorization|Bearer /);
 });
 
 test('observed generated files and prepared asset manifest must match exactly', () => {
-  const source = makeSourceChain(); const candidate = materializeSharedMediaRemotionV2(source);
+  const source = makeSourceChain(); const candidate = materializeSharedMediaRemotionV2({plan:source.plan, manifest:source.manifest, preparedReceipt:source.prepared, qualificationReceipt:source.qualification});
   const observedFiles = candidate.generatedFileManifest.map((x)=>({...x})); const observedAssets = candidate.preparedAssetManifest.map((x)=>({...x}));
   assert.equal(verifyObservedRemotionMaterializationV2({candidate, observedFiles, observedPreparedAssets:observedAssets}), true);
   const bad = structuredClone(observedAssets); bad[0].sha256 = sha('different');
@@ -139,15 +135,15 @@ test('observed generated files and prepared asset manifest must match exactly', 
 test('unsupported prepared media type is rejected by exact source semantics', () => {
   const source = makeSourceChain(); const changed = structuredClone(source.prepared);
   changed.visualArtifacts[0].mediaType = 'application/octet-stream'; changed.preparedInputsDigest = computePreparedInputsDigestV1(changed);
-  expectCode(()=>materializeSharedMediaRemotionV2({...source, preparedReceipt:changed}), 'SOURCE_SEMANTICS_MISMATCH');
+  expectCode(()=>materializeSharedMediaRemotionV2({plan:source.plan, manifest:source.manifest, preparedReceipt:changed, qualificationReceipt:source.qualification}), 'SOURCE_SEMANTICS_MISMATCH');
 });
 
 test('none voice and none captions produce a visual-only prepared asset set', () => {
-  const source = makeSourceChain({voiceMode:'none', captionMode:'none'}); const candidate = materializeSharedMediaRemotionV2(source);
+  const source = makeSourceChain({voiceMode:'none', captionMode:'none'}); const candidate = materializeSharedMediaRemotionV2({plan:source.plan, manifest:source.manifest, preparedReceipt:source.prepared, qualificationReceipt:source.qualification});
   assert.equal(candidate.preparedAssetManifest.length, 1); assert.equal(candidate.preparedAssetManifest[0].role, 'visual'); assert.equal(candidate.captionCues.length, 0);
 });
 
 test('candidate is deeply frozen', () => {
-  const source = makeSourceChain(); const candidate = materializeSharedMediaRemotionV2(source);
+  const source = makeSourceChain(); const candidate = materializeSharedMediaRemotionV2({plan:source.plan, manifest:source.manifest, preparedReceipt:source.prepared, qualificationReceipt:source.qualification});
   assert.equal(Object.isFrozen(candidate), true); assert.equal(Object.isFrozen(candidate.files), true); assert.equal(Object.isFrozen(candidate.files[0]), true);
 });
