@@ -174,76 +174,6 @@ const renderedCandidateClaims = (evidence) => Object.freeze({
   historicalStagesProven: false,
 });
 
-const requiredPositiveNumber = (value, field, {integer = false} = {}) => {
-  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0 || (integer && !Number.isInteger(value))) {
-    throw new TypeError(`${field} must be a positive ${integer ? 'integer' : 'number'}`);
-  }
-  return value;
-};
-
-const normalizeRenderProfile = (profile, field) => {
-  if (!profile || typeof profile !== 'object' || Array.isArray(profile)) {
-    throw new TypeError(`${field} must be an object`);
-  }
-  return Object.freeze({
-    width: requiredPositiveNumber(profile.width, `${field}.width`, {integer: true}),
-    height: requiredPositiveNumber(profile.height, `${field}.height`, {integer: true}),
-    fps: requiredPositiveNumber(profile.fps, `${field}.fps`),
-    durationSeconds: requiredPositiveNumber(profile.durationSeconds, `${field}.durationSeconds`),
-  });
-};
-
-const normalizeRenderExecutionEvidence = (evidence, field = 'evidence') => {
-  if (!evidence || typeof evidence !== 'object' || Array.isArray(evidence)) {
-    throw new TypeError(`${field} must be an object`);
-  }
-  const executionBackend = requiredText(evidence.executionBackend, `${field}.executionBackend`).toLowerCase();
-  if (!/^[a-z][a-z0-9_-]{1,63}$/.test(executionBackend)) {
-    throw new TypeError(`${field}.executionBackend must be a normalized backend id`);
-  }
-  return Object.freeze({
-    schemaVersion: 'toolradar.render-execution-evidence.v1',
-    executionBackend,
-    exactSourceHead: requiredGitOid(evidence.exactSourceHead, `${field}.exactSourceHead`),
-    provenanceSnapshotDigest: requiredSha256(evidence.provenanceSnapshotDigest, `${field}.provenanceSnapshotDigest`),
-    finalVideoReceiptDigest: requiredSha256(evidence.finalVideoReceiptDigest, `${field}.finalVideoReceiptDigest`),
-    finalVideoSha256: requiredSha256(evidence.finalVideoSha256, `${field}.finalVideoSha256`),
-    outputPath: requiredText(evidence.outputPath, `${field}.outputPath`),
-    renderProfile: normalizeRenderProfile(evidence.renderProfile, `${field}.renderProfile`),
-    workflowRunId: evidence.workflowRunId == null ? null : requiredText(String(evidence.workflowRunId), `${field}.workflowRunId`),
-    sourceArtifactId: evidence.sourceArtifactId == null ? null : requiredText(String(evidence.sourceArtifactId), `${field}.sourceArtifactId`),
-    sourceArtifactDigest: evidence.sourceArtifactDigest == null
-      ? null
-      : requiredSha256(evidence.sourceArtifactDigest, `${field}.sourceArtifactDigest`),
-    renderExecutionVerified: true,
-    finalVideoClaimAllowed: true,
-    qualityReviewAllowed: true,
-    publicationAllowed: false,
-    originalRenderGateProven: false,
-    historicalStagesProven: false,
-  });
-};
-
-const renderExecutionEvidenceClaims = (evidence) => Object.freeze({
-  executionBackend: evidence.executionBackend,
-  exactSourceHead: evidence.exactSourceHead,
-  provenanceSnapshotDigest: evidence.provenanceSnapshotDigest,
-  finalVideoReceiptDigest: evidence.finalVideoReceiptDigest,
-  finalVideoSha256: evidence.finalVideoSha256,
-  outputPath: evidence.outputPath,
-  renderProfile: evidence.renderProfile,
-  workflowRunId: evidence.workflowRunId,
-  sourceArtifactId: evidence.sourceArtifactId,
-  sourceArtifactDigest: evidence.sourceArtifactDigest,
-  reviewBindingDigest: evidence.provenanceSnapshotDigest,
-  renderExecutionVerified: true,
-  finalVideoClaimAllowed: true,
-  qualityReviewAllowed: true,
-  publicationAllowed: false,
-  originalRenderGateProven: false,
-  historicalStagesProven: false,
-});
-
 const normalizeTimestamp = (value, field) => {
   const text = requiredText(value, field);
   const date = new Date(text);
@@ -347,22 +277,7 @@ const assertArtifactBoundary = (eventType, artifact) => {
     }
   }
   if (eventType === 'IMPORT_RENDERED_CANDIDATE') {
-    const claims = artifact.claims ?? {};
-    let normalizedEvidence;
-    let canonicalClaims;
-    try {
-      normalizedEvidence = normalizeRenderExecutionEvidence(claims, 'IMPORT_RENDERED_CANDIDATE.artifact.claims');
-      canonicalClaims = renderExecutionEvidenceClaims(normalizedEvidence);
-    } catch {
-      throw new Error('rendered candidate import boundary is invalid');
-    }
-    if (artifact.schemaVersion !== normalizedEvidence.schemaVersion
-      || artifact.status !== 'COMPLETED'
-      || artifact.truthBoundary !== 'post_render_execution_evidence_verified'
-      || stableStringify(claims) !== stableStringify(canonicalClaims)
-      || artifact.digest !== digest(normalizedEvidence)) {
-      throw new Error('rendered candidate import boundary is invalid');
-    }
+    assertRenderedCandidateImportArtifact(artifact);
   }
   if (eventType === 'APPROVE_QUALITY') {
     if (artifact.status !== 'QUALITY_APPROVED_FOR_RELEASE_PREPARATION'
@@ -421,7 +336,7 @@ export const importRenderedCandidateProject = ({
   evidence,
 } = {}) => {
   const normalizedOccurredAt = normalizeTimestamp(occurredAt, 'occurredAt');
-  const normalizedEvidence = normalizeRenderExecutionEvidence(evidence);
+  const normalizedEvidence = normalizeRenderedCandidateEvidence(evidence);
 
   const evidenceDigest = digest(normalizedEvidence);
   const project = createVideoProject({
