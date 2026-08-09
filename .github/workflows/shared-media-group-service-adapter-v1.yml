@@ -1,0 +1,113 @@
+name: shared-media-group-service-adapter-v1
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - packages/shared-media-group-service-adapter/**
+      - docs/architecture/shared-media-group-service-adapter-v1.md
+      - .github/workflows/shared-media-group-service-adapter-v1.yml
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TARGET_SHA: ${{ github.event.pull_request.head.sha }}
+
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify exact head and projection-only boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "$TARGET_SHA"
+          echo "exact_head=$actual"
+          test -f packages/shared-media-render-contract/src/index.mjs
+          test -f packages/shared-media-group-service-adapter/src/index.mjs
+          ! grep -RInE "from ['\"](node:fs|node:child_process|node:http|node:https|node:net|node:dgram)|\b(fetch|exec|execFile|spawn|fork)\s*\(" packages/shared-media-group-service-adapter/src || {
+            echo 'Group service adapter must remain pure/read-only.' >&2
+            exit 1
+          }
+          ! grep -RInE 'Authorization|Bearer |ACTION_TOKEN|publish\(|send\(|POST /v1/render' packages/shared-media-group-service-adapter/src || {
+            echo 'Group service adapter must not own transport, credentials or publication.' >&2
+            exit 1
+          }
+
+      - name: Syntax check
+        run: node --check packages/shared-media-group-service-adapter/src/index.mjs
+
+      - name: Run exact adapter contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test packages/shared-media-group-service-adapter/test/index.test.mjs | tee "$RUNNER_TEMP/shared-media-group-service-adapter.tap"
+          grep -Eq '# tests[[:space:]]+8$' "$RUNNER_TEMP/shared-media-group-service-adapter.tap"
+          grep -Eq '# pass[[:space:]]+8$' "$RUNNER_TEMP/shared-media-group-service-adapter.tap"
+          grep -Eq '# fail[[:space:]]+0$' "$RUNNER_TEMP/shared-media-group-service-adapter.tap"
+
+      - name: Enforce group truth boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F 'validateMediaRenderResultV1(input.result)' packages/shared-media-group-service-adapter/src/index.mjs
+          grep -F 'technicalResultOnly: true' packages/shared-media-group-service-adapter/src/index.mjs
+          grep -F 'humanReviewCompleted: false' packages/shared-media-group-service-adapter/src/index.mjs
+          grep -F 'humanDecisionInferred: false' packages/shared-media-group-service-adapter/src/index.mjs
+          grep -F 'consumerDomainDecisionInferred: false' packages/shared-media-group-service-adapter/src/index.mjs
+          grep -F 'publicationAllowed: false' packages/shared-media-group-service-adapter/src/index.mjs
+          grep -F 'publicationPerformed: false' packages/shared-media-group-service-adapter/src/index.mjs
+          grep -F 'externalActionPerformed: false' packages/shared-media-group-service-adapter/src/index.mjs
+          ! grep -RInE 'socialAccount|publishingAccount|publicationCredentials|payment|settlement|wallet|tokenMovement' packages/shared-media-group-service-adapter/src
+
+      - name: Emit exact-head receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json,os,pathlib,re
+          root=pathlib.Path(os.environ['RUNNER_TEMP'])
+          tap=(root/'shared-media-group-service-adapter.tap').read_text()
+          def number(name):
+              m=re.search(rf'^# {name}\s+(\d+)\s*$',tap,re.M)
+              return int(m.group(1)) if m else None
+          receipt={
+            'schemaVersion':'shared-media.group-service-adapter-exact-head.v1',
+            'exactHead':os.environ['TARGET_SHA'],
+            'tests':number('tests'),
+            'pass':number('pass'),
+            'fail':number('fail'),
+            'readOnly':True,
+            'technicalResultOnly':True,
+            'humanReviewCompleted':False,
+            'humanDecisionInferred':False,
+            'consumerDomainDecisionInferred':False,
+            'publicationAllowed':False,
+            'publicationPerformed':False,
+            'externalActionPerformed':False,
+            'testLogSha256':hashlib.sha256(tap.encode()).hexdigest(),
+          }
+          path=root/'shared-media-group-service-adapter-exact-head.json'
+          path.write_text(json.dumps(receipt,indent=2)+'\n')
+          print(json.dumps(receipt,indent=2))
+          PY
+
+      - name: Upload exact-head evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: shared-media-group-service-adapter-v1
+          path: |
+            ${{ runner.temp }}/shared-media-group-service-adapter-exact-head.json
+            ${{ runner.temp }}/shared-media-group-service-adapter.tap
+          if-no-files-found: error
+          retention-days: 30
