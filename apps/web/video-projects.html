@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ToolRadar · Video Projects</title>
-  <meta name="description" content="Video OP 项目阶段、阻塞项、证据和事件时间线。">
+  <meta name="description" content="Video OP 项目阶段、创意预检、阻塞项、证据和事件时间线。">
   <link rel="stylesheet" href="./video-projects.css">
 </head>
 <body>
@@ -14,7 +14,7 @@
   </header>
   <main>
     <section class="page-head">
-      <div><p class="eyebrow">VIDEO OP / PROJECT CONTROL</p><h1>视频项目看板</h1><p>这里显示真实证据走到哪一步。高热度不能跳过版权、素材、渲染、人工审核或发布确认。</p></div>
+      <div><p class="eyebrow">VIDEO OP / PROJECT CONTROL</p><h1>视频项目看板</h1><p>这里显示真实证据走到哪一步。高热度不能跳过版权、素材、创意预检、渲染、人工审核或发布确认。</p></div>
       <div class="runtime" data-runtime>读取项目账本…</div>
     </section>
 
@@ -27,12 +27,37 @@
 
     <section class="blocker" data-blocker hidden>
       <div><small>当前阻塞</small><strong data-blocker-text></strong></div>
-      <p>只有真实素材和人工核验完成后，项目才能恢复并进入素材预检。</p>
+      <p>只有真实证据完成后，项目才能恢复并进入下一道门。</p>
     </section>
 
     <section class="panel">
       <header><div><p class="eyebrow">LIFECYCLE</p><h2>12 阶段生产链</h2></div><span class="boundary">严格顺序 · 摘要绑定 · 不虚构成功</span></header>
       <div class="stage-grid" data-stages></div>
+    </section>
+
+    <section class="panel creative-preflight-panel">
+      <header><div><p class="eyebrow">CREATIVE PREFLIGHT</p><h2>动画前创意预检</h2></div><span class="boundary" data-creative-status>尚未到达</span></header>
+      <p class="creative-intro" data-creative-message>Art Gate 与 Animatic Gate 是 RENDER_AUTHORIZED 之前的证据门，不改变 12 阶段生命周期。</p>
+      <div class="creative-grid">
+        <article class="creative-gate">
+          <header><strong>Art Gate</strong><span data-art-gate-status>WAITING</span></header>
+          <ul data-art-gate-checks></ul>
+          <code data-art-gate-digest>无证据摘要</code>
+        </article>
+        <article class="creative-gate">
+          <header><strong>Animatic Gate</strong><span data-animatic-gate-status>WAITING</span></header>
+          <ul data-animatic-gate-checks></ul>
+          <code data-animatic-gate-digest>无证据摘要</code>
+        </article>
+        <article class="creative-gate creative-boundary">
+          <header><strong>Render Authorization</strong><span data-render-input-status>BLOCKED</span></header>
+          <p data-creative-boundary>Creative Preflight 没有 PASS 前，不允许进入 Final Render Gate。</p>
+          <dl>
+            <dt>Human creative approval</dt><dd data-human-creative-approval>false</dd>
+            <dt>Publication allowed</dt><dd data-creative-publication>false</dd>
+          </dl>
+        </article>
+      </div>
     </section>
 
     <section class="two-column">
@@ -42,11 +67,11 @@
       </article>
       <article class="panel">
         <header><div><p class="eyebrow">NEXT WORK</p><h2>下一批真实工作</h2></div></header>
-        <ol class="next-work">
+        <ol class="next-work" data-next-work>
           <li><strong>录制 Design 流程</strong><span>自有浏览器录屏，含桌面、390px 和一次修改。</span></li>
           <li><strong>录制 Build 限制</strong><span>展示真实无预览状态，不推断不存在的交付能力。</span></li>
           <li><strong>生成并审核正式配音</strong><span>配音通过后再执行 owned-media preflight。</span></li>
-          <li><strong>恢复项目并进入 M9</strong><span>真实文件 SHA 验证后才允许 Mac Runner 渲染。</span></li>
+          <li><strong>恢复项目并进入 M9</strong><span>真实文件 SHA 验证后，再进入 Creative Preflight 和 Render Authorization。</span></li>
         </ol>
       </article>
     </section>
@@ -59,7 +84,7 @@
     <section class="panel source-panel">
       <header><div><p class="eyebrow">SOURCE BINDING</p><h2>内容摘要</h2></div></header>
       <dl data-digests></dl>
-      <p class="truth">当前账本只确认选题、研究、中文脚本和分镜已经存在；不确认真实录屏、正式配音、最终视频、发布或分析数据。</p>
+      <p class="truth">当前账本只显示已有真实证据；Creative Preflight PASS 也只代表允许进入 Render Authorization，不代表人工创意批准、平台适配批准、发布或分析结果。</p>
     </section>
   </main>
   <script type="module" src="./video-projects.mjs"></script>
