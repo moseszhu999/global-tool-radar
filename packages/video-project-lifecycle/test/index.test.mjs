@@ -70,6 +70,20 @@ const currentExplainerEvidence = () => ({
   sourceArtifactDigest: 'cbb0a4b97201a3999b819486682d023d0d93061f1d97920c13a8c34fe51e4a3b',
 });
 
+const importedProjectFixture = () => importRenderedCandidateProject({
+  projectId: 'video-project:toolradar-explainer-v2:imported',
+  owner: 'video-operation',
+  actor: 'video-operation-controller',
+  occurredAt: '2026-08-09T09:30:00.000Z',
+  sourceSignal: {
+    id: 'toolradar-explainer-production-polish-alpha-v2',
+    title: 'ToolRadar Explainer Production Polish Alpha v2',
+    platform: 'internal-render',
+    sourceUrl: null,
+  },
+  evidence: currentExplainerEvidence(),
+});
+
 test('creates an auditable discovered video project', () => {
   const project = baseProject();
   assert.equal(project.stage, 'DISCOVERED');
@@ -79,19 +93,7 @@ test('creates an auditable discovered video project', () => {
 });
 
 test('imports a verified externally rendered candidate without asserting skipped lifecycle history', () => {
-  const project = importRenderedCandidateProject({
-    projectId: 'video-project:toolradar-explainer-v2:imported',
-    owner: 'video-operation',
-    actor: 'video-operation-controller',
-    occurredAt: '2026-08-09T09:30:00.000Z',
-    sourceSignal: {
-      id: 'toolradar-explainer-production-polish-alpha-v2',
-      title: 'ToolRadar Explainer Production Polish Alpha v2',
-      platform: 'internal-render',
-      sourceUrl: null,
-    },
-    evidence: currentExplainerEvidence(),
-  });
+  const project = importedProjectFixture();
 
   assert.equal(validateVideoProject(project), true);
   assert.equal(project.stage, 'RENDER_COMPLETED');
@@ -109,6 +111,24 @@ test('imports a verified externally rendered candidate without asserting skipped
   assert.equal(project.artifacts[0].claims.reviewBindingDigest, currentExplainerEvidence().provenanceSnapshotDigest);
 });
 
+test('keeps rendered-candidate import inaccessible through the public event API', () => {
+  const discovered = createVideoProject({
+    projectId: 'video-project:direct-import-bypass',
+    owner: 'video-operation',
+    createdAt: '2026-08-09T09:30:00.000Z',
+    sourceSignal: {id: 'candidate:direct', title: 'Direct import attempt', platform: 'internal-render'},
+  });
+  const canonicalImport = importedProjectFixture();
+  assert.throws(() => applyVideoProjectEvent(discovered, {
+    eventId: 'direct-import-attempt',
+    type: 'IMPORT_RENDERED_CANDIDATE',
+    actor: 'bypass-attempt',
+    occurredAt: '2026-08-09T09:31:00.000Z',
+    reason: 'should never bypass the canonical import constructor',
+    artifact: canonicalImport.artifacts[0],
+  }), /unsupported event type: IMPORT_RENDERED_CANDIDATE/);
+});
+
 test('fails closed when imported render evidence lacks a valid provenance digest', () => {
   assert.throws(() => importRenderedCandidateProject({
     projectId: 'video-project:bad-import',
@@ -118,6 +138,28 @@ test('fails closed when imported render evidence lacks a valid provenance digest
     sourceSignal: {id: 'candidate:bad', title: 'Bad import', platform: 'internal-render'},
     evidence: {...currentExplainerEvidence(), provenanceSnapshotDigest: 'not-a-digest'},
   }), /provenanceSnapshotDigest must be SHA-256/);
+});
+
+test('fails closed for unsupported render backend or unbound GitHub artifact identity', () => {
+  const input = {
+    projectId: 'video-project:bad-backend',
+    owner: 'video-operation',
+    actor: 'video-operation-controller',
+    occurredAt: '2026-08-09T09:30:00.000Z',
+    sourceSignal: {id: 'candidate:bad-backend', title: 'Bad backend import', platform: 'internal-render'},
+  };
+  assert.throws(() => importRenderedCandidateProject({
+    ...input,
+    evidence: {...currentExplainerEvidence(), executionBackend: 'self_asserted_runner'},
+  }), /executionBackend is unsupported/);
+  assert.throws(() => importRenderedCandidateProject({
+    ...input,
+    evidence: {...currentExplainerEvidence(), sourceArtifactId: 'not-an-artifact-id'},
+  }), /sourceArtifactId must be a numeric id/);
+  assert.throws(() => importRenderedCandidateProject({
+    ...input,
+    evidence: {...currentExplainerEvidence(), exactSourceHead: 'f'.repeat(39)},
+  }), /exactSourceHead must be a Git object id/);
 });
 
 test('runs the complete lifecycle and marks feedback-ready work completed', () => {
