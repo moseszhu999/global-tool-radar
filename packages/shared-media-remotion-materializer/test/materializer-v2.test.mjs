@@ -99,9 +99,9 @@ test('provided voice fails closed in v2', () => {
   expectCode(()=>materializeSharedMediaRemotionV2({plan:changedPlan, manifest:changedManifest, preparedReceipt:source.prepared, qualificationReceipt:source.qualification}), 'SOURCE_IDENTITY_MISMATCH');
 });
 
-test('video visual is rejected by the existing qualification boundary', () => {
+test('video visual is rejected by the v2 materializer subset', () => {
   const source = makeSourceChain({visualKind:'video'});
-  expectCode(()=>materializeSharedMediaRemotionV2({plan:source.plan, manifest:source.manifest, preparedReceipt:source.prepared, qualificationReceipt:source.qualification}), 'VISUAL_MEDIA_UNSUPPORTED_V1');
+  expectCode(()=>materializeSharedMediaRemotionV2({plan:source.plan, manifest:source.manifest, preparedReceipt:source.prepared, qualificationReceipt:source.qualification}), 'MATERIALIZATION_SUBSET_UNSUPPORTED');
 });
 
 test('non-integer frame mapping fails closed', () => {
