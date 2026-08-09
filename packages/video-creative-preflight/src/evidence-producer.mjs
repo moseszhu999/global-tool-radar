@@ -38,8 +38,10 @@ const hasSecretField = (value) => {
 
 const normalizeChecks = (checks, field) => {
   if (!checks || typeof checks !== 'object' || Array.isArray(checks)) throw new TypeError(`${field} must be an object`);
+  const entries = Object.entries(checks);
+  if (entries.length === 0) throw new TypeError(`${field} must contain at least one check`);
   const output = {};
-  for (const [name, evidence] of Object.entries(checks)) {
+  for (const [name, evidence] of entries) {
     if (!evidence || typeof evidence !== 'object' || Array.isArray(evidence)) throw new TypeError(`${field}.${name} must be an object`);
     if (hasSecretField(evidence)) throw new Error(`${field}.${name} must not contain secret fields`);
     output[name] = Object.freeze({
