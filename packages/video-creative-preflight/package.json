@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "node --check src/index.mjs && node --check src/cli.mjs",
-    "test": "node --test test/index.test.mjs"
+    "check": "node --check src/index.mjs && node --check src/cli.mjs && node --check src/evidence-producer.mjs",
+    "test": "node --test test/*.test.mjs"
   }
 }
