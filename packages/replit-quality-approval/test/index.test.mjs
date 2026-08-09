@@ -8,6 +8,7 @@ import {
 import {
   applyVideoProjectEvent,
   createVideoProject,
+  importRenderedCandidateProject,
 } from '../../video-project-lifecycle/src/index.mjs';
 import {
   applyProjectQualityDecision,
@@ -71,16 +72,40 @@ const makeRenderCompletedProject = () => {
       },
     })},
   ];
-  events.forEach((event, index) => {
+  events.forEach((item, index) => {
     project = applyVideoProjectEvent(project, {
       eventId: `event-${index + 1}`,
       actor: 'test-operator',
       occurredAt: times[index],
-      ...event,
+      ...item,
     });
   });
   return project;
 };
+
+const makeImportedRenderCompletedProject = () => importRenderedCandidateProject({
+  projectId: 'video-project:toolradar-explainer-v2:imported',
+  owner: 'video-operation',
+  actor: 'video-operation-controller',
+  occurredAt: '2026-08-09T09:30:00.000Z',
+  sourceSignal: {
+    id: 'toolradar-explainer-production-polish-alpha-v2',
+    title: 'ToolRadar Explainer Production Polish Alpha v2',
+    platform: 'internal-render',
+  },
+  evidence: {
+    executionBackend: 'github_actions',
+    exactSourceHead: 'a5ac58e0ea05c5d8d8ca6861e1001b044bde44e0',
+    provenanceSnapshotDigest: 'b3a0f5c823af4be875510d27ebbd65dc6de9907463d1b9e10eea682397060991',
+    finalVideoReceiptDigest: '56ff8a2f3f8738facb7e86c656159e7c149036abf324f82a48e82881e8359be5',
+    finalVideoSha256: '1de5e8a6e25b8e25ef4f7a7db8a628941794687432ba0420eb956fdc0ba6f598',
+    outputPath: 'apps/remotion-video/out/toolradar-explainer-19s-production-polish-alpha-v2.mp4',
+    renderProfile: {width: 1080, height: 1920, fps: 30, durationSeconds: 19.2},
+    workflowRunId: '31304399179',
+    sourceArtifactId: '9035504064',
+    sourceArtifactDigest: 'cbb0a4b97201a3999b819486682d023d0d93061f1d97920c13a8c34fe51e4a3b',
+  },
+});
 
 const passDecisions = () => qualityReviewCheckIds.map((id) => ({id, verdict: 'PASS'}));
 
@@ -91,7 +116,7 @@ const approvedEnvelope = (pack) => recordQualityDecision(pack, {
   decisions: passDecisions(),
 });
 
-test('prepares the ten-check pack directly from render-completion evidence', () => {
+test('prepares the ten-check pack directly from Mac render-completion evidence', () => {
   const project = makeRenderCompletedProject();
   const pack = prepareQualityReviewPackFromProject({project, createdAt: '2026-08-06T10:30:00.000Z'});
   assert.equal(pack.projectId, project.projectId);
@@ -100,6 +125,40 @@ test('prepares the ten-check pack directly from render-completion evidence', () 
   assert.equal(pack.finalVideo.renderCommandManifestSha256, sha('c'));
   assert.equal(pack.finalVideo.path, 'out/final.mp4');
   assert.equal(pack.checks.length, 10);
+});
+
+test('prepares the same official M10 pack from imported GitHub Actions render evidence', () => {
+  const project = makeImportedRenderCompletedProject();
+  const pack = prepareQualityReviewPackFromProject({project, createdAt: '2026-08-09T09:35:00.000Z'});
+  assert.equal(pack.projectId, project.projectId);
+  assert.equal(pack.finalVideo.receiptDigest, '56ff8a2f3f8738facb7e86c656159e7c149036abf324f82a48e82881e8359be5');
+  assert.equal(pack.finalVideo.sha256, '1de5e8a6e25b8e25ef4f7a7db8a628941794687432ba0420eb956fdc0ba6f598');
+  assert.equal(pack.finalVideo.renderCommandManifestSha256, 'b3a0f5c823af4be875510d27ebbd65dc6de9907463d1b9e10eea682397060991');
+  assert.equal(pack.finalVideo.expectedProfile.durationSeconds, 19.2);
+  assert.equal(pack.publicationAllowed, false);
+});
+
+test('advances an imported render only after the official approved M10 review', () => {
+  const project = makeImportedRenderCompletedProject();
+  const pack = prepareQualityReviewPackFromProject({project, createdAt: '2026-08-09T09:35:00.000Z'});
+  const receipt = applyProjectQualityDecision({
+    project,
+    reviewPack: pack,
+    qualityDecisionEnvelope: recordQualityDecision(pack, {
+      reviewer: 'human-reviewer',
+      reviewedAt: '2026-08-09T09:40:00.000Z',
+      reviewerApproved: true,
+      decisions: passDecisions(),
+    }),
+    actor: 'quality-operator',
+    occurredAt: '2026-08-09T09:41:00.000Z',
+  });
+  assert.equal(validateQualityApprovalReceipt(receipt), true);
+  assert.equal(receipt.status, 'QUALITY_APPROVED');
+  assert.equal(receipt.updatedProject.stage, 'QUALITY_APPROVED');
+  assert.equal(receipt.releasePreparationAllowed, true);
+  assert.equal(receipt.publicationAllowed, false);
+  assert.equal(receipt.updatedProject.events.length, 2);
 });
 
 test('advances only the official approved M10 review to QUALITY_APPROVED', () => {
