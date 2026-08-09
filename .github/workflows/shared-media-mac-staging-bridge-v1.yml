@@ -1,0 +1,112 @@
+name: shared-media-mac-staging-bridge-v1
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - packages/shared-media-mac-staging-bridge/**
+      - .github/workflows/shared-media-mac-staging-bridge-v1.yml
+      - packages/shared-media-remotion-materializer/src/v2.mjs
+      - packages/shared-media-mac-compatibility/src/index.mjs
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TARGET_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Verify exact head and no-I/O boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          test -f packages/shared-media-mac-staging-bridge/src/index.mjs
+          test -f packages/shared-media-mac-staging-bridge/test/index.test.mjs
+          ! grep -nE "from ['\"](node:fs|node:child_process|node:http|node:https|node:net|node:dgram)|\b(fetch|exec|execFile|spawn|fork)\s*\(" packages/shared-media-mac-staging-bridge/src/index.mjs
+          ! grep -nE 'createMacPreMaterializedBindingV1|approved_pre_materialized|create_or_update|render_existing|/v1/render|Authorization|Bearer ' packages/shared-media-mac-staging-bridge/src/index.mjs
+          ! grep -nE 'TrainingOS|ToolRadar|courseId|studentId|teacherId|publicationAllowed|publicationPerformed|analyticsObserved|humanApproved' packages/shared-media-mac-staging-bridge/src/index.mjs
+      - name: Syntax check
+        run: |
+          node --check packages/shared-media-mac-staging-bridge/src/index.mjs
+          node --check packages/shared-media-mac-staging-bridge/test/index.test.mjs
+      - name: Run exact staging contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --prefix packages/shared-media-mac-staging-bridge test | tee "$RUNNER_TEMP/shared-media-mac-staging-bridge.tap"
+          grep -Eq '# tests[[:space:]]+15$' "$RUNNER_TEMP/shared-media-mac-staging-bridge.tap"
+          grep -Eq '# pass[[:space:]]+15$' "$RUNNER_TEMP/shared-media-mac-staging-bridge.tap"
+          grep -Eq '# fail[[:space:]]+0$' "$RUNNER_TEMP/shared-media-mac-staging-bridge.tap"
+          grep -F 'creates a Mac staging candidate from the exact materialization source chain' "$RUNNER_TEMP/shared-media-mac-staging-bridge.tap"
+          grep -F 'prepared asset staging paths are rooted under public and preserve source hashes' "$RUNNER_TEMP/shared-media-mac-staging-bridge.tap"
+          grep -F 'generated project files preserve exact content bytes, paths and sizes' "$RUNNER_TEMP/shared-media-mac-staging-bridge.tap"
+          grep -F 'staging candidate verification re-materializes the exact source chain' "$RUNNER_TEMP/shared-media-mac-staging-bridge.tap"
+          grep -F 're-signed staging candidate from a different materialization source is rejected' "$RUNNER_TEMP/shared-media-mac-staging-bridge.tap"
+          grep -F 'staging candidate cannot be changed into an approved binding' "$RUNNER_TEMP/shared-media-mac-staging-bridge.tap"
+          grep -F 'staging bridge does not emit Mac transport submission fields' "$RUNNER_TEMP/shared-media-mac-staging-bridge.tap"
+          grep -F 'staging candidate is deeply independent from its source objects' "$RUNNER_TEMP/shared-media-mac-staging-bridge.tap"
+      - name: Enforce audited Mac runtime identity only
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F 'MAC_REMOTION_RUNTIME_SCHEMA_V1' packages/shared-media-mac-staging-bridge/src/index.mjs
+          grep -F 'serverMjsSha256' packages/shared-media-mac-staging-bridge/src/index.mjs
+          grep -F 'openapiSha256' packages/shared-media-mac-staging-bridge/src/index.mjs
+          grep -F 'approvalRequired: true' packages/shared-media-mac-staging-bridge/src/index.mjs
+          grep -F 'bindingCreated: false' packages/shared-media-mac-staging-bridge/src/index.mjs
+          grep -F 'renderAuthorized: false' packages/shared-media-mac-staging-bridge/src/index.mjs
+          grep -F 'transportSubmissionAllowed: false' packages/shared-media-mac-staging-bridge/src/index.mjs
+      - name: Emit exact-head receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json,os,pathlib,re
+          root=pathlib.Path(os.environ['RUNNER_TEMP'])
+          tap=(root/'shared-media-mac-staging-bridge.tap').read_text()
+          def n(name):
+              m=re.search(rf'^# {name}\s+(\d+)\s*$',tap,re.M)
+              return int(m.group(1)) if m else None
+          receipt={
+            'schemaVersion':'shared-media.mac-staging-bridge-v1-exact-head.v1',
+            'exactHead':os.environ['TARGET_SHA'],
+            'package':'@shared-media/mac-staging-bridge@1.0.0',
+            'tests':n('tests'),'pass':n('pass'),'fail':n('fail'),
+            'requiresExactMaterializationCandidate':True,
+            'requiresExactPlanManifestPreparedQualification':True,
+            'preparedAssetStageManifestProduced':True,
+            'generatedProjectStageManifestProduced':True,
+            'auditedMacRuntimeIdentityBound':True,
+            'approvalRequired':True,
+            'bindingCreated':False,
+            'renderAuthorized':False,
+            'transportSubmissionAllowed':False,
+            'filesystemWritePerformed':False,
+            'networkPerformed':False,
+            'processExecutionPerformed':False,
+            'macOperationPerformed':False,
+            'testLogSha256':hashlib.sha256(tap.encode()).hexdigest(),
+          }
+          path=root/'shared-media-mac-staging-bridge-v1-exact-head.json'
+          path.write_text(json.dumps(receipt,indent=2)+'\n')
+          print(json.dumps(receipt,indent=2))
+          PY
+      - name: Upload exact-head evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: shared-media-mac-staging-bridge-v1
+          path: |
+            ${{ runner.temp }}/shared-media-mac-staging-bridge-v1-exact-head.json
+            ${{ runner.temp }}/shared-media-mac-staging-bridge.tap
+          if-no-files-found: error
+          retention-days: 30
