@@ -5,6 +5,7 @@ import {
   createVideoCreativePreflight,
   validateVideoCreativePreflight,
 } from './index.mjs';
+import {toCreativePreflightGate} from './evidence-producer.mjs';
 
 const required = (name) => {
   const value = process.env[name]?.trim();
@@ -18,6 +19,12 @@ const writeJson = async (path, value) => {
   await writeFile(path, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
 };
 
+const readGate = async (path) => {
+  const input = await readJson(path);
+  if (input?.schemaVersion === 'toolradar.video-creative-gate-evidence.v1') return toCreativePreflightGate(input);
+  return input;
+};
+
 const ledgerInput = resolve(process.env.VIDEO_PROJECT_LEDGER_INPUT?.trim() || 'artifacts/replit-design-assets-verified-ledger.json');
 const artGateInput = resolve(required('TOOLRADAR_ART_GATE_INPUT'));
 const animaticGateInput = resolve(required('TOOLRADAR_ANIMATIC_GATE_INPUT'));
@@ -27,8 +34,8 @@ try {
   const ledger = await readJson(ledgerInput);
   const receipt = createVideoCreativePreflight({
     project: ledger.project,
-    artGate: await readJson(artGateInput),
-    animaticGate: await readJson(animaticGateInput),
+    artGate: await readGate(artGateInput),
+    animaticGate: await readGate(animaticGateInput),
     reviewer: required('TOOLRADAR_CREATIVE_REVIEWER'),
     reviewedAt: process.env.TOOLRADAR_CREATIVE_REVIEWED_AT?.trim() || new Date().toISOString(),
   });
