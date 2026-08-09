@@ -37,6 +37,12 @@ test('preserves a failed check as explicit evidence', () => {
   assert.equal(validateCreativeGateEvidence(evidence), true);
 });
 
+test('rejects empty evidence gates', () => {
+  const input = validInput();
+  input.gate.checks = {};
+  assert.throws(() => produceCreativeGateEvidence(input), /at least one check/);
+});
+
 test('rejects unsupported provenance', () => {
   const input = validInput();
   input.gate.checks.silhouetteReadable.sourceType = 'model_guess';
@@ -51,6 +57,5 @@ test('rejects secret-bearing evidence', () => {
 
 test('rejects tampered digest', () => {
   const evidence = produceCreativeGateEvidence(validInput());
-  evidence.evidenceDigest = sha('b');
-  assert.throws(() => validateCreativeGateEvidence(evidence), /digest mismatch/);
+  assert.throws(() => validateCreativeGateEvidence({...evidence, evidenceDigest: sha('b')}), /digest mismatch/);
 });
