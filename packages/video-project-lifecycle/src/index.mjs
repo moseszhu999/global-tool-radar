@@ -10,6 +10,7 @@ const stableStringify = (value) => {
 
 const digest = (value) => createHash('sha256').update(stableStringify(value)).digest('hex');
 const SHA256 = /^[a-f0-9]{64}$/;
+const GIT_OID = /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/;
 const SECRET_KEY = /(authorization|token|secret|password|cookie|api[-_]?key)/i;
 
 export const VIDEO_PROJECT_STAGES = Object.freeze([
@@ -29,6 +30,7 @@ export const VIDEO_PROJECT_STAGES = Object.freeze([
 
 export const VIDEO_PROJECT_EVENTS = Object.freeze([
   'SELECT_CANDIDATE',
+  'IMPORT_RENDERED_CANDIDATE',
   'ATTACH_RESEARCH',
   'ATTACH_SCRIPT',
   'ATTACH_STORYBOARD',
@@ -52,6 +54,7 @@ const ARTIFACT_TYPES = new Set([
   'owned_media_preflight',
   'final_render_gate',
   'mac_remotion_render_run',
+  'render_execution_evidence',
   'final_render_quality_review',
   'platform_upload_handoff',
   'bound_publication_receipt',
@@ -60,6 +63,7 @@ const ARTIFACT_TYPES = new Set([
 
 const TRANSITIONS = Object.freeze({
   SELECT_CANDIDATE: {from: 'DISCOVERED', to: 'SELECTED', artifactTypes: []},
+  IMPORT_RENDERED_CANDIDATE: {from: 'DISCOVERED', to: 'RENDER_COMPLETED', artifactTypes: ['render_execution_evidence']},
   ATTACH_RESEARCH: {from: 'SELECTED', to: 'RESEARCH_READY', artifactTypes: ['topic_brief']},
   ATTACH_SCRIPT: {from: 'RESEARCH_READY', to: 'SCRIPT_READY', artifactTypes: ['production_case']},
   ATTACH_STORYBOARD: {from: 'SCRIPT_READY', to: 'STORYBOARD_READY', artifactTypes: ['storyboard_package']},
@@ -80,6 +84,18 @@ const requiredText = (value, field) => {
 const optionalText = (value, field) => {
   if (value === null || value === undefined || value === '') return null;
   return requiredText(value, field);
+};
+
+const requiredSha256 = (value, field) => {
+  const normalized = requiredText(value, field).toLowerCase();
+  if (!SHA256.test(normalized)) throw new TypeError(`${field} must be SHA-256`);
+  return normalized;
+};
+
+const requiredGitOid = (value, field) => {
+  const normalized = requiredText(value, field).toLowerCase();
+  if (!GIT_OID.test(normalized)) throw new TypeError(`${field} must be a Git object id`);
+  return normalized;
 };
 
 const normalizeTimestamp = (value, field) => {
@@ -159,6 +175,27 @@ const assertArtifactBoundary = (eventType, artifact) => {
       throw new Error('render completion boundary is invalid');
     }
   }
+  if (eventType === 'IMPORT_RENDERED_CANDIDATE') {
+    const claims = artifact.claims ?? {};
+    if (artifact.status !== 'COMPLETED'
+      || artifact.truthBoundary !== 'post_render_execution_evidence_verified'
+      || claims.renderExecutionVerified !== true
+      || claims.finalVideoClaimAllowed !== true
+      || claims.qualityReviewAllowed !== true
+      || claims.publicationAllowed !== false
+      || claims.originalRenderGateProven !== false
+      || claims.historicalStagesProven !== false
+      || !SHA256.test(claims.finalVideoSha256 ?? '')
+      || !SHA256.test(claims.finalVideoReceiptDigest ?? '')
+      || !SHA256.test(claims.reviewBindingDigest ?? '')
+      || typeof claims.outputPath !== 'string'
+      || claims.outputPath.trim() === ''
+      || !claims.renderProfile
+      || typeof claims.renderProfile !== 'object'
+      || Array.isArray(claims.renderProfile)) {
+      throw new Error('rendered candidate import boundary is invalid');
+    }
+  }
   if (eventType === 'APPROVE_QUALITY') {
     if (artifact.status !== 'QUALITY_APPROVED_FOR_RELEASE_PREPARATION'
       || artifact.claims.releasePreparationAllowed !== true) {
@@ -205,6 +242,90 @@ export const createVideoProject = ({
     nextEvent: 'SELECT_CANDIDATE',
   };
   return freezeProject(core);
+};
+
+export const importRenderedCandidateProject = ({
+  projectId,
+  sourceSignal,
+  owner,
+  actor,
+  occurredAt = new Date().toISOString(),
+  evidence,
+} = {}) => {
+  if (!evidence || typeof evidence !== 'object' || Array.isArray(evidence)) {
+    throw new TypeError('evidence must be an object');
+  }
+
+  const normalizedOccurredAt = normalizeTimestamp(occurredAt, 'occurredAt');
+  const renderProfile = evidence.renderProfile;
+  if (!renderProfile || typeof renderProfile !== 'object' || Array.isArray(renderProfile)) {
+    throw new TypeError('evidence.renderProfile must be an object');
+  }
+
+  const normalizedEvidence = Object.freeze({
+    schemaVersion: 'toolradar.render-execution-evidence.v1',
+    executionBackend: requiredText(evidence.executionBackend, 'evidence.executionBackend'),
+    exactSourceHead: requiredGitOid(evidence.exactSourceHead, 'evidence.exactSourceHead'),
+    provenanceSnapshotDigest: requiredSha256(evidence.provenanceSnapshotDigest, 'evidence.provenanceSnapshotDigest'),
+    finalVideoReceiptDigest: requiredSha256(evidence.finalVideoReceiptDigest, 'evidence.finalVideoReceiptDigest'),
+    finalVideoSha256: requiredSha256(evidence.finalVideoSha256, 'evidence.finalVideoSha256'),
+    outputPath: requiredText(evidence.outputPath, 'evidence.outputPath'),
+    renderProfile: Object.freeze(structuredClone(renderProfile)),
+    workflowRunId: evidence.workflowRunId == null ? null : String(evidence.workflowRunId),
+    sourceArtifactId: evidence.sourceArtifactId == null ? null : String(evidence.sourceArtifactId),
+    sourceArtifactDigest: evidence.sourceArtifactDigest == null
+      ? null
+      : requiredSha256(evidence.sourceArtifactDigest, 'evidence.sourceArtifactDigest'),
+    renderExecutionVerified: true,
+    finalVideoClaimAllowed: true,
+    qualityReviewAllowed: true,
+    publicationAllowed: false,
+    originalRenderGateProven: false,
+    historicalStagesProven: false,
+  });
+  const evidenceDigest = digest(normalizedEvidence);
+
+  const project = createVideoProject({
+    projectId,
+    sourceSignal,
+    owner,
+    createdAt: normalizedOccurredAt,
+  });
+
+  return applyVideoProjectEvent(project, {
+    eventId: `import-rendered:${evidenceDigest.slice(0, 20)}`,
+    type: 'IMPORT_RENDERED_CANDIDATE',
+    actor: requiredText(actor, 'actor'),
+    occurredAt: normalizedOccurredAt,
+    reason: 'Verified post-render evidence import; earlier lifecycle stages are not asserted by this event',
+    artifact: {
+      type: 'render_execution_evidence',
+      schemaVersion: normalizedEvidence.schemaVersion,
+      artifactId: `render-execution-evidence:${evidenceDigest}`,
+      digest: evidenceDigest,
+      status: 'COMPLETED',
+      truthBoundary: 'post_render_execution_evidence_verified',
+      claims: {
+        executionBackend: normalizedEvidence.executionBackend,
+        exactSourceHead: normalizedEvidence.exactSourceHead,
+        provenanceSnapshotDigest: normalizedEvidence.provenanceSnapshotDigest,
+        finalVideoReceiptDigest: normalizedEvidence.finalVideoReceiptDigest,
+        finalVideoSha256: normalizedEvidence.finalVideoSha256,
+        outputPath: normalizedEvidence.outputPath,
+        renderProfile: normalizedEvidence.renderProfile,
+        workflowRunId: normalizedEvidence.workflowRunId,
+        sourceArtifactId: normalizedEvidence.sourceArtifactId,
+        sourceArtifactDigest: normalizedEvidence.sourceArtifactDigest,
+        reviewBindingDigest: normalizedEvidence.provenanceSnapshotDigest,
+        renderExecutionVerified: true,
+        finalVideoClaimAllowed: true,
+        qualityReviewAllowed: true,
+        publicationAllowed: false,
+        originalRenderGateProven: false,
+        historicalStagesProven: false,
+      },
+    },
+  });
 };
 
 export const validateVideoProject = (project) => {
