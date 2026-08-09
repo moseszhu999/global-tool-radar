@@ -41,7 +41,6 @@ export class SharedMediaRemotionMaterializerV2Error extends TypeError {
 const fail = (code, message, path = null) => { throw new SharedMediaRemotionMaterializerV2Error(code, message, {path}); };
 const object = (v, p) => { if (!v || typeof v !== 'object' || Array.isArray(v)) fail('INVALID_FIELD', `${p} must be an object`, p); return v; };
 const text = (v, p, max = 1000) => { if (typeof v !== 'string' || v.trim() === '' || v.length > max) fail('INVALID_FIELD', `${p} must be bounded text`, p); return v.trim(); };
-const clone = (v) => structuredClone(v);
 const deepFreeze = (v) => { if (!v || typeof v !== 'object' || Object.isFrozen(v) || ArrayBuffer.isView(v)) return v; Object.freeze(v); for (const k of Object.keys(v)) deepFreeze(v[k]); return v; };
 const sha256 = (s) => createHash('sha256').update(s).digest('hex');
 const json = (v) => JSON.stringify(v, null, 2) + '\n';
@@ -120,15 +119,24 @@ const sourceMediaManifest = ({assets, captions}) => [
 
 const rootSource = ({profile, shots, assets, captions}) => {
   const assetBySource = Object.fromEntries(assets.filter(a=>a.role==='visual').map(a=>[a.sourceId,a.relativePath]));
-  const audioBySegment = Object.fromEntries(assets.filter(a=>a.role==='voice-synthesized').map(a=>[a.segmentId,a.relativePath]));
+  const audioEntries = assets.filter(a=>a.role==='voice-synthesized').map(a=>{
+    const from = Math.floor((a.targetStartMs * profile.fps) / 1000);
+    const end = Math.ceil(((a.targetStartMs + a.targetDurationMs) * profile.fps) / 1000);
+    if (end <= from) fail('INVALID_AUDIO_TIMING', `audio segment ${a.segmentId} maps to zero frames`, '$prepared.voiceResult.artifacts');
+    return {segmentId:a.segmentId, sourceShotId:a.sourceShotId, src:a.relativePath, from, durationInFrames:end-from};
+  });
+  const shotLiteral = JSON.stringify(shots);
+  const visualLiteral = JSON.stringify(assetBySource);
+  const audioLiteral = JSON.stringify(audioEntries);
+  const captionLiteral = JSON.stringify(captions);
   return [
     "import React from 'react';",
     "import {AbsoluteFill, Audio, Composition, Img, Sequence, staticFile} from 'remotion';",
     '',
-    `const SHOTS = ${JSON.stringify(shots)} as const;`,
-    `const VISUALS = ${JSON.stringify(assetBySource)} as const;`,
-    `const AUDIO = ${JSON.stringify(audioBySegment)} as const;`,
-    `const CAPTIONS = ${JSON.stringify(captions)} as const;`,
+    `const SHOTS = ${shotLiteral} as const;`,
+    `const VISUALS = ${visualLiteral} as const;`,
+    `const AUDIO = ${audioLiteral} as const;`,
+    `const CAPTIONS = ${captionLiteral} as const;`,
     '',
     'const ShotVisuals: React.FC<{shot: typeof SHOTS[number]}> = ({shot}) => (',
     '  <AbsoluteFill>',
@@ -156,11 +164,11 @@ const rootSource = ({profile, shots, assets, captions}) => {
     '        <ShotVisuals shot={shot} />',
     '      </Sequence>',
     '    ))}',
-    '    {Object.entries(AUDIO).map(([segmentId, src]) => {',
-    '      const shot = SHOTS.find((item) => `narration-${item.shotId}` === segmentId);',
-    '      if (!shot) return null;',
-    '      return <Sequence key={segmentId} from={shot.from} durationInFrames={shot.durationInFrames}><Audio src={staticFile(src)} volume={1} /></Sequence>;',
-    '    })}',
+    '    {AUDIO.map((audio) => (',
+    '      <Sequence key={audio.segmentId} from={audio.from} durationInFrames={audio.durationInFrames}>',
+    '        <Audio src={staticFile(audio.src)} volume={1} />',
+    '      </Sequence>',
+    '    ))}',
     '    {CAPTIONS.length > 0 ? <Captions /> : null}',
     '  </AbsoluteFill>',
     ');',
