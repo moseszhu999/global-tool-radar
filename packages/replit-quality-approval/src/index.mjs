@@ -41,7 +41,19 @@ const assertReadyProject = (project) => {
 
 const latestRenderCompletionArtifact = (project) => [...project.artifacts]
   .reverse()
-  .find((artifact) => artifact.type === 'mac_remotion_render_run' && artifact.status === 'COMPLETED');
+  .find((artifact) => ['mac_remotion_render_run', 'render_execution_evidence'].includes(artifact.type)
+    && artifact.status === 'COMPLETED');
+
+const completionBinding = (completion) => {
+  const claims = completion?.claims ?? {};
+  return {
+    finalVideoReceiptDigest: claims.finalVideoReceiptDigest,
+    finalVideoSha256: claims.finalVideoSha256,
+    outputPath: claims.outputPath,
+    reviewBindingDigest: claims.gateDigest ?? claims.reviewBindingDigest,
+    renderProfile: claims.renderProfile,
+  };
+};
 
 const qualityArtifact = (envelope) => ({
   type: 'final_render_quality_review',
@@ -64,19 +76,19 @@ const qualityArtifact = (envelope) => ({
 export const prepareQualityReviewPackFromProject = ({
   project,
   createdAt = new Date().toISOString(),
-  reviewerInstructionsVersion = '2026-08-06',
+  reviewerInstructionsVersion = '2026-08-09',
 } = {}) => {
   assertReadyProject(project);
   const completion = latestRenderCompletionArtifact(project);
   if (!completion) throw new Error('render completion artifact is missing');
-  const claims = completion.claims ?? {};
+  const binding = completionBinding(completion);
   return createQualityReviewPack({
     projectId: project.projectId,
-    finalVideoReceiptDigest: claims.finalVideoReceiptDigest,
-    finalVideoSha256: claims.finalVideoSha256,
-    finalVideoPath: claims.outputPath,
-    renderCommandManifestSha256: claims.gateDigest,
-    expectedProfile: claims.renderProfile,
+    finalVideoReceiptDigest: binding.finalVideoReceiptDigest,
+    finalVideoSha256: binding.finalVideoSha256,
+    finalVideoPath: binding.outputPath,
+    renderCommandManifestSha256: binding.reviewBindingDigest,
+    expectedProfile: binding.renderProfile,
     reviewerInstructionsVersion,
     createdAt: normalizeTimestamp(createdAt, 'createdAt'),
   });
@@ -93,6 +105,7 @@ export const applyProjectQualityDecision = ({
   const normalizedActor = requiredText(actor, 'actor');
   const normalizedOccurredAt = normalizeTimestamp(occurredAt);
   const completion = latestRenderCompletionArtifact(project);
+  const binding = completionBinding(completion);
   const errors = [];
 
   if (!completion) errors.push('render_completion_artifact_missing');
@@ -103,20 +116,20 @@ export const applyProjectQualityDecision = ({
   }
 
   if (reviewPack?.projectId !== project.projectId) errors.push('review_pack_project_mismatch');
-  if (completion && reviewPack?.finalVideo?.receiptDigest !== completion.claims?.finalVideoReceiptDigest) {
+  if (completion && reviewPack?.finalVideo?.receiptDigest !== binding.finalVideoReceiptDigest) {
     errors.push('review_pack_final_video_receipt_mismatch');
   }
-  if (completion && reviewPack?.finalVideo?.sha256 !== completion.claims?.finalVideoSha256) {
+  if (completion && reviewPack?.finalVideo?.sha256 !== binding.finalVideoSha256) {
     errors.push('review_pack_final_video_sha256_mismatch');
   }
-  if (completion && reviewPack?.finalVideo?.renderCommandManifestSha256 !== completion.claims?.gateDigest) {
+  if (completion && reviewPack?.finalVideo?.renderCommandManifestSha256 !== binding.reviewBindingDigest) {
     errors.push('review_pack_render_manifest_mismatch');
   }
   const officialReview = qualityDecisionEnvelope?.officialReview;
-  if (officialReview?.outputSha256 !== completion?.claims?.finalVideoSha256) {
+  if (officialReview?.outputSha256 !== binding.finalVideoSha256) {
     errors.push('official_review_final_video_sha256_mismatch');
   }
-  if (officialReview?.renderCommandManifestSha256 !== completion?.claims?.gateDigest) {
+  if (officialReview?.renderCommandManifestSha256 !== binding.reviewBindingDigest) {
     errors.push('official_review_render_manifest_mismatch');
   }
   if (officialReview?.status !== 'QUALITY_APPROVED_FOR_RELEASE_PREPARATION'
