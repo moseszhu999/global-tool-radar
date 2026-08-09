@@ -101,3 +101,12 @@ export const validateCreativeGateEvidence = (evidence) => {
   if (evidence.publicationAllowed !== false) throw new Error('creative gate evidence cannot allow publication');
   return true;
 };
+
+export const toCreativePreflightGate = (evidence) => {
+  validateCreativeGateEvidence(evidence);
+  return {
+    evidenceType: evidence.schemaVersion,
+    evidenceDigest: evidence.evidenceDigest,
+    checks: Object.fromEntries(Object.entries(evidence.checks).map(([name, item]) => [name, item.result])),
+  };
+};
