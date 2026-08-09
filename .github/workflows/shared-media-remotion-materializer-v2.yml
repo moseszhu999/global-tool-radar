@@ -1,0 +1,117 @@
+name: shared-media-remotion-materializer-v2
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - packages/shared-media-remotion-materializer/src/v2.mjs
+      - packages/shared-media-remotion-materializer/test/materializer-v2.test.mjs
+      - .github/workflows/shared-media-remotion-materializer-v2.yml
+      - docs/contracts/shared-media-remotion-materializer-v2.md
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TARGET_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Verify exact head and pure materializer boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          test -f packages/shared-media-remotion-materializer/src/v2.mjs
+          test -f packages/shared-media-remotion-materializer/test/materializer-v2.test.mjs
+          ! grep -RInE "from ['\"](node:fs|node:child_process|node:http|node:https|node:net|node:dgram)|\b(fetch|exec|execFile|spawn|fork)\s*\(" packages/shared-media-remotion-materializer/src/v2.mjs
+          ! grep -nE 'createMacPreMaterializedBindingV1|approved_pre_materialized|create_or_update|render_existing|Authorization|Bearer ' packages/shared-media-remotion-materializer/src/v2.mjs
+          ! grep -nE 'TrainingOS|ToolRadar|courseId|studentId|teacherId|publicationAllowed|publicationPerformed|analyticsObserved|humanApproved' packages/shared-media-remotion-materializer/src/v2.mjs
+      - name: Syntax check
+        run: |
+          node --check packages/shared-media-remotion-materializer/src/v2.mjs
+          node --check packages/shared-media-remotion-materializer/test/materializer-v2.test.mjs
+      - name: Run exact v2 contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --prefix packages/shared-media-remotion-materializer test | tee "$RUNNER_TEMP/shared-media-remotion-materializer-v2.tap"
+          grep -Eq '# tests[[:space:]]+41$' "$RUNNER_TEMP/shared-media-remotion-materializer-v2.tap"
+          grep -Eq '# pass[[:space:]]+41$' "$RUNNER_TEMP/shared-media-remotion-materializer-v2.tap"
+          grep -Eq '# fail[[:space:]]+0$' "$RUNNER_TEMP/shared-media-remotion-materializer-v2.tap"
+          grep -F 'materializes course-shaped prepared inputs into four deterministic project files' "$RUNNER_TEMP/shared-media-remotion-materializer-v2.tap"
+          grep -F 'candidate re-signing does not make a modified root source authoritative' "$RUNNER_TEMP/shared-media-remotion-materializer-v2.tap"
+          grep -F 'exact verifier rejects a candidate from a different prepared source chain' "$RUNNER_TEMP/shared-media-remotion-materializer-v2.tap"
+          grep -F 'observed generated files and prepared asset manifest must match exactly' "$RUNNER_TEMP/shared-media-remotion-materializer-v2.tap"
+          grep -F 'generated audio track uses exact prepared start and target window instead of segment naming conventions' "$RUNNER_TEMP/shared-media-remotion-materializer-v2.tap"
+          grep -F 'candidate is deeply frozen' "$RUNNER_TEMP/shared-media-remotion-materializer-v2.tap"
+      - name: Enforce runtime and truth boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F "remotion: '4.0.506'" packages/shared-media-remotion-materializer/src/v2.mjs
+          grep -F "'@remotion/cli': '4.0.506'" packages/shared-media-remotion-materializer/src/v2.mjs
+          grep -F "react: '19.2.3'" packages/shared-media-remotion-materializer/src/v2.mjs
+          grep -F "'react-dom': '19.2.3'" packages/shared-media-remotion-materializer/src/v2.mjs
+          grep -F 'validatePreparedQualificationReceiptV1' packages/shared-media-remotion-materializer/src/v2.mjs
+          grep -F 'renderAuthorized:false' packages/shared-media-remotion-materializer/src/v2.mjs
+          grep -F 'bindingCreated:false' packages/shared-media-remotion-materializer/src/v2.mjs
+          grep -F 'staticFile(' packages/shared-media-remotion-materializer/src/v2.mjs
+      - name: Emit exact-head receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json,os,pathlib,re
+          root=pathlib.Path(os.environ['RUNNER_TEMP'])
+          tap=(root/'shared-media-remotion-materializer-v2.tap').read_text()
+          def n(name):
+              m=re.search(rf'^# {name}\s+(\d+)\s*$',tap,re.M)
+              return int(m.group(1)) if m else None
+          receipt={
+            'schemaVersion':'shared-media.remotion-materializer-v2-exact-head.v1',
+            'exactHead':os.environ['TARGET_SHA'],
+            'package':'@shared-media/remotion-materializer@2.0.0',
+            'tests':n('tests'),'pass':n('pass'),'fail':n('fail'),
+            'supportedSubset':'static-image+synthesized-segment-audio+auto-captions',
+            'generatedFileCount':4,
+            'compositionId':'SharedMediaRenderV2',
+            'referenceRemotionVersion':'4.0.506',
+            'referenceReactVersion':'19.2.3',
+            'exactPlanManifestPreparedReceiptQualificationRequired':True,
+            'freshQualificationRequired':True,
+            'preparedAssetStagingManifestRequired':True,
+            'generatedSourceManifestRequired':True,
+            'candidateMustMatchExactRequest':True,
+            'filesystemWritePerformed':False,
+            'networkPerformed':False,
+            'processExecutionPerformed':False,
+            'bindingCreated':False,
+            'renderAuthorized':False,
+            'renderSubmitted':False,
+            'realMacOperationPerformed':False,
+            'consumerDomainDecisionInferred':False,
+            'businessOutcomeInferred':False,
+            'testLogSha256':hashlib.sha256(tap.encode()).hexdigest(),
+          }
+          path=root/'shared-media-remotion-materializer-v2-exact-head.json'
+          path.write_text(json.dumps(receipt,indent=2)+'\n')
+          print(json.dumps(receipt,indent=2))
+          PY
+      - name: Upload exact-head evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: shared-media-remotion-materializer-v2
+          path: |
+            ${{ runner.temp }}/shared-media-remotion-materializer-v2-exact-head.json
+            ${{ runner.temp }}/shared-media-remotion-materializer-v2.tap
+          if-no-files-found: error
+          retention-days: 30
