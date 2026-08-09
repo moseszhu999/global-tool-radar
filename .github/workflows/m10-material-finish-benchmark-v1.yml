@@ -6,6 +6,7 @@ on:
     types: [opened, synchronize, reopened]
     paths:
       - apps/remotion-video/src/toolradar-material-finish-benchmark-v1.tsx
+      - apps/remotion-video/public/assets/m10-material-finish-v1/**
       - .github/workflows/m10-material-finish-benchmark-v1.yml
       - docs/video/evidence/m10-human-rejection-material-finish-2026-08-10.md
 
@@ -23,6 +24,7 @@ jobs:
       EXPECTED_HEIGHT: '1920'
       SOURCE_FILE: apps/remotion-video/src/toolradar-material-finish-benchmark-v1.tsx
       OUTPUT_FILE: apps/remotion-video/out/toolradar-material-finish-benchmark-v1.mp4
+      ASSET_DIR: apps/remotion-video/public/assets/m10-material-finish-v1
     steps:
       - name: Checkout exact benchmark head
         uses: actions/checkout@v4
@@ -31,7 +33,7 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
-      - name: Verify exact head and benchmark boundary
+      - name: Verify exact head and production-asset preservation boundary
         shell: bash
         run: |
           set -euo pipefail
@@ -41,12 +43,26 @@ jobs:
           grep -F 'MATERIAL_FINISH_BENCHMARK_FRAMES = 150' "$SOURCE_FILE"
           grep -F 'MATERIAL_FINISH_BENCHMARK_FPS = 30' "$SOURCE_FILE"
           grep -F 'ToolRadarMaterialFinishBenchmarkV1' "$SOURCE_FILE"
-          grep -F 'MATERIAL FINISH ONLY · NOT CANONICAL' "$SOURCE_FILE"
-          ! grep -Eq '(<Video|<Img|staticFile\(|https?://|execute_arbitrary_graph)' "$SOURCE_FILE"
+          grep -F "staticFile('assets/m10-material-finish-v1/signal-module.svg')" "$SOURCE_FILE"
+          grep -F "staticFile('assets/m10-material-finish-v1/evidence-card.svg')" "$SOURCE_FILE"
+          grep -F "staticFile('assets/m10-material-finish-v1/radar-scout.svg')" "$SOURCE_FILE"
+          grep -F '<Img' "$SOURCE_FILE"
+          grep -F 'data-production-asset-preservation="svg-staticfile-img"' "$SOURCE_FILE"
+          test -s "$ASSET_DIR/signal-module.svg"
+          test -s "$ASSET_DIR/evidence-card.svg"
+          test -s "$ASSET_DIR/radar-scout.svg"
+          ! grep -Eq '(const MaterialSignal|const EvidenceCard|const PremiumScout)' "$SOURCE_FILE"
+          ! grep -Eq '(https?://|execute_arbitrary_graph)' "$SOURCE_FILE"
           python3 - <<'PY'
-          frames=150; fps=30
-          assert frames/fps == 5.0
-          print({'durationSeconds':frames/fps,'experiment':'material-finish-only','thirdPartyVisualAssets':False,'canonicalCandidateModified':False})
+          from pathlib import Path
+          import hashlib,json,os
+          base=Path(os.environ['ASSET_DIR'])
+          rows=[]
+          for name in ['signal-module.svg','evidence-card.svg','radar-scout.svg']:
+              data=(base/name).read_bytes()
+              rows.append({'name':name,'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest()})
+          assert all(r['bytes'] > 1000 for r in rows)
+          print(json.dumps({'durationSeconds':5.0,'controlledVariable':'asset_preservation_and_finish','remotionRole':'composition_only','assets':rows},indent=2))
           PY
 
       - name: Install media and fonts
@@ -88,7 +104,7 @@ jobs:
             --crf=16
           test -s out/toolradar-material-finish-benchmark-v1.mp4
 
-      - name: Inspect exact media
+      - name: Inspect exact media and persist source-asset digests
         shell: bash
         run: |
           set -euo pipefail
@@ -106,15 +122,23 @@ jobs:
           assert frames == int(os.environ['EXPECTED_FRAMES']), frames
           assert int(video['width']) == int(os.environ['EXPECTED_WIDTH'])
           assert int(video['height']) == int(os.environ['EXPECTED_HEIGHT'])
-          data=pathlib.Path(os.environ['VIDEO']).read_bytes()
+          output=pathlib.Path(os.environ['VIDEO']).read_bytes()
           black=(rt/'blackdetect.txt').read_text(errors='ignore')
           assert 'black_start:' not in black, black
+          base=pathlib.Path(os.environ['GITHUB_WORKSPACE'])/os.environ['ASSET_DIR']
+          assets=[]
+          for name in ['signal-module.svg','evidence-card.svg','radar-scout.svg']:
+              data=(base/name).read_bytes()
+              assets.append({'name':name,'sha256':hashlib.sha256(data).hexdigest(),'bytes':len(data)})
           receipt={
-            'schemaVersion':'toolradar.m10.material-finish-benchmark.v1',
+            'schemaVersion':'toolradar.m10.material-finish-benchmark.v2',
             'exactHead':os.environ['PR_HEAD'],
             'compositionId':'ToolRadarMaterialFinishBenchmarkV1',
-            'controlledVariable':'material_finish_only',
-            'assetClasses':['signal_module','evidence_card','radar_scout'],
+            'controlledVariable':'asset_preservation_and_finish',
+            'sourceAssetAuthority':'durable_svg_files',
+            'remotionAssetPath':'staticFile_plus_Img',
+            'remotionRedrawOfHeroAssets':False,
+            'sourceAssets':assets,
             'durationSeconds':frames/int(os.environ['EXPECTED_FPS']),
             'frames':frames,
             'fps':int(os.environ['EXPECTED_FPS']),
@@ -125,8 +149,8 @@ jobs:
             'thirdPartyVisualAssetsUsed':False,
             'generatedFactualUiUsed':False,
             'canonicalCandidateModified':False,
-            'outputSha256':hashlib.sha256(data).hexdigest(),
-            'outputBytes':len(data),
+            'outputSha256':hashlib.sha256(output).hexdigest(),
+            'outputBytes':len(output),
             'controllerCreativeApproved':False,
             'humanSelectedForCanonical':False,
             'publicationAllowed':False,
@@ -143,6 +167,7 @@ jobs:
           name: toolradar-m10-material-finish-benchmark-v1
           path: |
             apps/remotion-video/out/toolradar-material-finish-benchmark-v1.mp4
+            apps/remotion-video/public/assets/m10-material-finish-v1/*.svg
             ${{ runner.temp }}/contact-sheet.jpg
             ${{ runner.temp }}/receipt.json
             ${{ runner.temp }}/ffprobe.json
