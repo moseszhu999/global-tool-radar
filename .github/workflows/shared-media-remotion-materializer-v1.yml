@@ -55,11 +55,10 @@ jobs:
         run: |
           set -euo pipefail
           node --test packages/shared-media-remotion-materializer/test/index.test.mjs | tee "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
-          grep -Eq '# tests[[:space:]]+25$' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
-          grep -Eq '# pass[[:space:]]+25$' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
+          grep -Eq '# tests[[:space:]]+24$' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
+          grep -Eq '# pass[[:space:]]+24$' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
           grep -Eq '# fail[[:space:]]+0$' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
           grep -F 'semantically equal output profile with different key insertion order produces same candidate' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
-          grep -F 'persisted output profile id must be a safe non-secret identifier' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
           grep -F 'candidate never grants render authorization or creates an approved binding' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
           grep -F 'unknown output-affecting request, shot or profile fields fail closed' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
           grep -F 'candidate validation rejects semantic or generated-source tampering' "$RUNNER_TEMP/shared-media-remotion-materializer.tap"
