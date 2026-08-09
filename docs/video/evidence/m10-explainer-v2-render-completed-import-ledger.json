@@ -1,0 +1,71 @@
+{
+  "schemaVersion": "toolradar.video-project.v1",
+  "projectId": "video-project:toolradar-explainer-v2:2026-08-09",
+  "owner": "video-operation",
+  "sourceSignal": {
+    "id": "toolradar-explainer-production-polish-alpha-v2",
+    "title": "ToolRadar Explainer Production Polish Alpha v2",
+    "platform": "internal-render",
+    "sourceUrl": null
+  },
+  "stage": "RENDER_COMPLETED",
+  "status": "ACTIVE",
+  "blockedReason": null,
+  "createdAt": "2026-08-09T10:05:00.000Z",
+  "updatedAt": "2026-08-09T10:05:00.000Z",
+  "artifacts": [
+    {
+      "type": "render_execution_evidence",
+      "schemaVersion": "toolradar.render-execution-evidence.v1",
+      "artifactId": "render-execution-evidence:e3b054c4476af94856b6ba4d15066396602b9a9f65ea67b88fcd6d109f2fc921",
+      "digest": "e3b054c4476af94856b6ba4d15066396602b9a9f65ea67b88fcd6d109f2fc921",
+      "status": "COMPLETED",
+      "truthBoundary": "post_render_execution_evidence_verified",
+      "claims": {
+        "executionBackend": "github_actions",
+        "exactSourceHead": "a5ac58e0ea05c5d8d8ca6861e1001b044bde44e0",
+        "provenanceSnapshotDigest": "b3a0f5c823af4be875510d27ebbd65dc6de9907463d1b9e10eea682397060991",
+        "finalVideoReceiptDigest": "56ff8a2f3f8738facb7e86c656159e7c149036abf324f82a48e82881e8359be5",
+        "finalVideoSha256": "1de5e8a6e25b8e25ef4f7a7db8a628941794687432ba0420eb956fdc0ba6f598",
+        "outputPath": "apps/remotion-video/out/toolradar-explainer-19s-production-polish-alpha-v2.mp4",
+        "renderProfile": {
+          "width": 1080,
+          "height": 1920,
+          "fps": 30,
+          "durationSeconds": 19.2
+        },
+        "workflowRunId": "31304399179",
+        "sourceArtifactId": "9035504064",
+        "sourceArtifactDigest": "cbb0a4b97201a3999b819486682d023d0d93061f1d97920c13a8c34fe51e4a3b",
+        "reviewBindingDigest": "b3a0f5c823af4be875510d27ebbd65dc6de9907463d1b9e10eea682397060991",
+        "renderExecutionVerified": true,
+        "finalVideoClaimAllowed": true,
+        "qualityReviewAllowed": true,
+        "publicationAllowed": false,
+        "originalRenderGateProven": false,
+        "historicalStagesProven": false
+      },
+      "attachedByEventId": "import-rendered:e3b054c4476af94856b6",
+      "attachedAt": "2026-08-09T10:05:00.000Z"
+    }
+  ],
+  "events": [
+    {
+      "sequence": 1,
+      "eventId": "import-rendered:e3b054c4476af94856b6",
+      "requestDigest": "3f537c5b649fbb2859e220b85fa14975a821edde7308c6c91718dbd4e56bcfff",
+      "type": "IMPORT_RENDERED_CANDIDATE",
+      "actor": "video-operation-controller",
+      "occurredAt": "2026-08-09T10:05:00.000Z",
+      "reason": "Verified post-render evidence import; earlier lifecycle stages are not asserted by this event",
+      "artifactDigest": "e3b054c4476af94856b6ba4d15066396602b9a9f65ea67b88fcd6d109f2fc921",
+      "fromStage": "DISCOVERED",
+      "toStage": "RENDER_COMPLETED",
+      "fromStatus": "ACTIVE",
+      "toStatus": "ACTIVE",
+      "eventDigest": "46914fffedd6e75a153631abdb6ed4a23ef02a2757c6fa152d6dbcc4fc3d66bd"
+    }
+  ],
+  "nextEvent": "APPROVE_QUALITY",
+  "projectDigest": "e85b33821b56aeed0d303fc1ccad49bd8e57ee3189c66eef40a03fe851df6b85"
+}
