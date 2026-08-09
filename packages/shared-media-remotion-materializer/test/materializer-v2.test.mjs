@@ -138,6 +138,13 @@ test('unsupported prepared media type is rejected by exact source semantics', ()
   expectCode(()=>materializeSharedMediaRemotionV2({plan:source.plan, manifest:source.manifest, preparedReceipt:changed, qualificationReceipt:source.qualification}), 'SOURCE_SEMANTICS_MISMATCH');
 });
 
+test('generated audio track uses exact prepared start and target window instead of segment naming conventions', () => {
+  const source = makeSourceChain(); const candidate = materializeSharedMediaRemotionV2({plan:source.plan, manifest:source.manifest, preparedReceipt:source.prepared, qualificationReceipt:source.qualification});
+  const root = candidate.files.find((f)=>f.path==='src/root.tsx').content;
+  assert.match(root, /const AUDIO = \[{"segmentId":"narration-shot-1","sourceShotId":"shot-1","src":"assets\/prepared-voice-1\.wav","from":0,"durationInFrames":30}\] as const;/);
+  assert.doesNotMatch(root, /narration-\$\{shot\.shotId\}/);
+});
+
 test('none voice and none captions produce a visual-only prepared asset set', () => {
   const source = makeSourceChain({voiceMode:'none', captionMode:'none'}); const candidate = materializeSharedMediaRemotionV2({plan:source.plan, manifest:source.manifest, preparedReceipt:source.prepared, qualificationReceipt:source.qualification});
   assert.equal(candidate.preparedAssetManifest.length, 1); assert.equal(candidate.preparedAssetManifest[0].role, 'visual'); assert.equal(candidate.captionCues.length, 0);
