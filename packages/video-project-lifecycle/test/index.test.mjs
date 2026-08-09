@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
   applyVideoProjectEvent,
   createVideoProject,
+  importRenderedCandidateProject,
   summarizeVideoProject,
   validateVideoProject,
 } from '../src/index.mjs';
@@ -56,12 +57,109 @@ const advanceToRenderAuthorized = () => {
   })));
 };
 
+const currentExplainerEvidence = () => ({
+  executionBackend: 'github_actions',
+  exactSourceHead: 'a5ac58e0ea05c5d8d8ca6861e1001b044bde44e0',
+  provenanceSnapshotDigest: 'b3a0f5c823af4be875510d27ebbd65dc6de9907463d1b9e10eea682397060991',
+  finalVideoReceiptDigest: '56ff8a2f3f8738facb7e86c656159e7c149036abf324f82a48e82881e8359be5',
+  finalVideoSha256: '1de5e8a6e25b8e25ef4f7a7db8a628941794687432ba0420eb956fdc0ba6f598',
+  outputPath: 'apps/remotion-video/out/toolradar-explainer-19s-production-polish-alpha-v2.mp4',
+  renderProfile: {width: 1080, height: 1920, fps: 30, durationSeconds: 19.2},
+  workflowRunId: '31304399179',
+  sourceArtifactId: '9035504064',
+  sourceArtifactDigest: 'cbb0a4b97201a3999b819486682d023d0d93061f1d97920c13a8c34fe51e4a3b',
+});
+
+const importedProjectFixture = () => importRenderedCandidateProject({
+  projectId: 'video-project:toolradar-explainer-v2:imported',
+  owner: 'video-operation',
+  actor: 'video-operation-controller',
+  occurredAt: '2026-08-09T09:30:00.000Z',
+  sourceSignal: {
+    id: 'toolradar-explainer-production-polish-alpha-v2',
+    title: 'ToolRadar Explainer Production Polish Alpha v2',
+    platform: 'internal-render',
+    sourceUrl: null,
+  },
+  evidence: currentExplainerEvidence(),
+});
+
 test('creates an auditable discovered video project', () => {
   const project = baseProject();
   assert.equal(project.stage, 'DISCOVERED');
   assert.equal(project.status, 'ACTIVE');
   assert.equal(project.nextEvent, 'SELECT_CANDIDATE');
   assert.equal(validateVideoProject(project), true);
+});
+
+test('imports a verified externally rendered candidate without asserting skipped lifecycle history', () => {
+  const project = importedProjectFixture();
+
+  assert.equal(validateVideoProject(project), true);
+  assert.equal(project.stage, 'RENDER_COMPLETED');
+  assert.equal(project.status, 'ACTIVE');
+  assert.equal(project.nextEvent, 'APPROVE_QUALITY');
+  assert.equal(project.events.length, 1);
+  assert.equal(project.events[0].type, 'IMPORT_RENDERED_CANDIDATE');
+  assert.equal(project.artifacts.length, 1);
+  assert.equal(project.artifacts[0].type, 'render_execution_evidence');
+  assert.equal(project.artifacts[0].truthBoundary, 'post_render_execution_evidence_verified');
+  assert.equal(project.artifacts[0].claims.renderExecutionVerified, true);
+  assert.equal(project.artifacts[0].claims.originalRenderGateProven, false);
+  assert.equal(project.artifacts[0].claims.historicalStagesProven, false);
+  assert.equal(project.artifacts[0].claims.publicationAllowed, false);
+  assert.equal(project.artifacts[0].claims.reviewBindingDigest, currentExplainerEvidence().provenanceSnapshotDigest);
+});
+
+test('keeps rendered-candidate import inaccessible through the public event API', () => {
+  const discovered = createVideoProject({
+    projectId: 'video-project:direct-import-bypass',
+    owner: 'video-operation',
+    createdAt: '2026-08-09T09:30:00.000Z',
+    sourceSignal: {id: 'candidate:direct', title: 'Direct import attempt', platform: 'internal-render'},
+  });
+  const canonicalImport = importedProjectFixture();
+  assert.throws(() => applyVideoProjectEvent(discovered, {
+    eventId: 'direct-import-attempt',
+    type: 'IMPORT_RENDERED_CANDIDATE',
+    actor: 'bypass-attempt',
+    occurredAt: '2026-08-09T09:31:00.000Z',
+    reason: 'should never bypass the canonical import constructor',
+    artifact: canonicalImport.artifacts[0],
+  }), /unsupported event type: IMPORT_RENDERED_CANDIDATE/);
+});
+
+test('fails closed when imported render evidence lacks a valid provenance digest', () => {
+  assert.throws(() => importRenderedCandidateProject({
+    projectId: 'video-project:bad-import',
+    owner: 'video-operation',
+    actor: 'video-operation-controller',
+    occurredAt: '2026-08-09T09:30:00.000Z',
+    sourceSignal: {id: 'candidate:bad', title: 'Bad import', platform: 'internal-render'},
+    evidence: {...currentExplainerEvidence(), provenanceSnapshotDigest: 'not-a-digest'},
+  }), /provenanceSnapshotDigest must be SHA-256/);
+});
+
+test('fails closed for unsupported render backend or unbound GitHub artifact identity', () => {
+  const input = {
+    projectId: 'video-project:bad-backend',
+    owner: 'video-operation',
+    actor: 'video-operation-controller',
+    occurredAt: '2026-08-09T09:30:00.000Z',
+    sourceSignal: {id: 'candidate:bad-backend', title: 'Bad backend import', platform: 'internal-render'},
+  };
+  assert.throws(() => importRenderedCandidateProject({
+    ...input,
+    evidence: {...currentExplainerEvidence(), executionBackend: 'self_asserted_runner'},
+  }), /executionBackend is unsupported/);
+  assert.throws(() => importRenderedCandidateProject({
+    ...input,
+    evidence: {...currentExplainerEvidence(), sourceArtifactId: 'not-an-artifact-id'},
+  }), /sourceArtifactId must be a numeric id/);
+  assert.throws(() => importRenderedCandidateProject({
+    ...input,
+    evidence: {...currentExplainerEvidence(), exactSourceHead: 'f'.repeat(39)},
+  }), /exactSourceHead must be a Git object id/);
 });
 
 test('runs the complete lifecycle and marks feedback-ready work completed', () => {
