@@ -19,12 +19,12 @@ import {
 const sha = (s) => createHash('sha256').update(s).digest('hex');
 const expectCode = (fn, code) => assert.throws(fn, (error) => error?.code === code);
 
-const makeSource = () => {
+const makeSource = ({durationMs=1000} = {}) => {
   const imageSha = sha('image-payload');
   const audioSha = sha('audio-payload');
   const request = createMediaRenderRequestV1({
     requestId:'fixture-course-video-01', purpose:'course.explainer', title:'Bounded fixture', language:'zh-CN',
-    shots:[{shotId:'shot-1', order:1, durationMs:1000, narration:{mode:'text', text:'这是一个确定性的测试片段。'}, visualAssetIds:['visual-1']}],
+    shots:[{shotId:'shot-1', order:1, durationMs, narration:{mode:'text', text:'这是一个确定性的测试片段。'}, visualAssetIds:['visual-1']}],
     visualAssets:[{assetId:'visual-1', kind:'image', locator:'fixture://visual-1', mediaType:'image/png', sha256:imageSha}],
     voice:{mode:'synthesize', provider:'edge-tts', voiceId:'zh-CN-XiaoxiaoNeural', rate:1.12, locale:'zh-CN'},
     captions:{mode:'auto', format:'burn-in', language:'zh-CN'},
@@ -49,7 +49,7 @@ const makeSource = () => {
     renderPlanDigest:plan.renderPlanDigest, preparationManifestDigest:manifest.preparationManifestDigest, preparedInputsDigest:prepared.preparedInputsDigest,
     qualifiedAt:'2026-08-09T00:00:01.000Z',
     visualInspections:[{artifactId:'prepared-visual-1', sha256:imageSha, mediaType:'image/png', kind:'image', width:1920, height:1080, qualified:true}],
-    voiceTiming:[{artifactId:'prepared-voice-1', sha256:audioSha, mediaType:'audio/wav', kind:'audio', actualDurationSeconds:0.2, actualDurationMsCeil:200, targetDurationMs:narration.durationMs, trailingSilenceMs:800, fitsWindow:true, segmentId:narration.segmentId, sourceShotId:narration.shotId, playbackStartMs:narration.startMs}],
+    voiceTiming:[{artifactId:'prepared-voice-1', sha256:audioSha, mediaType:'audio/wav', kind:'audio', actualDurationSeconds:0.2, actualDurationMsCeil:200, targetDurationMs:narration.durationMs, trailingSilenceMs:narration.durationMs-200, fitsWindow:true, segmentId:narration.segmentId, sourceShotId:narration.shotId, playbackStartMs:narration.startMs}],
     captionQualification:{mode:'auto', format:'burn-in', cueCount:1, cuesBoundToExactTimeline:true, providedCaptionPayloadSupported:false},
     policy:{timeStretchApplied:false, trimApplied:false, audioOverrunAllowed:false, shortAudioTrailingSilenceAllowed:true},
     qualificationPassed:true, materializationAuthorized:false, transportSelected:false, bindingCreated:false, renderAuthorized:false, consumerDomainDecisionInferred:false, businessOutcomeInferred:false,
@@ -60,7 +60,7 @@ const makeSource = () => {
   return {plan,manifest,prepared,qualification,materialization};
 };
 
-const makeStaging = () => { const source = makeSource(); const staging = createSharedMediaMacStagingCandidateV1({candidate:source.materialization, plan:source.plan, manifest:source.manifest, preparedReceipt:source.prepared, qualificationReceipt:source.qualification}); return {...source, staging}; };
+const makeStaging = (options) => { const source = makeSource(options); const staging = createSharedMediaMacStagingCandidateV1({candidate:source.materialization, plan:source.plan, manifest:source.manifest, preparedReceipt:source.prepared, qualificationReceipt:source.qualification}); return {...source, staging}; };
 
 test('creates a Mac staging candidate from the exact materialization source chain', () => {
   const {staging} = makeStaging();
@@ -140,9 +140,8 @@ test('staging digest tampering fails closed', () => {
 
 test('re-signed staging candidate from a different materialization source is rejected', () => {
   const source = makeStaging();
-  const changed = makeSource();
-  const tampered = createSharedMediaMacStagingCandidateV1({candidate:changed.materialization, plan:changed.plan, manifest:changed.manifest, preparedReceipt:changed.prepared, qualificationReceipt:changed.qualification});
-  expectCode(()=>verifySharedMediaMacStagingCandidateV1({candidate:tampered, materializationCandidate:source.materialization, plan:source.plan, manifest:source.manifest, preparedReceipt:source.prepared, qualificationReceipt:source.qualification}), 'SOURCE_SEMANTICS_MISMATCH');
+  const changed = makeStaging({durationMs:2000});
+  expectCode(()=>verifySharedMediaMacStagingCandidateV1({candidate:changed.staging, materializationCandidate:source.materialization, plan:source.plan, manifest:source.manifest, preparedReceipt:source.prepared, qualificationReceipt:source.qualification}), 'SOURCE_SEMANTICS_MISMATCH');
 });
 
 test('staging candidate cannot be changed into an approved binding', () => {
