@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="body" x1="74" y1="52" x2="438" y2="464" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#d9fbff"/><stop offset="0.11" stop-color="#6de9f5"/><stop offset="0.42" stop-color="#148ca7"/><stop offset="0.78" stop-color="#0a334c"/><stop offset="1" stop-color="#041522"/>
+    </linearGradient>
+    <linearGradient id="rim" x1="90" y1="76" x2="416" y2="438" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffffff" stop-opacity=".9"/><stop offset=".2" stop-color="#a7f7ff" stop-opacity=".48"/><stop offset=".65" stop-color="#1db4cc" stop-opacity=".18"/><stop offset="1" stop-color="#06141e" stop-opacity=".7"/>
+    </linearGradient>
+    <radialGradient id="core" cx="36%" cy="30%" r="72%">
+      <stop offset="0" stop-color="#fff"/><stop offset=".12" stop-color="#dfffff"/><stop offset=".32" stop-color="#70f2ff"/><stop offset=".6" stop-color="#0fa3bc"/><stop offset="1" stop-color="#052333"/>
+    </radialGradient>
+    <filter id="shadow" x="-40%" y="-40%" width="180%" height="200%">
+      <feDropShadow dx="0" dy="28" stdDeviation="24" flood-color="#000814" flood-opacity=".58"/>
+      <feDropShadow dx="0" dy="0" stdDeviation="16" flood-color="#55dfee" flood-opacity=".22"/>
+    </filter>
+    <filter id="grain" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2" seed="17" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 .075 0"/>
+      <feBlend in="SourceGraphic" mode="soft-light"/>
+    </filter>
+  </defs>
+  <g filter="url(#shadow)">
+    <rect x="66" y="66" width="380" height="380" rx="112" fill="url(#body)" stroke="url(#rim)" stroke-width="7"/>
+    <rect x="84" y="84" width="344" height="344" rx="96" fill="none" stroke="#d9fbff" stroke-opacity=".22" stroke-width="3"/>
+    <path d="M114 106C189 60 329 66 401 128C365 105 299 102 245 120C191 137 158 163 132 188C112 166 105 132 114 106Z" fill="#fff" fill-opacity=".28"/>
+    <path d="M92 317C158 388 277 425 395 362C364 415 320 446 255 446C164 446 93 392 92 317Z" fill="#000" fill-opacity=".22"/>
+    <circle cx="256" cy="256" r="92" fill="url(#core)" stroke="#eaffff" stroke-width="7"/>
+    <circle cx="229" cy="219" r="23" fill="#fff" fill-opacity=".9"/>
+    <circle cx="256" cy="256" r="119" fill="none" stroke="#6de9f5" stroke-opacity=".22" stroke-width="5"/>
+    <circle cx="256" cy="256" r="141" fill="none" stroke="#6de9f5" stroke-opacity=".11" stroke-width="2"/>
+  </g>
+  <rect x="76" y="76" width="360" height="360" rx="106" fill="#fff" opacity=".01" filter="url(#grain)"/>
+</svg>
