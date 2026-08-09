@@ -1,0 +1,346 @@
+name: M10 Explainer Production Polish Alpha A-B v2
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - apps/remotion-video/src/toolradar-explainer-production-polish-alpha-overlay-v2.tsx
+      - .github/workflows/m10-explainer-production-polish-alpha-ab-v2.yml
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  alpha-polish-ab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      BASELINE_ARTIFACT_ID: '9015703667'
+      BASELINE_SHA256: '7081bd479d082dd3bbc18860de4005740c81f1e8420baef9ea8e1887c03a7add'
+      BASELINE_EXACT_HEAD: '41b01578f5bd2a3c5ac6a9e3dc3993c6dc40608c'
+      OVERLAY_SOURCE: apps/remotion-video/src/toolradar-explainer-production-polish-alpha-overlay-v2.tsx
+      ANIMATIC_SOURCE: apps/remotion-video/src/toolradar-explainer-19s-animatic-v1.tsx
+      WORKSPACE_SOURCE: apps/web/workspace.html
+    steps:
+      - name: Checkout exact alpha-polish head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify exact source, copy lineage, and true-alpha intent
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          test -z "$(git status --porcelain)"
+          grep -F 'PRODUCTION_POLISH_ALPHA_FRAMES = 576' "$OVERLAY_SOURCE"
+          grep -F 'PRODUCTION_POLISH_ALPHA_FPS = 30' "$OVERLAY_SOURCE"
+          grep -F "background:'transparent'" "$OVERLAY_SOURCE"
+          grep -F 'data-alpha-production-polish' "$OVERLAY_SOURCE"
+          grep -F "height:345" "$OVERLAY_SOURCE"
+          ! grep -F '#00ff00' "$OVERLAY_SOURCE"
+          ! grep -E 'https?://|staticFile\(|<img|<Image|<Video|<OffthreadVideo' "$OVERLAY_SOURCE"
+
+          grep -F 'title="5 个焦点，先留下来。"' "$ANIMATIC_SOURCE"
+          grep -F 'title="先看到 14 个信号。"' "$ANIMATIC_SOURCE"
+          grep -F 'title="不是盯着热度，先看证据。"' "$ANIMATIC_SOURCE"
+          grep -F 'title="一边更吵，一边更清楚。"' "$ANIMATIC_SOURCE"
+          grep -F 'title="真正的升级，是敢于减少。"' "$ANIMATIC_SOURCE"
+          grep -F 'title="Agent 提议，人来决定。"' "$ANIMATIC_SOURCE"
+
+          grep -F 'Radar inbox' "$WORKSPACE_SOURCE"
+          grep -F 'data-count>UNKNOWN' "$WORKSPACE_SOURCE"
+          grep -F 'data-rights>UNKNOWN' "$WORKSPACE_SOURCE"
+          grep -F 'data-security>UNKNOWN' "$WORKSPACE_SOURCE"
+          grep -F '缺失不会显示为 0' "$WORKSPACE_SOURCE"
+
+      - name: Install deterministic media, font, and review dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg unzip fontconfig fonts-noto-cjk python3-pil
+          sudo fc-cache -f
+          fc-match 'Noto Sans CJK SC' | tee "$RUNNER_TEMP/font-match.txt"
+          grep -F 'NotoSansCJK' "$RUNNER_TEMP/font-match.txt" >/dev/null
+          ffmpeg -hide_banner -decoders 2>/dev/null | grep -F 'libvpx-vp9' >/dev/null
+          python3 - <<'PY'
+          from PIL import Image
+          print('Pillow explicit dependency PASS', Image.__version__)
+          PY
+
+      - name: Download immutable Phase 6 four-cameo baseline
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/baseline"
+          curl -fsSL \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts/${BASELINE_ARTIFACT_ID}/zip" \
+            -o "$RUNNER_TEMP/baseline.zip"
+          unzip -q "$RUNNER_TEMP/baseline.zip" -d "$RUNNER_TEMP/baseline"
+          base="$(find "$RUNNER_TEMP/baseline" -type f -name 'toolradar-explainer-19s-radar-scout-cameo-v2.mp4' -print -quit)"
+          test -n "$base" && test -s "$base"
+          actual="$(sha256sum "$base" | awk '{print $1}')"
+          test "$actual" = "$BASELINE_SHA256"
+          cp "$base" "$RUNNER_TEMP/cameo-A.mp4"
+
+      - name: Install Remotion and render true-alpha VP9 overlay
+        working-directory: apps/remotion-video
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f package-lock.json ]; then npm ci --no-audit --no-fund; else npm install --no-audit --no-fund; fi
+          npx remotion browser ensure
+          mkdir -p out
+
+          image_flag='--image-format=png'
+          printf '%s\n' "$image_flag" > "$RUNNER_TEMP/remotion-image-flag.txt"
+
+          npx remotion render \
+            src/toolradar-explainer-production-polish-alpha-overlay-v2.tsx \
+            ToolRadarExplainerProductionPolishAlphaOverlayV2 \
+            out/production-polish-alpha-v2.webm \
+            --codec=vp9 \
+            --pixel-format=yuva420p \
+            "$image_flag"
+          test -s out/production-polish-alpha-v2.webm
+
+      - name: Prove alpha plane exists before composition
+        shell: bash
+        run: |
+          set -euo pipefail
+          overlay="$GITHUB_WORKSPACE/apps/remotion-video/out/production-polish-alpha-v2.webm"
+          ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,pix_fmt:stream_tags=alpha_mode -of json "$overlay" > "$RUNNER_TEMP/alpha-ffprobe.json"
+          python3 - "$RUNNER_TEMP/alpha-ffprobe.json" <<'PY'
+          import json,sys
+          p=json.load(open(sys.argv[1]))
+          s=p['streams'][0]
+          assert s['codec_name']=='vp9', s
+          alpha_mode=str(s.get('tags',{}).get('alpha_mode',''))
+          pix=s.get('pix_fmt','')
+          assert alpha_mode=='1' or pix.startswith('yuva'), s
+          print('alpha container signal PASS', {'pix_fmt':pix,'alpha_mode':alpha_mode})
+          PY
+
+          ffmpeg -hide_banner -loglevel error -y -ss 10.90 -c:v libvpx-vp9 -i "$overlay" -frames:v 1 -vf alphaextract "$RUNNER_TEMP/alpha-10_90.png"
+          test -s "$RUNNER_TEMP/alpha-10_90.png"
+          python3 - "$RUNNER_TEMP/alpha-10_90.png" <<'PY'
+          from PIL import Image
+          import sys
+          im=Image.open(sys.argv[1]).convert('L')
+          vals=list(im.getdata())
+          avg=sum(vals)/len(vals)
+          lo=min(vals); hi=max(vals)
+          assert lo < 16, (lo,hi,avg)
+          assert hi > 240, (lo,hi,avg)
+          assert 20 < avg < 100, (lo,hi,avg)
+          print(f'alphaPlane PASS min={lo} max={hi} avg={avg:.3f}')
+          PY
+
+      - name: Composite using alpha only, no chroma key
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="$RUNNER_TEMP/cameo-A.mp4"
+          overlay="$GITHUB_WORKSPACE/apps/remotion-video/out/production-polish-alpha-v2.webm"
+          out="$GITHUB_WORKSPACE/apps/remotion-video/out/toolradar-explainer-19s-production-polish-alpha-v2.mp4"
+          ffmpeg -hide_banner -loglevel error -y \
+            -i "$base" -c:v libvpx-vp9 -i "$overlay" \
+            -filter_complex "[0:v][1:v]overlay=0:0:format=auto[v]" \
+            -map '[v]' -map 0:a:0 \
+            -c:v libx264 -crf 19 -pix_fmt yuv420p \
+            -c:a copy -t 19.2 -movflags +faststart "$out"
+          test -s "$out"
+
+      - name: Verify audio identity and bounded visual delta
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="$RUNNER_TEMP/cameo-A.mp4"
+          out="$GITHUB_WORKSPACE/apps/remotion-video/out/toolradar-explainer-19s-production-polish-alpha-v2.mp4"
+
+          ffmpeg -hide_banner -loglevel error -y -i "$base" -map 0:a:0 -c copy "$RUNNER_TEMP/a-baseline.aac"
+          ffmpeg -hide_banner -loglevel error -y -i "$out" -map 0:a:0 -c copy "$RUNNER_TEMP/a-polish.aac"
+          a0="$(sha256sum "$RUNNER_TEMP/a-baseline.aac" | awk '{print $1}')"
+          a1="$(sha256sum "$RUNNER_TEMP/a-polish.aac" | awk '{print $1}')"
+          test "$a0" = "$a1"
+          printf '%s\n' "$a0" > "$RUNNER_TEMP/audio-sha.txt"
+
+          measure_ssim() {
+            local t="$1" filter="$2" name="$3"
+            ffmpeg -hide_banner -nostats -ss "$t" -i "$base" -ss "$t" -i "$out" \
+              -filter_complex "[0:v]$filter[a];[1:v]$filter[b];[a][b]ssim" \
+              -frames:v 1 -f null - 2> "$RUNNER_TEMP/$name.log" || true
+            grep -oE 'All:[0-9.]+' "$RUNNER_TEMP/$name.log" | tail -1 | cut -d: -f2
+          }
+          proof="$(measure_ssim 6.55 'crop=832:470:124:1242' proof-ssim)"
+          body="$(measure_ssim 10.90 'crop=1080:1450:0:470' body-ssim)"
+          top="$(measure_ssim 10.90 'crop=1080:360:0:0' top-ssim)"
+          python3 - "$proof" "$body" "$top" <<'PY'
+          import sys
+          proof,body,top=map(float,sys.argv[1:])
+          if proof < 0.985: raise SystemExit(f'product proof changed too much: {proof:.6f}')
+          if body < 0.985: raise SystemExit(f'body changed outside polish scope: {body:.6f}')
+          if top > 0.985: raise SystemExit(f'typography delta too small: {top:.6f}')
+          print(f'proofCropSSIM={proof:.6f}')
+          print(f'bodyPreservationSSIM={body:.6f}')
+          print(f'topTypographySSIM={top:.6f}')
+          PY
+          printf '%s\n' "$proof" > "$RUNNER_TEMP/proof-ssim-score.txt"
+          printf '%s\n' "$body" > "$RUNNER_TEMP/body-ssim-score.txt"
+          printf '%s\n' "$top" > "$RUNNER_TEMP/top-ssim-score.txt"
+
+      - name: Fail closed on bright cyan-green shelf fringe
+        shell: bash
+        run: |
+          set -euo pipefail
+          out="$GITHUB_WORKSPACE/apps/remotion-video/out/toolradar-explainer-19s-production-polish-alpha-v2.mp4"
+          ffmpeg -hide_banner -loglevel error -y -ss 10.90 -i "$out" -frames:v 1 "$RUNNER_TEMP/polish-10_90.png"
+          python3 - "$RUNNER_TEMP/polish-10_90.png" "$RUNNER_TEMP/fringe-metrics.json" <<'PY'
+          from PIL import Image
+          import json,sys
+          im=Image.open(sys.argv[1]).convert('RGB')
+          band=im.crop((0,338,1080,346))
+          pixels=list(band.getdata())
+          suspicious=[(r,g,b) for r,g,b in pixels if g>90 and b>70 and g-r>45]
+          ratio=len(suspicious)/len(pixels)
+          max_g=max(g for _,g,_ in pixels)
+          metrics={'bandY':[338,346],'suspiciousPixelCount':len(suspicious),'pixelCount':len(pixels),'suspiciousRatio':ratio,'maxGreen':max_g}
+          json.dump(metrics,open(sys.argv[2],'w'),indent=2)
+          print(json.dumps(metrics,indent=2))
+          if ratio >= 0.005:
+              raise SystemExit(f'bright cyan/green shelf fringe detected: ratio={ratio:.6f}')
+          PY
+
+      - name: Inspect exact alpha-polish media
+        shell: bash
+        run: |
+          set -euo pipefail
+          video="$GITHUB_WORKSPACE/apps/remotion-video/out/toolradar-explainer-19s-production-polish-alpha-v2.mp4"
+          ffprobe -v error -show_streams -show_format -of json "$video" > "$RUNNER_TEMP/ffprobe.json"
+          ffprobe -v error -count_frames -select_streams v:0 -show_entries stream=nb_read_frames -of default=nw=1:nk=1 "$video" > "$RUNNER_TEMP/frame-count.txt"
+          ffmpeg -hide_banner -nostats -i "$video" -vf 'blackdetect=d=0.35:pix_th=0.05' -an -f null - 2> "$RUNNER_TEMP/blackdetect.txt" || true
+          ffmpeg -hide_banner -nostats -i "$video" -af 'silencedetect=noise=-45dB:d=0.75' -vn -f null - 2> "$RUNNER_TEMP/silencedetect.txt" || true
+          ffmpeg -hide_banner -nostats -i "$video" -af 'loudnorm=I=-16:TP=-1.5:LRA=11:print_format=json' -f null - 2> "$RUNNER_TEMP/loudness.txt" || true
+          test "$(cat "$RUNNER_TEMP/frame-count.txt")" = '576'
+          ! grep -F 'black_start:' "$RUNNER_TEMP/blackdetect.txt"
+          ! grep -F 'silence_start:' "$RUNNER_TEMP/silencedetect.txt"
+
+      - name: Generate matched-time A-B review sheet
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="$RUNNER_TEMP/cameo-A.mp4"
+          out="$GITHUB_WORKSPACE/apps/remotion-video/out/toolradar-explainer-19s-production-polish-alpha-v2.mp4"
+          review="$RUNNER_TEMP/review"; mkdir -p "$review"
+          times=(1.20 4.00 6.55 10.90 12.20 14.80 18.25)
+          for i in "${!times[@]}"; do
+            n="$(printf '%02d' $((i+1)))"
+            ffmpeg -hide_banner -loglevel error -y -ss "${times[$i]}" -i "$base" -frames:v 1 -vf scale=540:960 "$review/${n}-A.jpg"
+            ffmpeg -hide_banner -loglevel error -y -ss "${times[$i]}" -i "$out" -frames:v 1 -vf scale=540:960 "$review/${n}-B.jpg"
+          done
+          python3 - "$review" "$GITHUB_WORKSPACE/apps/remotion-video/out/production-polish-alpha-v2-ab-contact-sheet.jpg" <<'PY'
+          from PIL import Image,ImageDraw,ImageFont
+          import pathlib,sys
+          d=pathlib.Path(sys.argv[1]); out=sys.argv[2]
+          times=['1.20s','4.00s','6.55s','10.90s','12.20s','14.80s','18.25s']
+          font=ImageFont.truetype('/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc',22)
+          rows=[]
+          for i,t in enumerate(times,1):
+              a=Image.open(d/f'{i:02d}-A.jpg').convert('RGB')
+              b=Image.open(d/f'{i:02d}-B.jpg').convert('RGB')
+              row=Image.new('RGB',(a.width+b.width+8,a.height+40),(8,16,28))
+              row.paste(a,(0,40)); row.paste(b,(a.width+8,40))
+              ImageDraw.Draw(row).text((8,7),f'{t}   A=FOUR-CAMEO BASELINE    B=TRUE-ALPHA POLISH',fill='white',font=font)
+              rows.append(row)
+          sheet=Image.new('RGB',(rows[0].width,sum(r.height for r in rows)+8*(len(rows)-1)),(8,16,28))
+          y=0
+          for row in rows:
+              sheet.paste(row,(0,y)); y+=row.height+8
+          sheet.save(out,quality=91)
+          PY
+
+      - name: Write exact alpha-polish receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          video="$GITHUB_WORKSPACE/apps/remotion-video/out/toolradar-explainer-19s-production-polish-alpha-v2.mp4"
+          VIDEO="$video" HEAD="${{ github.event.pull_request.head.sha }}" python3 - <<'PY'
+          import hashlib,json,os,pathlib,re
+          rt=pathlib.Path(os.environ['RUNNER_TEMP'])
+          probe=json.loads((rt/'ffprobe.json').read_text())
+          vs=next(s for s in probe['streams'] if s['codec_type']=='video')
+          au=next(s for s in probe['streams'] if s['codec_type']=='audio')
+          loud=(rt/'loudness.txt').read_text(errors='ignore')
+          def metric(name):
+              m=re.search(rf'"{name}"\s*:\s*"?(-?\d+(?:\.\d+)?)',loud)
+              return float(m.group(1)) if m else None
+          data=pathlib.Path(os.environ['VIDEO']).read_bytes()
+          fringe=json.loads((rt/'fringe-metrics.json').read_text())
+          receipt={
+            'schemaVersion':'toolradar.m10.production-polish-alpha-ab.v2',
+            'exactHead':os.environ['HEAD'],
+            'baselineExactHead':os.environ['BASELINE_EXACT_HEAD'],
+            'baselineSha256':os.environ['BASELINE_SHA256'],
+            'polishSha256':hashlib.sha256(data).hexdigest(),
+            'polishBytes':len(data),
+            'frames':int((rt/'frame-count.txt').read_text().strip()),
+            'durationSeconds':float(probe['format']['duration']),
+            'videoCodec':vs['codec_name'],
+            'audioCodec':au['codec_name'],
+            'intermediateTransparency':'vp9-alpha',
+            'chromaKeyApplied':False,
+            'audioBitstreamPreserved':True,
+            'audioBitstreamSha256':(rt/'audio-sha.txt').read_text().strip(),
+            'proofCropSSIMAt6_55s':float((rt/'proof-ssim-score.txt').read_text().strip()),
+            'bodyPreservationSSIMAt10_90s':float((rt/'body-ssim-score.txt').read_text().strip()),
+            'topTypographySSIMAt10_90s':float((rt/'top-ssim-score.txt').read_text().strip()),
+            'shelfFringeSuspiciousRatioAt10_90s':fringe['suspiciousRatio'],
+            'fourCameoStrategyPreserved':True,
+            'productProofTextModified':False,
+            'generatedFactualUiUsed':False,
+            'thirdPartyVisualAssetsUsed':False,
+            'firstPayoffSeconds':5.2,
+            'fullRevealSeconds':10.4,
+            'loopStartSeconds':17.6,
+            'integratedLoudnessMeasured':metric('input_i'),
+            'truePeakMeasured':metric('input_tp'),
+            'blackIntervalAtLeast035s':False,
+            'silenceIntervalAtLeast075s':False,
+            'canonicalPR89CandidateReplaced':False,
+            'humanWatchedFullCandidate':False,
+            'socialPlatformBusinessFitApprovedByHuman':False,
+            'publicationAllowed':False,
+            'publicationPerformed':False,
+            'analyticsObserved':False,
+          }
+          (rt/'production-polish-alpha-v2-receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')
+          print(json.dumps(receipt,indent=2))
+          PY
+
+      - name: Upload exact true-alpha polish evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: toolradar-explainer-production-polish-alpha-ab-v2
+          path: |
+            apps/remotion-video/out/toolradar-explainer-19s-production-polish-alpha-v2.mp4
+            apps/remotion-video/out/production-polish-alpha-v2-ab-contact-sheet.jpg
+            ${{ runner.temp }}/production-polish-alpha-v2-receipt.json
+            ${{ runner.temp }}/alpha-ffprobe.json
+            ${{ runner.temp }}/fringe-metrics.json
+            ${{ runner.temp }}/proof-ssim-score.txt
+            ${{ runner.temp }}/body-ssim-score.txt
+            ${{ runner.temp }}/top-ssim-score.txt
+            ${{ runner.temp }}/ffprobe.json
+            ${{ runner.temp }}/loudness.txt
+          if-no-files-found: error
+          retention-days: 30
