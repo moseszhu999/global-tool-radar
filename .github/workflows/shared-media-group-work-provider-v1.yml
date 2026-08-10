@@ -1,0 +1,113 @@
+name: shared-media-group-work-provider-v1
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - packages/shared-media-group-work-provider/**
+      - docs/architecture/shared-media-group-work-provider-v1.md
+      - .github/workflows/shared-media-group-work-provider-v1.yml
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TARGET_SHA: ${{ github.event.pull_request.head.sha }}
+
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify exact head and provider-only boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "$TARGET_SHA"
+          echo "exact_head=$actual"
+          test -f packages/shared-media-render-contract/src/index.mjs
+          test -f packages/shared-media-group-service-adapter/src/index.mjs
+          test -f packages/shared-media-group-work-provider/src/index.mjs
+          ! grep -RInE "from ['\"](node:fs|node:child_process|node:http|node:https|node:net|node:dgram)|\b(fetch|exec|execFile|spawn|fork)\s*\(" packages/shared-media-group-work-provider/src || {
+            echo 'Group Work provider must remain pure/service-only in v1.' >&2
+            exit 1
+          }
+          ! grep -RInE 'Authorization|Bearer |ACTION_TOKEN|publish\(|send\(|POST /v1/render' packages/shared-media-group-work-provider/src || {
+            echo 'Group Work provider must not own transport credentials, render submission or publication.' >&2
+            exit 1
+          }
+
+      - name: Syntax check
+        run: node --check packages/shared-media-group-work-provider/src/index.mjs
+
+      - name: Run exact provider contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test packages/shared-media-group-work-provider/test/index.test.mjs | tee "$RUNNER_TEMP/shared-media-group-work-provider.tap"
+          grep -Eq '# tests[[:space:]]+10$' "$RUNNER_TEMP/shared-media-group-work-provider.tap"
+          grep -Eq '# pass[[:space:]]+10$' "$RUNNER_TEMP/shared-media-group-work-provider.tap"
+          grep -Eq '# fail[[:space:]]+0$' "$RUNNER_TEMP/shared-media-group-work-provider.tap"
+
+      - name: Enforce provider response truth boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F "GROUP_WORK_PROVIDER_RESPONSE_SCHEMA = 'group.work-provider.response.v1'" packages/shared-media-group-work-provider/src/index.mjs
+          grep -F "SHARED_MEDIA_WORK_ITEM_SCHEMA = 'shared-media.group-work-item.v1'" packages/shared-media-group-work-provider/src/index.mjs
+          grep -F 'projectMediaRenderResultForGroupService' packages/shared-media-group-work-provider/src/index.mjs
+          grep -F 'providerTruthOwnedExternally: true' packages/shared-media-group-work-provider/src/index.mjs
+          grep -F 'persistencePerformed: false' packages/shared-media-group-work-provider/src/index.mjs
+          grep -F 'crossDomainWritePerformed: false' packages/shared-media-group-work-provider/src/index.mjs
+          grep -F 'authorityGrantCreated: false' packages/shared-media-group-work-provider/src/index.mjs
+          grep -F 'executionAuthorized: false' packages/shared-media-group-work-provider/src/index.mjs
+          grep -F 'externalActionPerformed: false' packages/shared-media-group-work-provider/src/index.mjs
+          ! grep -RInE 'publicationAllowed: true|publicationPerformed: true|humanReviewCompleted: true|service_role|DATABASE_URL|socialAccount|publicationCredentials|payment|settlement|wallet|tokenMovement' packages/shared-media-group-work-provider/src
+
+      - name: Emit exact-head receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json,os,pathlib,re
+          root=pathlib.Path(os.environ['RUNNER_TEMP'])
+          tap=(root/'shared-media-group-work-provider.tap').read_text()
+          def number(name):
+              m=re.search(rf'^# {name}\s+(\d+)\s*$',tap,re.M)
+              return int(m.group(1)) if m else None
+          receipt={
+            'schemaVersion':'shared-media.group-work-provider-exact-head.v1',
+            'exactHead':os.environ['TARGET_SHA'],
+            'tests':number('tests'),
+            'pass':number('pass'),
+            'fail':number('fail'),
+            'responseSchema':'group.work-provider.response.v1',
+            'sourceSchema':'shared-media.group-work-item.v1',
+            'pureProviderAdapter':True,
+            'providerTruthOwnedExternally':True,
+            'publicationAllowed':False,
+            'externalActionPerformed':False,
+            'testLogSha256':hashlib.sha256(tap.encode()).hexdigest(),
+          }
+          path=root/'shared-media-group-work-provider-exact-head.json'
+          path.write_text(json.dumps(receipt,indent=2)+'\n')
+          print(json.dumps(receipt,indent=2))
+          PY
+
+      - name: Upload exact-head evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: shared-media-group-work-provider-v1
+          path: |
+            ${{ runner.temp }}/shared-media-group-work-provider-exact-head.json
+            ${{ runner.temp }}/shared-media-group-work-provider.tap
+          if-no-files-found: error
+          retention-days: 30
