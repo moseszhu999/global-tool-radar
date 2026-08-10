@@ -15,6 +15,7 @@ export const EXPECTED_MAC_REMOTION_SERVER_SHA256 =
 
 const SHA256 = /^[a-f0-9]{64}$/;
 const SAFE_REF = /^[A-Za-z0-9][A-Za-z0-9._:/-]{0,239}$/;
+const SECRET_KEY = /^(?:authorization|token|secret|password|cookie|api[-_]?key|x-amz-signature|signature|sig)$/i;
 const SECRET_TEXT = /(?:bearer\s+|(?:token|secret|password|api[_-]?key|cookie|session)\s*[:=]|[?&#](?:token|secret|password|api[_-]?key|x-amz-signature|signature|sig)=)/i;
 
 const stableStringify = (value) => {
@@ -69,6 +70,22 @@ const requireSha = (value, label) => {
   return normalized;
 };
 
+const assertNoDurableSecretMaterial = (value, path = '$canonicalResult') => {
+  if (typeof value === 'string') {
+    if (SECRET_TEXT.test(value)) throw new TypeError(`${path} contains secret-shaped durable material`);
+    return;
+  }
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => assertNoDurableSecretMaterial(item, `${path}[${index}]`));
+    return;
+  }
+  if (!value || typeof value !== 'object') return;
+  for (const [key, nested] of Object.entries(value)) {
+    if (SECRET_KEY.test(key)) throw new TypeError(`${path}.${key} is a secret-shaped durable field`);
+    assertNoDurableSecretMaterial(nested, `${path}.${key}`);
+  }
+};
+
 const resultInputManifestDigest = (result) => {
   if (!result?.evidence || typeof result.evidence.inputManifestDigest !== 'string') {
     throw new TypeError('canonical result evidence.inputManifestDigest is required');
@@ -93,7 +110,9 @@ const normalizeCanonicalResult = (request, result) => {
   if (resultInputManifestDigest(result) !== request.inputManifestDigest) {
     throw new Error('CANONICAL_RECEIPT_INPUT_MANIFEST_MISMATCH');
   }
-  return structuredClone(result);
+  const canonicalResult = structuredClone(result);
+  assertNoDurableSecretMaterial(canonicalResult);
+  return canonicalResult;
 };
 
 export function createCanonicalTerminalReceiptV1({request, result, persistedAt} = {}) {
