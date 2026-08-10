@@ -180,7 +180,11 @@ export function writeCanonicalTerminalReceiptSlotV1({existingReceipt = null, req
     });
   }
   const current = normalizeStoredReceipt(existingReceipt, request);
-  if (current.receiptDigest !== next.receiptDigest) {
+  if (current.requestId !== next.requestId
+    || current.jobId !== next.jobId
+    || current.inputManifestDigest !== next.inputManifestDigest
+    || current.terminalStatus !== next.terminalStatus
+    || current.resultDigest !== next.resultDigest) {
     throw new Error('CANONICAL_TERMINAL_RECEIPT_CONFLICT');
   }
   return deepFreeze({
