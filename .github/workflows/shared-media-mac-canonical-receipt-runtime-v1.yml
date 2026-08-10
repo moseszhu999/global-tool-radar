@@ -1,0 +1,52 @@
+name: shared-media-mac-canonical-receipt-runtime-v1
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/shared-media-mac-canonical-receipt-runtime-v1.yml
+      - packages/shared-media-mac-canonical-receipt-runtime/**
+      - docs/architecture/shared-media-mac-canonical-receipt-runtime-v1.md
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Verify exact head and source-only boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          ! grep -RInE '\b(sqlite|DATABASE_URL|redis|service_role)\b' packages/shared-media-mac-canonical-receipt-runtime
+          ! grep -RInE 'publicationAllowed:[[:space:]]*true|publicationPerformed:[[:space:]]*true|humanReviewCompleted:[[:space:]]*true|authorityGrantCreated:[[:space:]]*true' packages/shared-media-mac-canonical-receipt-runtime/src
+      - name: Syntax check
+        run: |
+          node --check packages/shared-media-mac-canonical-receipt-runtime/src/runtime.mjs
+          node --check packages/shared-media-mac-canonical-receipt-runtime/scripts/patch-mac-remotion-server-v1.mjs
+      - name: Run focused contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test packages/shared-media-mac-canonical-receipt-runtime/test/index.test.mjs | tee /tmp/runtime.tap
+          grep -Eq '# tests[[:space:]]+14$' /tmp/runtime.tap
+          grep -Eq '# pass[[:space:]]+14$' /tmp/runtime.tap
+          grep -Eq '# fail[[:space:]]+0$' /tmp/runtime.tap
+      - name: Lock rollout truth boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          SRC=packages/shared-media-mac-canonical-receipt-runtime/scripts/patch-mac-remotion-server-v1.mjs
+          grep -F "bb0de1478cd2ce48ce6bcf0c17c9b7f5e5e811131448b3555dfdcee3a4c8510f" "$SRC"
+          grep -F "liveMutationPerformed: false" "$SRC"
+          grep -F "serviceRestartPerformed: false" "$SRC"
+          grep -F "renderSubmitted: false" "$SRC"
+          grep -F "canonical_result_not_ready" "$SRC"
