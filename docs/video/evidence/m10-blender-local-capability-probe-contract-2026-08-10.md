@@ -67,9 +67,30 @@ BLENDER_BIN
 PATH: blender
 ```
 
-## Validation boundary
+## Contract validation
 
-The GitHub workflow `M10 Blender Capability Probe Contract v1` validates the probe **contract only** using fixtures. A green cloud CI run does not prove the user's local Blender is installed or reachable.
+Exact validated head:
+
+```text
+7a7c5b92e11da0f3210970c851183cd580450442
+```
+
+Workflow:
+
+```text
+M10 Blender Capability Probe Contract v1
+run: 31344298380
+conclusion: SUCCESS
+```
+
+The workflow validates both:
+
+- positive fixture: an explicit executable returns `Blender 4.5.0 LTS` and the receipt is `installed=true`;
+- negative fixture: no Blender executable is found and the receipt fails closed with `installed=false` and process exit code 2.
+
+The first workflow attempt failed only because the negative fixture hard-coded `/usr/bin/node`; current hosted runners expose Node elsewhere. The fixed workflow captures `command -v node` before constraining `PATH`. That CI failure was unrelated to Blender detection logic and unrelated to the user's local machine.
+
+A green cloud CI run still does **not** prove the user's local Blender is installed or reachable.
 
 The local capability truth remains:
 
@@ -115,7 +136,8 @@ Figma/SVG remains the preferred authority for deterministic UI, logo, HUD, icono
 ```text
 blenderProductionDirectionSelected=true
 probeContractImplemented=true
-probeContractCloudValidated=pending_at_creation
+probeContractCloudValidated=true
+probeContractRun=31344298380
 localProbeExecuted=false
 localBlenderInstalled=NOT_PROVEN
 localRenderExecuted=false
