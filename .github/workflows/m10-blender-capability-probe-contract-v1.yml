@@ -64,8 +64,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          node_bin="$(command -v node)"
           set +e
-          PATH="/usr/bin:/bin" BLENDER_BIN="$RUNNER_TEMP/does-not-exist" /usr/bin/node apps/remotion-video/scripts/probe-blender-capability.mjs > "$RUNNER_TEMP/negative.json"
+          PATH="/usr/bin:/bin" BLENDER_BIN="$RUNNER_TEMP/does-not-exist" "$node_bin" apps/remotion-video/scripts/probe-blender-capability.mjs > "$RUNNER_TEMP/negative.json"
           code=$?
           set -e
           test "$code" -eq 2
