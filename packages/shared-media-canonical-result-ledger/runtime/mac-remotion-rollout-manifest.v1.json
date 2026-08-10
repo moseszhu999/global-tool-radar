@@ -1,0 +1,52 @@
+{
+  "schemaVersion": "shared-media.mac-canonical-receipt-rollout-manifest.v1",
+  "runtime": "mac-remotion-action",
+  "expectedServerSha256": "bb0de1478cd2ce48ce6bcf0c17c9b7f5e5e811131448b3555dfdcee3a4c8510f",
+  "observedGitRepository": false,
+  "existingDurability": {
+    "jsonLedgerRead": true,
+    "jsonLedgerWrite": true,
+    "startupRecovery": true,
+    "sqlite": false,
+    "postgres": false,
+    "redis": false
+  },
+  "canonicalReceiptFieldsObservedBeforeRollout": false,
+  "targetLedgerExtension": {
+    "field": "canonicalResultReceipt",
+    "schemaVersion": "shared-media.canonical-terminal-receipt.v1",
+    "identity": [
+      "requestId",
+      "jobId",
+      "inputManifestDigest"
+    ],
+    "terminalStatuses": [
+      "succeeded",
+      "failed"
+    ],
+    "conflictingReplay": "fail_closed",
+    "identicalReplay": "idempotent"
+  },
+  "requiredChecks": {
+    "exactServerSha": true,
+    "backupBeforeMutation": true,
+    "nodeCheckBeforeActivation": true,
+    "alternatePortVerification": true,
+    "healthCheckAfterActivation": true,
+    "restartRecoveryReceiptValidation": true,
+    "deterministicRollback": true
+  },
+  "forbidden": {
+    "newDatabase": true,
+    "transportCompletedAsCanonicalSucceeded": true,
+    "signedUrlPersistence": true,
+    "credentialPersistence": true,
+    "publicationAuthority": true,
+    "humanApprovalInference": true,
+    "crossDomainAuthorityGrant": true
+  },
+  "sourcePrRuntimeMutationAuthorized": false,
+  "sourcePrServiceRestartAuthorized": false,
+  "sourcePrRenderSubmissionAuthorized": false,
+  "nextStep": "separate_bounded_mac_rollout_after_source_acceptance"
+}

@@ -1,0 +1,122 @@
+name: shared-media-canonical-result-ledger-v1
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - packages/shared-media-canonical-result-ledger/**
+      - docs/architecture/shared-media-canonical-terminal-receipt-ledger-v1.md
+      - .github/workflows/shared-media-canonical-result-ledger-v1.yml
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TARGET_SHA: ${{ github.event.pull_request.head.sha }}
+
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify exact head and source-only boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "$TARGET_SHA"
+          echo "exact_head=$actual"
+          test -f packages/shared-media-render-contract/src/index.mjs
+          test -f packages/shared-media-evidence-collector/src/index.mjs
+          test -f packages/shared-media-group-work-provider/src/index.mjs
+          test -f packages/shared-media-canonical-result-ledger/src/index.mjs
+          ! grep -RInE '\b(writeFile|writeFileSync|appendFile|appendFileSync|renameSync?|unlinkSync?|rmSync?|exec|execFile|spawn|fork)\s*\(' packages/shared-media-canonical-result-ledger/src || {
+            echo 'Canonical result ledger contract source must not mutate runtime/files/processes.' >&2
+            exit 1
+          }
+          ! grep -RInE '\b(fetch|XMLHttpRequest)\s*\(' packages/shared-media-canonical-result-ledger/src || {
+            echo 'Canonical result ledger source must not own network transport.' >&2
+            exit 1
+          }
+          ! grep -RInE 'publicationAllowed: true|publicationPerformed: true|humanReviewCompleted: true|authorityGrantCreated: true|service_role|DATABASE_URL' packages/shared-media-canonical-result-ledger/src
+
+      - name: Syntax check source and rollout preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check packages/shared-media-canonical-result-ledger/src/index.mjs
+          node --check packages/shared-media-canonical-result-ledger/scripts/mac-remotion-rollout-preflight-v1.mjs
+
+      - name: Run exact canonical ledger contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test packages/shared-media-canonical-result-ledger/test/index.test.mjs | tee "$RUNNER_TEMP/shared-media-canonical-result-ledger.tap"
+          grep -Eq '# tests[[:space:]]+15$' "$RUNNER_TEMP/shared-media-canonical-result-ledger.tap"
+          grep -Eq '# pass[[:space:]]+15$' "$RUNNER_TEMP/shared-media-canonical-result-ledger.tap"
+          grep -Eq '# fail[[:space:]]+0$' "$RUNNER_TEMP/shared-media-canonical-result-ledger.tap"
+
+      - name: Enforce receipt and rollout truth boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          SRC=packages/shared-media-canonical-result-ledger/src/index.mjs
+          MANIFEST=packages/shared-media-canonical-result-ledger/runtime/mac-remotion-rollout-manifest.v1.json
+          grep -F "'shared-media.canonical-terminal-receipt.v1'" "$SRC"
+          grep -F "'shared-media.canonical-result-slot.v1'" "$SRC"
+          grep -F "'bb0de1478cd2ce48ce6bcf0c17c9b7f5e5e811131448b3555dfdcee3a4c8510f'" "$SRC"
+          grep -F 'validateMediaRenderResultV1(result, {request})' "$SRC"
+          grep -F 'CANONICAL_TERMINAL_RECEIPT_CONFLICT' "$SRC"
+          grep -F 'CANONICAL_RECEIPT_READ_NOT_AUTHORIZED' "$SRC"
+          grep -F 'runtimeMutationAuthorized: false' "$SRC"
+          grep -F 'serviceRestartAuthorized: false' "$SRC"
+          grep -F 'renderSubmissionAuthorized: false' "$SRC"
+          node -e "const m=require('./'+'$MANIFEST'); if(m.sourcePrRuntimeMutationAuthorized!==false||m.requiredChecks.backupBeforeMutation!==true||m.requiredChecks.deterministicRollback!==true) process.exit(1)"
+          ! grep -RInE '\"sourcePrRuntimeMutationAuthorized\"[[:space:]]*:[[:space:]]*true|\"sourcePrServiceRestartAuthorized\"[[:space:]]*:[[:space:]]*true|\"sourcePrRenderSubmissionAuthorized\"[[:space:]]*:[[:space:]]*true' "$MANIFEST"
+
+      - name: Emit exact-head receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json,os,pathlib,re
+          root=pathlib.Path(os.environ['RUNNER_TEMP'])
+          tap=(root/'shared-media-canonical-result-ledger.tap').read_text()
+          def number(name):
+              m=re.search(rf'^# {name}\s+(\d+)\s*$',tap,re.M)
+              return int(m.group(1)) if m else None
+          receipt={
+            'schemaVersion':'shared-media.canonical-result-ledger-exact-head.v1',
+            'exactHead':os.environ['TARGET_SHA'],
+            'tests':number('tests'),
+            'pass':number('pass'),
+            'fail':number('fail'),
+            'receiptSchema':'shared-media.canonical-terminal-receipt.v1',
+            'expectedMacServerSha256':'bb0de1478cd2ce48ce6bcf0c17c9b7f5e5e811131448b3555dfdcee3a4c8510f',
+            'newDatabaseIntroduced':False,
+            'runtimeMutationAuthorized':False,
+            'serviceRestartAuthorized':False,
+            'renderSubmissionAuthorized':False,
+            'testLogSha256':hashlib.sha256(tap.encode()).hexdigest(),
+          }
+          path=root/'shared-media-canonical-result-ledger-exact-head.json'
+          path.write_text(json.dumps(receipt,indent=2)+'\n')
+          print(json.dumps(receipt,indent=2))
+          PY
+
+      - name: Upload exact-head evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: shared-media-canonical-result-ledger-v1
+          path: |
+            ${{ runner.temp }}/shared-media-canonical-result-ledger-exact-head.json
+            ${{ runner.temp }}/shared-media-canonical-result-ledger.tap
+          if-no-files-found: error
+          retention-days: 30
