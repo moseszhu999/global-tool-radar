@@ -97,10 +97,13 @@ test('runtime rejects job identity mismatch', () => {
   assert.throws(() => runtime.validateReceipt(receipt(), {jobId: '22222222-2222-4222-8222-222222222222'}), /CANONICAL_RECEIPT_JOB_ID_MISMATCH/);
 });
 
-test('runtime rejects tampered canonical result digest', () => {
+test('runtime rejects a tampered canonical result before trusting the stored receipt digest', () => {
   const value = structuredClone(receipt());
   value.canonicalResult.artifact.byteLength += 1;
-  assert.throws(() => runtime.validateReceipt(value, {jobId: JOB_ID}), /EVIDENCE_MISMATCH|RESULT_DIGEST_MISMATCH/);
+  assert.throws(
+    () => runtime.validateReceipt(value, {jobId: JOB_ID}),
+    /ffprobe format mismatch|EVIDENCE_MISMATCH|RESULT_DIGEST_MISMATCH/,
+  );
 });
 
 test('runtime rejects widened human/publication boundary even if payload is otherwise unchanged', () => {
