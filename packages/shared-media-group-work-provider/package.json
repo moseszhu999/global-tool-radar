@@ -1,5 +1,5 @@
 {
-  "name": "@tradeos/shared-media-group-work-provider",
+  "name": "@shared-media/group-work-provider",
   "version": "1.0.0",
   "private": true,
   "type": "module",
