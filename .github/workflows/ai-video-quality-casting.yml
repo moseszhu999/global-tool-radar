@@ -6,6 +6,11 @@ on:
       - agent/ai-video-quality-casting-20260811
     paths:
       - .github/workflows/ai-video-quality-casting.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/ai-video-quality-casting.yml
 jobs:
   cast:
     runs-on: self-hosted
