@@ -11,12 +11,15 @@ from mathutils import Vector
 # representation family, but its broad hidden ellipsoid bridge produced only
 # near-parity versus V10 because it did not visibly lift/fuse adjacent root
 # valleys. V19 freezes V18's union/remesh method and exact V10 crown peak
-# centerlines/widths, changing only the buried connector geometry: replace the
-# broad ellipsoid with one root-following arc through the seven V10 crown roots.
-# The first V19 execution proved a 0.17-radius arc at 0.055 rear/down offset was
-# under-connected (4 components). This revision keeps the same variable/family,
-# moves the arc closer to the roots and raises its radius only enough to satisfy
-# the one-connected-crown hard gate before visual review.
+# centerlines/widths, changing only the connector geometry: replace the broad
+# ellipsoid with one root-following arc through the seven V10 crown roots.
+#
+# Evidence-driven connectivity revisions:
+# - 0.17 radius + 0.055 rear/down offset -> 4 components after remesh.
+# - 0.22 radius + 0.025 rear/down offset -> 2 components after remesh.
+# - this final bounded revision centers the 0.22 arc exactly on all seven V10
+#   root centers. If this still fails the one-component hard gate, the single
+#   root-arc connector method is rejected rather than tuned again.
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 V18_PATH = os.path.join(HERE, 'render-radar-scout-3d-hero-v18.py')
@@ -26,8 +29,8 @@ spec.loader.exec_module(v18)
 
 CROWN_COUNT = 7
 VOXEL_SIZE = v18.VOXEL_SIZE
-ROOT_ARC_REARWARD_OFFSET = 0.025
-ROOT_ARC_DOWN_OFFSET = 0.025
+ROOT_ARC_REARWARD_OFFSET = 0.0
+ROOT_ARC_DOWN_OFFSET = 0.0
 ROOT_ARC_BEVEL_DEPTH = 0.22
 ROOT_ARC_BEVEL_RESOLUTION = 5
 ROOT_ARC_RESOLUTION_U = 24
@@ -45,8 +48,6 @@ def crown_root_points():
     roots = []
     for points, _widths in v18.v10.v8.V6_PRIMARY[:CROWN_COUNT]:
         p = Vector(points[0])
-        # Negative Y is camera/front in this asset. A small +Y / -Z offset keeps
-        # the connector embedded while remaining inside every V10 root volume.
         p.y += ROOT_ARC_REARWARD_OFFSET
         p.z -= ROOT_ARC_DOWN_OFFSET
         roots.append(tuple(p))
@@ -76,7 +77,7 @@ def add_root_following_arc(material):
     obj['rootConnectorMethod'] = 'V10_ROOT_FOLLOWING_ARC'
     obj['rootArcConnectorUsed'] = True
     obj['ellipsoidRootBridgeUsed'] = False
-    obj['buriedBehindV10Roots'] = True
+    obj['centeredOnExactV10Roots'] = True
     obj['visibleSilhouetteAuthority'] = False
     obj['rearwardOffset'] = ROOT_ARC_REARWARD_OFFSET
     obj['downOffset'] = ROOT_ARC_DOWN_OFFSET
@@ -90,8 +91,6 @@ def add_root_following_arc(material):
 
 
 def build_connected_crown_with_root_arc(scene):
-    # Exact V10 is still the visible silhouette authority. V18 is imported only
-    # as the proven union/remesh method authority.
     v18.v10.geometry_v10(scene)
 
     crown = []
@@ -110,8 +109,6 @@ def build_connected_crown_with_root_arc(scene):
     union.name = 'HairCrownConnectedRootArcUnionV19'
     union.data.name = 'HairCrownConnectedRootArcUnionV19Mesh'
 
-    # Freeze V18 voxel union method/profile exactly; only connector geometry is
-    # the controlled variable.
     union.data.remesh_mode = 'VOXEL'
     union.data.remesh_voxel_size = VOXEL_SIZE
     union.data.remesh_voxel_adaptivity = 0.0
@@ -138,6 +135,7 @@ def build_connected_crown_with_root_arc(scene):
     union['rootConnectorMethod'] = 'V10_ROOT_FOLLOWING_ARC'
     union['rootArcConnectorUsed'] = True
     union['ellipsoidRootBridgeUsed'] = False
+    union['rootArcCenteredOnExactV10Roots'] = True
     union['rootArcRearwardOffset'] = ROOT_ARC_REARWARD_OFFSET
     union['rootArcDownOffset'] = ROOT_ARC_DOWN_OFFSET
     union['rootArcBevelDepth'] = ROOT_ARC_BEVEL_DEPTH
@@ -159,6 +157,7 @@ def build_connected_crown_with_root_arc(scene):
     scene['rootConnectorMethod'] = 'V10_ROOT_FOLLOWING_ARC'
     scene['rootArcConnectorUsed'] = True
     scene['ellipsoidRootBridgeUsed'] = False
+    scene['rootArcCenteredOnExactV10Roots'] = True
     scene['rootArcRearwardOffset'] = ROOT_ARC_REARWARD_OFFSET
     scene['rootArcDownOffset'] = ROOT_ARC_DOWN_OFFSET
     scene['rootArcBevelDepth'] = ROOT_ARC_BEVEL_DEPTH
@@ -226,6 +225,7 @@ def main():
         'rootConnectorMethod': 'V10_ROOT_FOLLOWING_ARC',
         'rootArcConnectorUsed': True,
         'ellipsoidRootBridgeUsed': False,
+        'rootArcCenteredOnExactV10Roots': True,
         'rootArcRearwardOffset': ROOT_ARC_REARWARD_OFFSET,
         'rootArcDownOffset': ROOT_ARC_DOWN_OFFSET,
         'rootArcBevelDepth': ROOT_ARC_BEVEL_DEPTH,
