@@ -144,7 +144,7 @@ def build_macro_group_union(scene):
     scene['inheritedSevenPeakArchitectureUsed'] = False
     scene['authoredMacroGroupCount'] = MACRO_GROUP_COUNT
     scene['macroGroupPattern'] = MACRO_GROUP_PATTERN
-    scene['macroGroupEndpoints'] = tuple(tuple(group[0][-1]) for group in MACRO_GROUPS)
+    scene['macroGroupEndpointsJson'] = json.dumps([list(group[0][-1]) for group in MACRO_GROUPS])
     scene['v23RootContinuityProfileRetained'] = True
     scene['v26TerminalProfileRetained'] = True
     scene['rootOverlapGain'] = v26.ROOT_OVERLAP_GAIN
