@@ -1,0 +1,21 @@
+{
+  "composition_id": "ai-video-production-zh",
+  "mode": "review_build",
+  "fps": 30,
+  "width": 1080,
+  "height": 1920,
+  "audio": {
+    "narration": "",
+    "music": "",
+    "sfx": []
+  },
+  "shots": [],
+  "captions": {},
+  "asset_manifest": "asset_manifest.json",
+  "shot_asset_binding": "shot_asset_binding.json",
+  "placeholder_policy": "forbidden_in_final",
+  "preflight": {
+    "render_authorized": false,
+    "blockers": []
+  }
+}
