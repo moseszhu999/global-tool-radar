@@ -24,6 +24,12 @@ v8 = v10.v8
 
 VOXEL_SIZE = v29.VOXEL_SIZE
 MATERIAL_PROFILE = 'PRIMARY_BRIGHT_ANISOTROPIC__SECONDARY_DARKER_ROUGHER'
+MATERIAL_NAMES = (
+    'ScoutHairMacroSecondaryLeftV33',
+    'ScoutHairMacroPrimaryPearlV33',
+    'ScoutHairMacroPrimaryCyanV33',
+    'ScoutHairMacroSecondaryRightV33',
+)
 
 
 def parse_args():
@@ -36,19 +42,18 @@ def parse_args():
 
 def create_macro_materials():
     return (
-        v8.hair_material('ScoutHairMacroSecondaryLeftV33', 'ScoutHairFiberV6',
+        v8.hair_material(MATERIAL_NAMES[0], 'ScoutHairFiberV6',
                          (0.78, 0.90, 0.95), 0.38, 0.64, 0.055, 0.14),
-        v8.hair_material('ScoutHairMacroPrimaryPearlV33', 'ScoutHairFiberV6',
+        v8.hair_material(MATERIAL_NAMES[1], 'ScoutHairFiberV6',
                          (0.965, 0.995, 1.0), 0.245, 0.84, 0.16, 0.24),
-        v8.hair_material('ScoutHairMacroPrimaryCyanV33', 'ScoutHairFiberV6',
+        v8.hair_material(MATERIAL_NAMES[2], 'ScoutHairFiberV6',
                          (0.62, 0.875, 0.985), 0.275, 0.80, 0.13, 0.21),
-        v8.hair_material('ScoutHairMacroSecondaryRightV33', 'ScoutHairFiberV6',
+        v8.hair_material(MATERIAL_NAMES[3], 'ScoutHairFiberV6',
                          (0.70, 0.84, 0.91), 0.40, 0.62, 0.050, 0.13),
     )
 
 
 def build_material_response_union(scene):
-    # Exact V10 production geometry/materials establish all frozen non-crown assets.
     v10.geometry_v10(scene)
     for ci in range(1, 8):
         obj = bpy.data.objects.get(f'HairMassPrimaryV10_{ci:02d}')
@@ -58,7 +63,6 @@ def build_material_response_union(scene):
 
     materials = create_macro_materials()
     crown = []
-    # Exact V30 geometry inputs: same points and width arrays, no mutation.
     for gi, (points, widths) in enumerate(v30.V30_MACRO_GROUPS, 1):
         obj = v29.add_macro_group(f'HairMacroMaterialV33_{gi:02d}', points, widths, materials[gi - 1], gi=gi)
         v18.apply_all_modifiers(obj)
@@ -155,7 +159,7 @@ def main():
         'v30VoxelSettingsFrozen': True,
         'materialProfile': MATERIAL_PROFILE,
         'materialGroupCount': 4,
-        'materialNames': [m.name for m in create_macro_materials()],
+        'materialNames': list(MATERIAL_NAMES),
         'connectedComponentsAfterRemesh': components,
         'crownObjectsAfterUnion': 1,
         'renderSucceeded': True,
