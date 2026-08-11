@@ -5,8 +5,8 @@ import {
   SHARED_MEDIA_AIEXE_RUNTIME_OBSERVATION_EVIDENCE_V1,
   aiexeDigest,
   canonicalize,
-  consumeAiexeSharedMediaObservationEvidenceV1 as consumeBase,
-} from './index.mjs';
+  consumeAiexeSharedMediaObservationEvidenceCoreV1,
+} from './core.mjs';
 
 export {
   AIEXE_MCP_PROTOCOL_VERSION,
@@ -39,5 +39,5 @@ export function consumeAiexeSharedMediaObservationEvidenceV1(input = {}) {
     }
   }
 
-  return consumeBase(input);
+  return consumeAiexeSharedMediaObservationEvidenceCoreV1(input);
 }
