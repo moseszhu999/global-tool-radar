@@ -25,9 +25,9 @@ jobs:
           node-version: 22
       - name: Syntax check
         run: |
-          node --check packages/shared-media-aiexe-runtime-fixture/src/index.mjs
+          node --check packages/shared-media-aiexe-runtime-fixture/src/core.mjs
           node --check packages/shared-media-aiexe-runtime-fixture/src/consumer.mjs
-          node --check packages/shared-media-aiexe-runtime-fixture/test/index.test.mjs
+          node --check packages/shared-media-aiexe-runtime-fixture/test/consumer.test.mjs
           node --check packages/shared-media-aiexe-runtime-fixture/test/identity-binding.test.mjs
       - name: Run focused consumer fixture
         run: npm test --prefix packages/shared-media-aiexe-runtime-fixture
