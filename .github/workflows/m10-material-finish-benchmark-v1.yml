@@ -1,0 +1,177 @@
+name: M10 Material Finish Benchmark v1
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - apps/remotion-video/src/toolradar-material-finish-benchmark-v1.tsx
+      - apps/remotion-video/public/assets/m10-material-finish-v1/**
+      - .github/workflows/m10-material-finish-benchmark-v1.yml
+      - docs/video/evidence/m10-human-rejection-material-finish-2026-08-10.md
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      EXPECTED_FRAMES: '150'
+      EXPECTED_FPS: '30'
+      EXPECTED_WIDTH: '1080'
+      EXPECTED_HEIGHT: '1920'
+      SOURCE_FILE: apps/remotion-video/src/toolradar-material-finish-benchmark-v1.tsx
+      OUTPUT_FILE: apps/remotion-video/out/toolradar-material-finish-benchmark-v1.mp4
+      ASSET_DIR: apps/remotion-video/public/assets/m10-material-finish-v1
+    steps:
+      - name: Checkout exact benchmark head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify exact head and production-asset preservation boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "${{ github.event.pull_request.head.sha }}"
+          test -z "$(git status --porcelain)"
+          grep -F 'MATERIAL_FINISH_BENCHMARK_FRAMES = 150' "$SOURCE_FILE"
+          grep -F 'MATERIAL_FINISH_BENCHMARK_FPS = 30' "$SOURCE_FILE"
+          grep -F 'ToolRadarMaterialFinishBenchmarkV1' "$SOURCE_FILE"
+          grep -F "staticFile('assets/m10-material-finish-v1/signal-module.svg')" "$SOURCE_FILE"
+          grep -F "staticFile('assets/m10-material-finish-v1/evidence-card.svg')" "$SOURCE_FILE"
+          grep -F "staticFile('assets/m10-material-finish-v1/radar-scout.svg')" "$SOURCE_FILE"
+          grep -F '<Img' "$SOURCE_FILE"
+          grep -F 'data-production-asset-preservation="svg-staticfile-img"' "$SOURCE_FILE"
+          test -s "$ASSET_DIR/signal-module.svg"
+          test -s "$ASSET_DIR/evidence-card.svg"
+          test -s "$ASSET_DIR/radar-scout.svg"
+          ! grep -Eq '(const MaterialSignal|const EvidenceCard|const PremiumScout)' "$SOURCE_FILE"
+          ! grep -Eq '(https?://|execute_arbitrary_graph)' "$SOURCE_FILE"
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,json,os
+          base=Path(os.environ['ASSET_DIR'])
+          rows=[]
+          for name in ['signal-module.svg','evidence-card.svg','radar-scout.svg']:
+              data=(base/name).read_bytes()
+              rows.append({'name':name,'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest()})
+          assert all(r['bytes'] > 1000 for r in rows)
+          print(json.dumps({'durationSeconds':5.0,'controlledVariable':'asset_preservation_and_finish','remotionRole':'composition_only','assets':rows},indent=2))
+          PY
+
+      - name: Install media and fonts
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg fontconfig fonts-noto-cjk
+          sudo fc-cache -f
+          fc-match 'Noto Sans CJK SC' | tee "$RUNNER_TEMP/font-match.txt"
+          grep -F 'NotoSansCJK' "$RUNNER_TEMP/font-match.txt" >/dev/null
+
+      - name: Install Remotion dependencies
+        working-directory: apps/remotion-video
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f package-lock.json ]; then
+            npm ci --no-audit --no-fund
+          else
+            npm install --no-audit --no-fund
+          fi
+          npx remotion browser ensure
+          npx remotion compositions src/toolradar-material-finish-benchmark-v1.tsx | tee "$RUNNER_TEMP/compositions.txt"
+          grep -F 'ToolRadarMaterialFinishBenchmarkV1' "$RUNNER_TEMP/compositions.txt"
+          grep -F "$EXPECTED_FRAMES" "$RUNNER_TEMP/compositions.txt"
+
+      - name: Render benchmark
+        working-directory: apps/remotion-video
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          npx remotion render \
+            src/toolradar-material-finish-benchmark-v1.tsx \
+            ToolRadarMaterialFinishBenchmarkV1 \
+            out/toolradar-material-finish-benchmark-v1.mp4 \
+            --codec=h264 \
+            --crf=16
+          test -s out/toolradar-material-finish-benchmark-v1.mp4
+
+      - name: Inspect exact media and persist source-asset digests
+        shell: bash
+        run: |
+          set -euo pipefail
+          video="$GITHUB_WORKSPACE/$OUTPUT_FILE"
+          ffprobe -v error -show_streams -show_format -of json "$video" > "$RUNNER_TEMP/ffprobe.json"
+          ffprobe -v error -count_frames -select_streams v:0 -show_entries stream=nb_read_frames -of default=nw=1:nk=1 "$video" > "$RUNNER_TEMP/frame-count.txt"
+          ffmpeg -hide_banner -nostats -i "$video" -vf 'blackdetect=d=0.35:pix_th=0.10' -an -f null - 2> "$RUNNER_TEMP/blackdetect.txt" || true
+          ffmpeg -hide_banner -loglevel error -y -i "$video" -vf 'fps=1,scale=270:480,tile=5x1:padding=8:margin=8' -frames:v 1 "$RUNNER_TEMP/contact-sheet.jpg"
+          VIDEO="$video" PR_HEAD="${{ github.event.pull_request.head.sha }}" python3 - <<'PY'
+          import hashlib,json,os,pathlib
+          rt=pathlib.Path(os.environ['RUNNER_TEMP'])
+          probe=json.loads((rt/'ffprobe.json').read_text())
+          video=next(s for s in probe['streams'] if s['codec_type']=='video')
+          frames=int((rt/'frame-count.txt').read_text().strip())
+          assert frames == int(os.environ['EXPECTED_FRAMES']), frames
+          assert int(video['width']) == int(os.environ['EXPECTED_WIDTH'])
+          assert int(video['height']) == int(os.environ['EXPECTED_HEIGHT'])
+          output=pathlib.Path(os.environ['VIDEO']).read_bytes()
+          black=(rt/'blackdetect.txt').read_text(errors='ignore')
+          assert 'black_start:' not in black, black
+          base=pathlib.Path(os.environ['GITHUB_WORKSPACE'])/os.environ['ASSET_DIR']
+          assets=[]
+          for name in ['signal-module.svg','evidence-card.svg','radar-scout.svg']:
+              data=(base/name).read_bytes()
+              assets.append({'name':name,'sha256':hashlib.sha256(data).hexdigest(),'bytes':len(data)})
+          receipt={
+            'schemaVersion':'toolradar.m10.material-finish-benchmark.v2',
+            'exactHead':os.environ['PR_HEAD'],
+            'compositionId':'ToolRadarMaterialFinishBenchmarkV1',
+            'controlledVariable':'asset_preservation_and_finish',
+            'sourceAssetAuthority':'durable_svg_files',
+            'remotionAssetPath':'staticFile_plus_Img',
+            'remotionRedrawOfHeroAssets':False,
+            'sourceAssets':assets,
+            'durationSeconds':frames/int(os.environ['EXPECTED_FPS']),
+            'frames':frames,
+            'fps':int(os.environ['EXPECTED_FPS']),
+            'width':int(video['width']),
+            'height':int(video['height']),
+            'videoCodec':video['codec_name'],
+            'audioIncluded':False,
+            'thirdPartyVisualAssetsUsed':False,
+            'generatedFactualUiUsed':False,
+            'canonicalCandidateModified':False,
+            'outputSha256':hashlib.sha256(output).hexdigest(),
+            'outputBytes':len(output),
+            'controllerCreativeApproved':False,
+            'humanSelectedForCanonical':False,
+            'publicationAllowed':False,
+            'publicationPerformed':False,
+            'analyticsObserved':False,
+          }
+          (rt/'receipt.json').write_text(json.dumps(receipt,indent=2,ensure_ascii=False)+'\n')
+          print(json.dumps(receipt,indent=2,ensure_ascii=False))
+          PY
+
+      - name: Upload benchmark evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: toolradar-m10-material-finish-benchmark-v1
+          path: |
+            apps/remotion-video/out/toolradar-material-finish-benchmark-v1.mp4
+            apps/remotion-video/public/assets/m10-material-finish-v1/*.svg
+            ${{ runner.temp }}/contact-sheet.jpg
+            ${{ runner.temp }}/receipt.json
+            ${{ runner.temp }}/ffprobe.json
+            ${{ runner.temp }}/blackdetect.txt
+            ${{ runner.temp }}/font-match.txt
+          if-no-files-found: error
+          retention-days: 30

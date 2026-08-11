@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="560" viewBox="0 0 960 560">
+  <defs>
+    <linearGradient id="paper" x1="90" y1="40" x2="870" y2="520" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffffff"/><stop offset=".48" stop-color="#edf5f8"/><stop offset="1" stop-color="#ccdbe1"/>
+    </linearGradient>
+    <linearGradient id="cyan" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#69ebf6"/><stop offset="1" stop-color="#19a3b9"/></linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="170%" height="180%"><feDropShadow dx="0" dy="26" stdDeviation="24" flood-color="#00101c" flood-opacity=".42"/></filter>
+    <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency=".65" numOctaves="3" seed="22"/><feColorMatrix type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 .05 0"/><feBlend in="SourceGraphic" mode="multiply"/></filter>
+  </defs>
+  <g filter="url(#shadow)">
+    <rect x="36" y="36" width="888" height="488" rx="54" fill="url(#paper)" stroke="#fff" stroke-width="3"/>
+    <rect x="36" y="36" width="18" height="488" rx="9" fill="url(#cyan)"/>
+    <path d="M80 60H880C824 92 712 99 604 82C424 54 239 118 80 123Z" fill="#fff" fill-opacity=".54"/>
+    <text x="92" y="126" font-family="Noto Sans CJK SC,Arial,sans-serif" font-size="30" font-weight="800" letter-spacing="4" fill="#4d6a78">EVIDENCE CARD</text>
+    <text x="92" y="220" font-family="Noto Sans CJK SC,Arial,sans-serif" font-size="72" font-weight="900" fill="#071722">候选方案</text>
+    <text x="92" y="282" font-family="Noto Sans CJK SC,Arial,sans-serif" font-size="34" font-weight="600" fill="#667d88">等待人工判断 · UNKNOWN 保持 UNKNOWN</text>
+    <g transform="translate(92 344)">
+      <g><rect width="220" height="112" rx="28" fill="#dff7fa" stroke="#91dce4"/><text x="24" y="42" font-family="Noto Sans CJK SC,Arial,sans-serif" font-size="24" font-weight="700" fill="#5a7480">来源</text><text x="24" y="82" font-family="Noto Sans CJK SC,Arial,sans-serif" font-size="28" font-weight="900" fill="#0d91a9">已绑定</text></g>
+      <g transform="translate(242)"><rect width="220" height="112" rx="28" fill="#e8eef1" stroke="#c7d4da"/><text x="24" y="42" font-family="Noto Sans CJK SC,Arial,sans-serif" font-size="24" font-weight="700" fill="#5a7480">证据</text><text x="24" y="82" font-family="Noto Sans CJK SC,Arial,sans-serif" font-size="28" font-weight="900" fill="#213845">待审</text></g>
+      <g transform="translate(484)"><rect width="220" height="112" rx="28" fill="#e8eef1" stroke="#c7d4da"/><text x="24" y="42" font-family="Noto Sans CJK SC,Arial,sans-serif" font-size="24" font-weight="700" fill="#5a7480">发布</text><text x="24" y="82" font-family="Noto Sans CJK SC,Arial,sans-serif" font-size="28" font-weight="900" fill="#213845">未授权</text></g>
+    </g>
+  </g>
+  <rect x="44" y="44" width="872" height="472" rx="48" fill="#fff" opacity=".01" filter="url(#grain)"/>
+</svg>

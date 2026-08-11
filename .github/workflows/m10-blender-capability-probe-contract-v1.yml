@@ -1,0 +1,80 @@
+name: M10 Blender Capability Probe Contract v1
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - apps/remotion-video/scripts/probe-blender-capability.mjs
+      - .github/workflows/m10-blender-capability-probe-contract-v1.yml
+      - docs/video/evidence/m10-blender-local-capability-probe-contract-2026-08-10.md
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify exact head
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          test -z "$(git status --porcelain)"
+
+      - name: Positive fixture — explicit Blender executable
+        shell: bash
+        run: |
+          set -euo pipefail
+          fake="$RUNNER_TEMP/blender"
+          cat > "$fake" <<'SH'
+          #!/usr/bin/env bash
+          if [ "${1:-}" = "--version" ]; then
+            printf '%s\n' 'Blender 4.5.0 LTS'
+            exit 0
+          fi
+          exit 99
+          SH
+          chmod +x "$fake"
+          BLENDER_BIN="$fake" node apps/remotion-video/scripts/probe-blender-capability.mjs > "$RUNNER_TEMP/positive.json"
+          RECEIPT="$RUNNER_TEMP/positive.json" python3 - <<'PY'
+          import json, os
+          r=json.load(open(os.environ['RECEIPT']))
+          assert r['schemaVersion']=='toolradar.blender.capability-probe.v1'
+          assert r['probeMode']=='READ_ONLY_VERSION_PROBE'
+          assert r['installed'] is True
+          assert r['discoverySource']=='BLENDER_BIN'
+          assert r['versionLine']=='Blender 4.5.0 LTS'
+          assert r['filesModified'] is False
+          assert r['blendOpened'] is False
+          assert r['renderPerformed'] is False
+          assert r['externalStateModified'] is False
+          PY
+
+      - name: Negative fixture — no executable found
+        shell: bash
+        run: |
+          set -euo pipefail
+          node_bin="$(command -v node)"
+          set +e
+          PATH="/usr/bin:/bin" BLENDER_BIN="$RUNNER_TEMP/does-not-exist" "$node_bin" apps/remotion-video/scripts/probe-blender-capability.mjs > "$RUNNER_TEMP/negative.json"
+          code=$?
+          set -e
+          test "$code" -eq 2
+          RECEIPT="$RUNNER_TEMP/negative.json" python3 - <<'PY'
+          import json, os
+          r=json.load(open(os.environ['RECEIPT']))
+          assert r['installed'] is False
+          assert r['executable'] is None
+          assert r['renderPerformed'] is False
+          assert r['externalStateModified'] is False
+          PY
