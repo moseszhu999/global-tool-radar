@@ -1,0 +1,11 @@
+{
+  "language": "zh-CN",
+  "candidates": [],
+  "selected_voice": null,
+  "human_listening_gate": {
+    "status": "PENDING",
+    "criteria": ["自然度", "断句", "情绪", "速度", "语气", "视觉匹配"]
+  },
+  "final_audio_path": "",
+  "actual_duration_sec": null
+}
