@@ -1,0 +1,16 @@
+{
+  "goal": "用约30秒解释“冷萃为什么通常比冰美式更顺口？”",
+  "audience": "对咖啡有兴趣但不熟悉萃取原理的短视频用户",
+  "platform": "Douyin",
+  "target_duration_sec": 32,
+  "language": "zh-CN",
+  "aspect_ratio": "9:16",
+  "tone": "高级、清爽、年轻",
+  "visual_style": "高分辨率商业摄影 + 原生信息动画",
+  "narrative_type": "explainer",
+  "cta": "本周到店试喝冷萃",
+  "constraints": [
+    "摄影 hero source 禁止从大故事板裁小图",
+    "Voice Gate 未通过不得标 Final"
+  ]
+}
