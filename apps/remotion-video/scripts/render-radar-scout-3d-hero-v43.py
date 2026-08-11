@@ -125,7 +125,11 @@ def apply_v43_pinned_crest_surface(union, scene):
     for i, co in pinned_coords.items():
         mesh.vertices[i].co = co
     mesh.update()
-    union.vertex_groups.remove(vg)
+    # Blender 5.2 may consume/detach the deform group while applying the
+    # Laplacian modifier. Re-resolve by name and remove only if it still exists.
+    residual_vg = union.vertex_groups.get('V43CrestSmoothWeight')
+    if residual_vg is not None:
+        union.vertex_groups.remove(residual_vg)
 
     after_vertex_count = len(mesh.vertices)
     after_polygon_count = len(mesh.polygons)
