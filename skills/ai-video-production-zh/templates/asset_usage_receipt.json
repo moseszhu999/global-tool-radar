@@ -1,0 +1,15 @@
+{
+  "contract": "media.asset.usage-receipt.v1",
+  "render_id": "",
+  "output": {
+    "uri": "",
+    "sha256": "",
+    "duration_frames": 0
+  },
+  "usage": [],
+  "checks": {
+    "all_required_assets_present": false,
+    "all_selected_assets_promoted": false,
+    "all_promoted_required_assets_bound": false
+  }
+}
