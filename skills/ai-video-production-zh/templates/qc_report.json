@@ -1,0 +1,18 @@
+{
+  "status": "REVIEW_BUILD",
+  "final_ready": false,
+  "gates": {
+    "story": "PENDING",
+    "continuity": "PENDING",
+    "visual_quality": "PENDING",
+    "asset_promotion": "PENDING",
+    "asset_binding": "PENDING",
+    "voice": "PENDING",
+    "caption_sync": "PENDING",
+    "motion": "PENDING",
+    "technical": "PENDING",
+    "artifact_record": "PENDING"
+  },
+  "shot_quality": [],
+  "blockers": []
+}
