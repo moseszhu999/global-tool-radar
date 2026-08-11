@@ -1,0 +1,10 @@
+{
+  "name": "@tool-radar/shared-media-aiexe-runtime-fixture",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": "./src/consumer.mjs",
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  }
+}
