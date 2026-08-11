@@ -12,8 +12,11 @@ from mathutils import Vector
 # near-parity versus V10 because it did not visibly lift/fuse adjacent root
 # valleys. V19 freezes V18's union/remesh method and exact V10 crown peak
 # centerlines/widths, changing only the buried connector geometry: replace the
-# broad ellipsoid with one narrow root-following arc through the seven V10 crown
-# roots, slightly rearward/down so it fuses valleys without becoming a cap.
+# broad ellipsoid with one root-following arc through the seven V10 crown roots.
+# The first V19 execution proved a 0.17-radius arc at 0.055 rear/down offset was
+# under-connected (4 components). This revision keeps the same variable/family,
+# moves the arc closer to the roots and raises its radius only enough to satisfy
+# the one-connected-crown hard gate before visual review.
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 V18_PATH = os.path.join(HERE, 'render-radar-scout-3d-hero-v18.py')
@@ -23,9 +26,9 @@ spec.loader.exec_module(v18)
 
 CROWN_COUNT = 7
 VOXEL_SIZE = v18.VOXEL_SIZE
-ROOT_ARC_REARWARD_OFFSET = 0.055
-ROOT_ARC_DOWN_OFFSET = 0.055
-ROOT_ARC_BEVEL_DEPTH = 0.17
+ROOT_ARC_REARWARD_OFFSET = 0.025
+ROOT_ARC_DOWN_OFFSET = 0.025
+ROOT_ARC_BEVEL_DEPTH = 0.22
 ROOT_ARC_BEVEL_RESOLUTION = 5
 ROOT_ARC_RESOLUTION_U = 24
 
@@ -42,8 +45,8 @@ def crown_root_points():
     roots = []
     for points, _widths in v18.v10.v8.V6_PRIMARY[:CROWN_COUNT]:
         p = Vector(points[0])
-        # Negative Y is camera/front in this asset. Positive Y buries the arc
-        # rearward; negative Z keeps the connector just below the visible roots.
+        # Negative Y is camera/front in this asset. A small +Y / -Z offset keeps
+        # the connector embedded while remaining inside every V10 root volume.
         p.y += ROOT_ARC_REARWARD_OFFSET
         p.z -= ROOT_ARC_DOWN_OFFSET
         roots.append(tuple(p))
@@ -57,7 +60,6 @@ def add_root_following_arc(material):
     curve.resolution_u = ROOT_ARC_RESOLUTION_U
     curve.bevel_depth = ROOT_ARC_BEVEL_DEPTH
     curve.bevel_resolution = ROOT_ARC_BEVEL_RESOLUTION
-    curve.resolution_u = ROOT_ARC_RESOLUTION_U
     curve.fill_mode = 'FULL'
 
     spline = curve.splines.new('BEZIER')
