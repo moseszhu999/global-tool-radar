@@ -1,0 +1,58 @@
+name: AI Video Quality Casting
+on:
+  push:
+    branches:
+      - agent/ai-video-quality-casting-20260811
+    paths:
+      - .github/workflows/ai-video-quality-casting.yml
+jobs:
+  cast:
+    runs-on: self-hosted
+    timeout-minutes: 10
+    steps:
+      - name: Inspect Chinese voices
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p voice-casting
+          say -v '?' > voice-casting/all-voices.txt
+          grep -Ei 'zh_|Chinese|Tingting|Meijia|Sinji|Yu-shu|Li-mu|Flo|Shelley' voice-casting/all-voices.txt | tee voice-casting/chinese-voices.txt || true
+      - name: Generate three candidates
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p voice-casting
+          cat > voice-casting/script.txt <<'TXT'
+          你有没有发现，同样是冰咖啡，冷萃喝起来常常更顺口？关键不是“更淡”，而是萃取方式不同。冰美式先用热水快速萃取，再加冰降温；冷萃从一开始就用冷水，经过大约十二个小时慢慢萃取。低温和长时间，会让尖锐的酸苦感不那么突出，甜感和圆润感更容易被喝出来。所以，冷萃不是更没味道，而是风味走了另一条路线。本周，来北纬三十九度 Coffee，亲自喝一杯试试看。
+          TXT
+          mapfile -t voices < <(awk '{print $1}' voice-casting/chinese-voices.txt | sed '/^$/d' | awk '!seen[$0]++' | head -3)
+          if [ ${#voices[@]} -eq 0 ]; then echo 'No Chinese voice found' >&2; exit 2; fi
+          while [ ${#voices[@]} -lt 3 ]; do voices+=("${voices[0]}"); done
+          rates=(184 176 168)
+          for i in 0 1 2; do
+            n=$((i+1)); v="${voices[$i]}"
+            echo "$v" > "voice-casting/candidate-${n}-voice.txt"
+            say -v "$v" -r "${rates[$i]}" -f voice-casting/script.txt -o "voice-casting/candidate-${n}.aiff"
+            afconvert -f WAVE -d LEI16@48000 "voice-casting/candidate-${n}.aiff" "voice-casting/candidate-${n}.wav"
+          done
+          shasum -a 256 voice-casting/*.wav > voice-casting/SHA256SUMS.txt
+      - name: Generate metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, pathlib, wave
+          root=pathlib.Path('voice-casting'); out=[]
+          for i in range(1,4):
+              wav=root/f'candidate-{i}.wav'
+              with wave.open(str(wav),'rb') as w:
+                  dur=w.getnframes()/w.getframerate(); sr=w.getframerate(); ch=w.getnchannels()
+              out.append({'candidate':i,'voice':(root/f'candidate-{i}-voice.txt').read_text().strip(),'duration_s':round(dur,3),'sample_rate':sr,'channels':ch})
+          (root/'metadata.json').write_text(json.dumps(out,ensure_ascii=False,indent=2))
+          PY
+      - name: Upload candidates
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-video-quality-casting-20260811
+          path: voice-casting/
+          retention-days: 7
