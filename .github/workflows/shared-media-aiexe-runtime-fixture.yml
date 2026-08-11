@@ -1,0 +1,43 @@
+name: Shared Media AIEXE Runtime Consumer Fixture
+
+on:
+  pull_request:
+    paths:
+      - 'packages/shared-media-aiexe-runtime-fixture/**'
+      - 'packages/shared-media-mcp-adapter/src/index.mjs'
+      - 'packages/shared-media-mcp-adapter/src/server.mjs'
+      - 'docs/shared-media/aiexe-runtime-observation-consumer-v1.md'
+      - '.github/workflows/shared-media-aiexe-runtime-fixture.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out exact head
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Syntax check
+        run: |
+          node --check packages/shared-media-aiexe-runtime-fixture/src/index.mjs
+          node --check packages/shared-media-aiexe-runtime-fixture/src/consumer.mjs
+          node --check packages/shared-media-aiexe-runtime-fixture/test/index.test.mjs
+          node --check packages/shared-media-aiexe-runtime-fixture/test/identity-binding.test.mjs
+      - name: Run focused consumer fixture
+        run: npm test --prefix packages/shared-media-aiexe-runtime-fixture
+      - name: Enforce observation-only boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -RInE 'fetch\(|axios|api[_-]?key\s*:|Authorization\s*:|Bearer [A-Za-z0-9]' \
+            packages/shared-media-aiexe-runtime-fixture/src; then
+            echo 'P4.1 consumer introduced forbidden provider/network/credential primitive.' >&2
+            exit 1
+          fi
+          echo 'P4.1 observation-only boundary: PASS'
