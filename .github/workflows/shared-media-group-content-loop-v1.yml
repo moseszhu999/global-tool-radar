@@ -1,0 +1,63 @@
+name: shared-media-group-content-loop-v1
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/shared-media-group-content-loop-v1.yml
+      - packages/shared-media-group-content-loop/**
+      - docs/architecture/shared-media-group-content-loop-v1.md
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify exact PR head
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+
+      - name: Verify canonical owner reuse and closed authority boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          SRC=packages/shared-media-group-content-loop/src/index.mjs
+          grep -F "shared-media-group-service-adapter/src/index.mjs" "$SRC"
+          grep -F "consumerDomain: 'pr-growth'" "$SRC"
+          ! grep -RInE 'publicationAllowed:[[:space:]]*true|publicationPerformed:[[:space:]]*true|humanReviewCompleted:[[:space:]]*true|approvalDecisionCreated:[[:space:]]*true|externalActionPerformed:[[:space:]]*true|renderSubmittedByThisModule:[[:space:]]*true|productionDeploymentPerformed:[[:space:]]*true' packages/shared-media-group-content-loop
+
+      - name: Syntax check
+        run: node --check packages/shared-media-group-content-loop/src/index.mjs
+
+      - name: Run focused contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test packages/shared-media-group-content-loop/test/index.test.mjs | tee /tmp/w3c.tap
+          grep -Eq '# tests[[:space:]]+10$' /tmp/w3c.tap
+          grep -Eq '# pass[[:space:]]+10$' /tmp/w3c.tap
+          grep -Eq '# fail[[:space:]]+0$' /tmp/w3c.tap
+
+      - name: Lock pre-publication truth boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          SRC=packages/shared-media-group-content-loop/src/index.mjs
+          grep -F "state: 'prepublication_review_ready'" "$SRC"
+          grep -F "humanDecisionRequired: ready" "$SRC"
+          grep -F "humanReviewCompleted: false" "$SRC"
+          grep -F "approvalDecisionCreated: false" "$SRC"
+          grep -F "publicationAllowed: false" "$SRC"
+          grep -F "publicationPerformed: false" "$SRC"
+          grep -F "renderSubmittedByThisModule: false" "$SRC"
