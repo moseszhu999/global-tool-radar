@@ -1,14 +1,16 @@
 # Video Operation Gold Baseline v1
 
-Status: **candidate baseline**  
+Status: **candidate baseline / default target for new Video Operation worker-generated projects**  
 Owner surface: `apps/remotion-video` + Shared Media render/audio/evidence contracts  
 Derived from: 2026-08-12 cold-brew iterative production review, which moved from roughly 60-point output to a user-rated ~95-point review build.
 
 ## Purpose
 
-This baseline turns the successful production lessons into default rules for future Video Operation work. It is not a style guide for one coffee video. It is a quality floor for any short-form AI-assisted video that uses Remotion or the shared media runtime.
+This baseline turns the successful production lessons into default rules for future Video Operation work. It is not a style guide for one coffee video. It is a quality floor for any new short-form AI-assisted video produced through the Video Operation worker chain and intended for Remotion or the shared media runtime.
 
 The target is: **start near 85–95 quality instead of rediscovering the path from 60**.
+
+Legacy stored artifacts and direct older canonical-builder callers remain backward-compatible; new worker-generated projects receive Gold as their default quality target through `packages/video-gold-profile`.
 
 ## Canonical production order
 
@@ -70,6 +72,8 @@ Avoid PPT/UI language unless the product itself is a UI:
 - large explanatory paragraphs over a passive background.
 
 Heuristic: when paused, the viewer should first see a cinematic shot and only then notice the explanatory layer. If the paused frame reads as a complete slide, the treatment is too page-like.
+
+For genuine software/UI product shots, `product-ui-native` treatment is allowed: information should bind to real controls, paths or UI state changes rather than adding a second PPT-like presentation layer.
 
 ## 4. Typography and mobile readability
 
@@ -137,9 +141,16 @@ Establish recurring visual grammar from shot 1, such as:
 
 The long-term benchmark is recognizability before the logo appears.
 
-## 10. Human + technical release gates
+## 10. Gold stages and release gates
 
-A render is **PREVIEW_ONLY / QUALITY_FAIL** unless all applicable gates pass:
+Gold is applied in stages rather than fabricating a final-quality pass during preview:
+
+- `PREVIEW_TARGET`: the project is designed toward Gold, but creative review evidence is not yet complete;
+- `TARGET_PENDING`: technical QA may pass, but release remains blocked by `GOLD_CREATIVE_REVIEW_REQUIRED`;
+- `REVIEW_EVALUATED`: creative evidence has been supplied and Gold checks are evaluated;
+- `FINAL_ENFORCED`: final candidate requires complete evidence and fails closed on any missing/failed Gold check.
+
+A final render is **PREVIEW_ONLY / QUALITY_FAIL** unless all applicable gates pass:
 
 - `Voice_Naturalness >= 85`
 - `Visual_Quality >= 85`
@@ -194,4 +205,12 @@ The following are now known failure modes and should be treated as regressions:
 
 ## Adoption
 
-This document is paired with `apps/remotion-video/props/gold-baseline.v1.json` and `apps/remotion-video/test/gold-baseline.test.mjs`. The JSON is the machine-readable contract; the test prevents accidental weakening of critical baseline gates.
+This document is paired with:
+
+- `packages/video-gold-profile/src/index.mjs` — default Gold adapter for new Video Operation worker output;
+- `apps/remotion-video/props/gold-baseline.v1.json` — machine-readable baseline contract;
+- `apps/remotion-video/test/gold-baseline.test.mjs` — contract non-regression tests;
+- `apps/remotion-video/test/gold-runtime-wiring.test.mjs` — worker/workflow wiring non-regression tests;
+- `docs/video/video-operation-gold-baseline-adoption.md` — operational adoption path.
+
+New worker-generated Video Operation projects start at the Gold target. Historical artifacts remain reproducible and are not rewritten in place.
