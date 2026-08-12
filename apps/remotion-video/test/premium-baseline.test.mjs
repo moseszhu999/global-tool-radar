@@ -6,6 +6,7 @@ const premium = JSON.parse(readFileSync(new URL('../props/premium-baseline.v1.js
 const audit = JSON.parse(readFileSync(new URL('../props/premium-benchmark-audit.v1.json', import.meta.url), 'utf8'));
 const premiumWorker = readFileSync(new URL('../../worker/src/apply-premium-video-profile.mjs', import.meta.url), 'utf8');
 const qualityWorker = readFileSync(new URL('../../worker/src/run-video-quality-gate.mjs', import.meta.url), 'utf8');
+const premiumWorkflow = readFileSync(new URL('../../../.github/workflows/premium-quality-contract.yml', import.meta.url), 'utf8');
 
 test('Premium explicitly extends Gold rather than replacing the quality floor', () => {
   assert.equal(premium.schemaVersion, 'video.production.premium.v1');
@@ -64,4 +65,25 @@ test('canonical quality worker supports independent Gold and Premium evidence in
   assert.match(qualityWorker, /premiumQualityEvidence/);
   assert.match(qualityWorker, /inheritedQualityProfile: report\.inheritedQualityProfile/);
   assert.match(qualityWorker, /qualityStage: report\.qualityStage/);
+});
+
+test('Premium contract workflow executes the real Gold-to-Premium CLI path', () => {
+  assert.match(premiumWorkflow, /npm run production:render-package:replit/);
+  assert.match(premiumWorkflow, /npm run production:premium-package:replit/);
+  assert.match(premiumWorkflow, /video\.production\.premium\.v1/);
+  assert.match(premiumWorkflow, /video\.production\.gold-baseline\.v1/);
+  assert.match(premiumWorkflow, /PREMIUM_TARGET/);
+});
+
+test('Premium contract workflow forbids fabricated review values and publication authority', () => {
+  assert.match(premiumWorkflow, /Premium human scores must not be fabricated/);
+  assert.match(premiumWorkflow, /PENDING_HUMAN_REVIEW/);
+  assert.match(premiumWorkflow, /Premium adapter cannot authorize publication/);
+  assert.match(premiumWorkflow, /premiumBaselineRequired !== false/);
+});
+
+test('Premium contract artifact carries both inherited Gold and Premium pending evidence', () => {
+  assert.match(premiumWorkflow, /build\/gold-creative-quality-pending\.json/);
+  assert.match(premiumWorkflow, /build\/premium-quality-pending\.json/);
+  assert.match(premiumWorkflow, /build\/replit-design-premium-render-package\.json/);
 });
