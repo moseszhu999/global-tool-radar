@@ -72,3 +72,7 @@ test('render-preview workflow still requires the legacy safety blockers and reje
   assert.match(renderPreviewWorkflow, /HUMAN_QUALITY_REVIEW_REQUIRED/);
   assert.match(renderPreviewWorkflow, /unexpected release blockers/);
 });
+
+test('preview artifact includes the pending Gold creative-review evidence for operator handoff', () => {
+  assert.match(renderPreviewWorkflow, /build\/gold-creative-quality-pending\.json/);
+});
