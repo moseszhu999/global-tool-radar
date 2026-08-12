@@ -1,3 +1,5 @@
+import { PREMIUM_PROFILE, premiumChecks } from "../../video-premium-profile/src/index.mjs";
+
 const freeze = Object.freeze;
 
 function check(id, category, passed, detail, severity = "error") {
@@ -62,7 +64,18 @@ function goldCreativeChecks(evidence) {
   ];
 }
 
-export function buildVideoQualityReport({ renderPackage, renderReceipt, mediaProbe, creativeQualityEvidence = null, generatedAt = new Date().toISOString() }) {
+function premiumCreativeChecks(evidence) {
+  return premiumChecks(evidence).map((item) => check(item.id, "premium", item.passed, item.detail));
+}
+
+export function buildVideoQualityReport({
+  renderPackage,
+  renderReceipt,
+  mediaProbe,
+  creativeQualityEvidence = null,
+  premiumQualityEvidence = null,
+  generatedAt = new Date().toISOString(),
+}) {
   if (renderPackage?.schemaVersion !== "toolradar.render-preview-package.v1") throw new TypeError("unsupported render package");
   if (renderReceipt?.schemaVersion !== "toolradar.render-preview-receipt.v1") throw new TypeError("unsupported render receipt");
   if (!mediaProbe?.format || !Array.isArray(mediaProbe.streams)) throw new TypeError("ffprobe media data is required");
@@ -73,11 +86,19 @@ export function buildVideoQualityReport({ renderPackage, renderReceipt, mediaPro
   const frameRateParts = String(video?.avg_frame_rate ?? "0/1").split("/").map(Number);
   const frameRate = frameRateParts[1] ? frameRateParts[0] / frameRateParts[1] : 0;
   const placeholders = renderPackage.placeholderSlideIds ?? [];
-  const goldBaselineRequired = renderPackage.gates?.goldBaselineRequired === true;
-  const goldBaselineTarget = goldBaselineRequired || renderPackage.gates?.goldBaselineTarget === true || renderPackage.qualityProfile === GOLD_PROFILE;
+
+  const premiumBaselineRequired = renderPackage.gates?.premiumBaselineRequired === true;
+  const premiumBaselineTarget = premiumBaselineRequired || renderPackage.gates?.premiumBaselineTarget === true || renderPackage.qualityProfile === PREMIUM_PROFILE;
+  const goldBaselineRequired = renderPackage.gates?.goldBaselineRequired === true || premiumBaselineRequired;
+  const goldBaselineTarget = premiumBaselineTarget || goldBaselineRequired || renderPackage.gates?.goldBaselineTarget === true || renderPackage.qualityProfile === GOLD_PROFILE;
+
   const hasCreativeEvidence = creativeQualityEvidence !== null && creativeQualityEvidence !== undefined;
+  const hasPremiumEvidence = premiumQualityEvidence !== null && premiumQualityEvidence !== undefined;
   const goldCreativeEvaluationRequested = goldBaselineRequired || (goldBaselineTarget && hasCreativeEvidence);
+  const premiumEvaluationRequested = premiumBaselineRequired || (premiumBaselineTarget && hasPremiumEvidence);
   const creativeChecks = goldCreativeEvaluationRequested ? goldCreativeChecks(creativeQualityEvidence) : [];
+  const premiumChecksForReport = premiumEvaluationRequested ? premiumCreativeChecks(premiumQualityEvidence) : [];
+
   const checks = [
     check("technical.duration", "technical", Math.abs(duration - renderPackage.timelineDurationSeconds) <= 0.1, `${duration}s vs ${renderPackage.timelineDurationSeconds}s`),
     check("technical.resolution", "technical", video?.width === renderPackage.format.width && video?.height === renderPackage.format.height, `${video?.width}x${video?.height}`),
@@ -92,22 +113,33 @@ export function buildVideoQualityReport({ renderPackage, renderReceipt, mediaPro
     check("safety.preview_not_publishable", "safety", renderReceipt.publicationAllowed === false && renderPackage.gates?.publicationAllowed === false, "publication disabled"),
     check("safety.placeholder_labels", "safety", renderPackage.renderSlides.filter((slide) => slide.placeholderRequired).every((slide) => slide.previewLabel.includes("待替换")), "all placeholder frames visibly labelled"),
     ...creativeChecks,
+    ...premiumChecksForReport,
   ];
 
   const failedChecks = checks.filter((item) => !item.passed);
   const failedCreativeChecks = creativeChecks.filter((item) => !item.passed);
+  const failedPremiumChecks = premiumChecksForReport.filter((item) => !item.passed);
   const automatedGatePassed = failedChecks.length === 0;
-  const qualityStage = goldBaselineRequired
-    ? "FINAL_ENFORCED"
-    : goldBaselineTarget
-      ? (hasCreativeEvidence ? "REVIEW_EVALUATED" : "TARGET_PENDING")
-      : "LEGACY";
+
+  const qualityProfile = premiumBaselineTarget ? PREMIUM_PROFILE : goldBaselineTarget ? GOLD_PROFILE : "legacy";
+  const qualityStage = premiumBaselineRequired
+    ? "PREMIUM_FINAL_ENFORCED"
+    : premiumBaselineTarget
+      ? (hasCreativeEvidence && hasPremiumEvidence ? "PREMIUM_REVIEW_EVALUATED" : "PREMIUM_TARGET_PENDING")
+      : goldBaselineRequired
+        ? "FINAL_ENFORCED"
+        : goldBaselineTarget
+          ? (hasCreativeEvidence ? "REVIEW_EVALUATED" : "TARGET_PENDING")
+          : "LEGACY";
+
   const releaseBlockers = [
     ...(placeholders.length ? ["OWNED_SCREEN_RECORDINGS_REQUIRED"] : []),
     ...(renderPackage.voiceover?.finalVoiceApprovalRequired ? ["FINAL_VOICE_APPROVAL_REQUIRED"] : []),
     ...(renderPackage.gates?.humanQualityReviewRequired ? ["HUMAN_QUALITY_REVIEW_REQUIRED"] : []),
     ...(goldBaselineTarget && !goldBaselineRequired && !hasCreativeEvidence ? ["GOLD_CREATIVE_REVIEW_REQUIRED"] : []),
+    ...(premiumBaselineTarget && !premiumBaselineRequired && !hasPremiumEvidence ? ["PREMIUM_CREATIVE_REVIEW_REQUIRED"] : []),
     ...(goldCreativeEvaluationRequested && failedCreativeChecks.length ? ["GOLD_BASELINE_QA_FAILED"] : []),
+    ...(premiumEvaluationRequested && failedPremiumChecks.length ? ["PREMIUM_BASELINE_QA_FAILED"] : []),
     ...(!automatedGatePassed ? ["AUTOMATED_QA_FAILED"] : []),
   ];
 
@@ -116,7 +148,8 @@ export function buildVideoQualityReport({ renderPackage, renderReceipt, mediaPro
     reportId: `${renderPackage.previewId}:quality-report:v1`,
     generatedAt,
     sourcePreviewId: renderPackage.previewId,
-    qualityProfile: goldBaselineTarget ? GOLD_PROFILE : "legacy",
+    qualityProfile,
+    inheritedQualityProfile: premiumBaselineTarget ? GOLD_PROFILE : null,
     qualityStage,
     automatedGate: automatedGatePassed ? "PASS" : "FAIL",
     releaseDecision: releaseBlockers.length ? "BLOCKED" : "ELIGIBLE_FOR_HUMAN_RELEASE_APPROVAL",
@@ -129,7 +162,9 @@ export function buildVideoQualityReport({ renderPackage, renderReceipt, mediaPro
       ? "REPLACE_OWNED_SCREEN_RECORDINGS"
       : releaseBlockers.includes("GOLD_CREATIVE_REVIEW_REQUIRED")
         ? "COMPLETE_GOLD_CREATIVE_REVIEW"
-        : "HUMAN_FINAL_QUALITY_REVIEW",
+        : releaseBlockers.includes("PREMIUM_CREATIVE_REVIEW_REQUIRED")
+          ? "COMPLETE_PREMIUM_CREATIVE_REVIEW"
+          : "HUMAN_FINAL_QUALITY_REVIEW",
   });
 }
 
@@ -138,11 +173,27 @@ export function validateVideoQualityReport(report) {
   if (!Array.isArray(report.checks) || report.checks.length === 0) throw new TypeError("quality checks are required");
   if (report.publicationAllowed !== false) throw new TypeError("quality report cannot authorize publication");
   if (report.automatedGate === "PASS" && report.failedCheckIds.length) throw new TypeError("passed gate cannot contain failed checks");
-  if (report.qualityProfile === GOLD_PROFILE && report.checks.some((item) => item.category === "creative" && !item.passed) && report.automatedGate !== "FAIL") {
+  if ((report.qualityProfile === GOLD_PROFILE || report.qualityProfile === PREMIUM_PROFILE) && report.checks.some((item) => item.category === "creative" && !item.passed) && report.automatedGate !== "FAIL") {
     throw new TypeError("gold creative failure must fail the automated gate");
+  }
+  if (report.qualityProfile === PREMIUM_PROFILE && report.checks.some((item) => item.category === "premium" && !item.passed) && report.automatedGate !== "FAIL") {
+    throw new TypeError("premium failure must fail the automated gate");
   }
   if (report.qualityProfile === GOLD_PROFILE && report.qualityStage === "TARGET_PENDING" && !report.releaseBlockers.includes("GOLD_CREATIVE_REVIEW_REQUIRED")) {
     throw new TypeError("pending Gold target must remain blocked for creative review");
+  }
+  if (report.qualityProfile === PREMIUM_PROFILE && report.qualityStage === "PREMIUM_TARGET_PENDING") {
+    const hasGoldChecks = report.checks.some((item) => item.category === "creative");
+    const hasPremiumChecks = report.checks.some((item) => item.category === "premium");
+    if (!hasGoldChecks && !report.releaseBlockers.includes("GOLD_CREATIVE_REVIEW_REQUIRED")) {
+      throw new TypeError("Premium target must retain Gold review blocker until Gold evidence exists");
+    }
+    if (!hasPremiumChecks && !report.releaseBlockers.includes("PREMIUM_CREATIVE_REVIEW_REQUIRED")) {
+      throw new TypeError("Premium target must remain blocked for Premium review until Premium evidence exists");
+    }
+    if (!report.releaseBlockers.includes("GOLD_CREATIVE_REVIEW_REQUIRED") && !report.releaseBlockers.includes("PREMIUM_CREATIVE_REVIEW_REQUIRED")) {
+      throw new TypeError("Premium target pending requires at least one outstanding review blocker");
+    }
   }
   return true;
 }

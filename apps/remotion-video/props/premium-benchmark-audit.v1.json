@@ -1,0 +1,65 @@
+{
+  "schemaVersion": "video.premium-benchmark-audit.v1",
+  "premiumProfile": "video.production.premium.v1",
+  "principle": "A file named benchmark is not automatically a Premium-safe reference. Reuse patterns, not legacy defects.",
+  "sources": [
+    {
+      "path": "apps/remotion-video/src/toolradar-explainer-14to5-benchmark-v1.tsx",
+      "status": "LEGACY_REFERENCE_ONLY",
+      "keep": [
+        "clear payoff reveal",
+        "monotonic radar sweep",
+        "evidence-link convergence",
+        "strong typographic hierarchy",
+        "explicit truth boundary"
+      ],
+      "banFromPremium": [
+        "continuous signal wobbleX/wobbleY driven by Math.sin/Math.cos",
+        "continuous decorative signal rotation wobble",
+        "unmotivated ambient oscillation"
+      ],
+      "reason": "Contains continuous undirected micro-motion that conflicts with Gold camera/motion non-regression and lowers perceived production stability."
+    },
+    {
+      "path": "apps/remotion-video/src/toolradar-explainer-19s-animatic-v1.tsx",
+      "status": "LEGACY_REFERENCE_ONLY",
+      "keep": [
+        "first payoff anchor",
+        "full reveal anchor",
+        "event sequencing",
+        "clear narrative phases"
+      ],
+      "banFromPremium": [
+        "background radial-gradient shift driven by Math.sin(frame)",
+        "signal bob driven by Math.sin(frame)",
+        "continuous signal rotation oscillation",
+        "large BEFORE/AFTER panel blocks as default visual grammar"
+      ],
+      "reason": "Useful timing reference, but its ambient wobble and panel-heavy comparison language are not Premium-safe production grammar."
+    },
+    {
+      "path": "apps/remotion-video/src/toolradar-explainer-production-polish-alpha-overlay-v2.tsx",
+      "status": "PATTERN_SOURCE_ONLY",
+      "keep": [
+        "non-overlapping beat ownership",
+        "large headline hierarchy",
+        "event-bounded anchor pulse",
+        "explicit loop guard",
+        "clear payoff timing"
+      ],
+      "upgradeForPremium": [
+        "replace overlay shelf dominance with scene-integrated spatial hierarchy where possible",
+        "tie pulses to causal scene events rather than decorative emphasis",
+        "carry brand motif through scene materials and motion, not only typography"
+      ],
+      "reason": "Contains strong editorial timing patterns, but should be used as a rhythm source rather than copied as a final visual layer."
+    }
+  ],
+  "premiumReferencePolicy": {
+    "legacyReferenceMayBeCopiedDirectly": false,
+    "goldNonRegressionMustPass": true,
+    "humanBenchmarkSelectionRequired": true,
+    "minimumExternalReferenceCount": 2,
+    "referencePurposeMustBeDeclared": true
+  }
+}

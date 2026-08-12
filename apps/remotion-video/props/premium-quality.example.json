@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "toolradar.premium-quality-evidence.v1",
+  "profile": "video.production.premium.v1",
+  "extends": "video.production.gold-baseline.v1",
+  "sourcePreviewId": "preview:replace-with-real-id",
+  "status": "HUMAN_REVIEW_COMPLETE_EXAMPLE_ONLY",
+  "continuity": {
+    "physicalOrSemanticTransitionCoverage": 0.8,
+    "continuityScore": 95,
+    "crossShotEventCarry": true,
+    "crossfadeOnlyPrimaryGrammar": false
+  },
+  "motion": {
+    "advancedMotionScore": 95,
+    "motionFamilies": ["physical", "material", "spatial"],
+    "causalMotion": true,
+    "cameraOnly": false
+  },
+  "materials": {
+    "materialRealismScore": 95,
+    "lightingContinuityScore": 95,
+    "opticalInteractionScore": 94,
+    "heroMaterialInteractionPresent": true
+  },
+  "brandWorld": {
+    "score": 94,
+    "recurringMotifCount": 3,
+    "motifCrossShotRecurrence": 0.75,
+    "logoOnlyBranding": false
+  },
+  "voice": {
+    "performanceScore": 95,
+    "prosodyIntentCoverage": 0.95,
+    "humanReviewed": true,
+    "timeStretchUsed": false
+  },
+  "sound": {
+    "narrativeScore": 95,
+    "bespokeMotifPresent": true,
+    "frameSynchronousSound": true,
+    "loudnessEvidencePresent": true
+  },
+  "typography": {
+    "hierarchyScore": 95
+  },
+  "benchmark": {
+    "humanComparisonCompleted": true,
+    "referenceCount": 3,
+    "overallHumanReviewScore": 97,
+    "referenceCopyingUsed": false,
+    "goldNonRegressionPassed": true
+  },
+  "review": {
+    "fullWatch": "PASS",
+    "technicalQc": "PASS"
+  },
+  "note": "Example values are illustrative. Real production evidence must come from actual human review and actual benchmark comparison."
+}
