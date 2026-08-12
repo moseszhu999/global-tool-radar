@@ -2,26 +2,54 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
-const worker = readFileSync(new URL('../../worker/src/run-video-quality-gate.mjs', import.meta.url), 'utf8');
+const qualityWorker = readFileSync(new URL('../../worker/src/run-video-quality-gate.mjs', import.meta.url), 'utf8');
+const caseWorker = readFileSync(new URL('../../worker/src/build-video-production-case.mjs', import.meta.url), 'utf8');
+const storyboardWorker = readFileSync(new URL('../../worker/src/build-storyboard-manifest.mjs', import.meta.url), 'utf8');
+const renderPackageWorker = readFileSync(new URL('../../worker/src/build-render-preview-package.mjs', import.meta.url), 'utf8');
 
-test('worker exposes the optional creative-quality evidence input', () => {
-  assert.match(worker, /--creative-quality/);
-  assert.match(worker, /creativeQualityPath/);
-  assert.match(worker, /creativeQualityEvidence/);
+test('quality worker exposes the optional creative-quality evidence input', () => {
+  assert.match(qualityWorker, /--creative-quality/);
+  assert.match(qualityWorker, /creativeQualityPath/);
+  assert.match(qualityWorker, /creativeQualityEvidence/);
 });
 
-test('worker passes creative-quality evidence into the canonical quality report builder', () => {
+test('quality worker passes creative-quality evidence into the canonical quality report builder', () => {
   assert.match(
-    worker,
+    qualityWorker,
     /buildVideoQualityReport\(\{[\s\S]*creativeQualityEvidence,[\s\S]*generatedAt[\s\S]*\}\)/,
   );
 });
 
-test('worker continues to support the legacy path when no creative-quality file is supplied', () => {
-  assert.match(worker, /creativeQualityArg \? resolve\(creativeQualityArg\) : null/);
-  assert.match(worker, /creativeQualityPath \? readFile\(creativeQualityPath,[\s\S]*: Promise\.resolve\(null\)/);
+test('quality worker continues to support the legacy path when no creative-quality file is supplied', () => {
+  assert.match(qualityWorker, /creativeQualityArg \? resolve\(creativeQualityArg\) : null/);
+  assert.match(qualityWorker, /creativeQualityPath \? readFile\(creativeQualityPath,[\s\S]*: Promise\.resolve\(null\)/);
 });
 
-test('worker exposes the selected quality profile in its operator receipt', () => {
-  assert.match(worker, /qualityProfile: report\.qualityProfile/);
+test('quality worker exposes the selected quality profile in its operator receipt', () => {
+  assert.match(qualityWorker, /qualityProfile: report\.qualityProfile/);
+});
+
+test('new production-case worker applies Gold defaults after building the canonical case', () => {
+  assert.match(caseWorker, /applyGoldDefaultsToProductionCase\(buildVideoProductionCase\(/);
+  assert.match(caseWorker, /validateGoldTarget\(productionCase\)/);
+  assert.match(caseWorker, /goldBaselineTarget: productionCase\.gates\.goldBaselineTarget/);
+});
+
+test('new storyboard worker applies Gold defaults after building the canonical storyboard', () => {
+  assert.match(storyboardWorker, /applyGoldDefaultsToStoryboardPackage\(buildStoryboardManifest\(/);
+  assert.match(storyboardWorker, /validateGoldTarget\(value\)/);
+  assert.match(storyboardWorker, /goldBaselineTarget: value\.gates\.goldBaselineTarget/);
+});
+
+test('render-package worker defaults to Gold target and emits pending creative evidence', () => {
+  assert.match(renderPackageWorker, /applyGoldDefaultsToRenderPreviewPackage\(buildRenderPreviewPackage\(/);
+  assert.match(renderPackageWorker, /buildPendingCreativeQualityEvidence\(renderPackage\)/);
+  assert.match(renderPackageWorker, /gold-creative-quality-pending\.json/);
+  assert.match(renderPackageWorker, /goldBaselineRequired: renderPackage\.gates\.goldBaselineRequired/);
+});
+
+test('preview Gold target remains non-enforcing until creative evidence is supplied', () => {
+  assert.match(renderPackageWorker, /qualityStage: renderPackage\.qualityStage/);
+  assert.match(renderPackageWorker, /goldBaselineTarget: renderPackage\.gates\.goldBaselineTarget/);
+  assert.match(renderPackageWorker, /goldBaselineRequired: renderPackage\.gates\.goldBaselineRequired/);
 });
