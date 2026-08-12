@@ -6,7 +6,8 @@
     "studio": "remotion studio src/index.ts --no-open",
     "render:preview": "remotion render src/index.ts ToolRadarAIDesignPortrait out/toolradar-ai-design-preview.mp4 --props=props/preview.json",
     "render:final": "remotion render src/index.ts ToolRadarAIDesignPortrait out/toolradar-ai-design-xiaoxiao-final.mp4 --props=props/final.json",
-    "check": "node --test test/contracts.test.mjs"
+    "check": "node --test test/*.test.mjs",
+    "check:gold": "node --test test/gold-baseline.test.mjs"
   },
   "dependencies": {
     "@remotion/cli": "4.0.506",
