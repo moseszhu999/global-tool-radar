@@ -58,15 +58,21 @@ jobs:
           if (report.releaseDecision !== "BLOCKED" || report.publicationAllowed !== false) {
             throw new Error("preview must remain blocked from release");
           }
-          const expected = [
+          const required = [
             "OWNED_SCREEN_RECORDINGS_REQUIRED",
             "FINAL_VOICE_APPROVAL_REQUIRED",
             "HUMAN_QUALITY_REVIEW_REQUIRED",
-            "GOLD_CREATIVE_REVIEW_REQUIRED",
           ];
-          if (JSON.stringify(report.releaseBlockers) !== JSON.stringify(expected)) {
-            throw new Error(`unexpected release blockers: ${report.releaseBlockers.join(", ")}`);
+          for (const blocker of required) {
+            if (!report.releaseBlockers.includes(blocker)) throw new Error(`missing required release blocker: ${blocker}`);
           }
+          const goldPending = report.qualityProfile === "video.production.gold-baseline.v1" && report.qualityStage === "TARGET_PENDING";
+          if (goldPending && !report.releaseBlockers.includes("GOLD_CREATIVE_REVIEW_REQUIRED")) {
+            throw new Error("Gold target preview must remain blocked for creative review");
+          }
+          const allowed = new Set([...required, "GOLD_CREATIVE_REVIEW_REQUIRED"]);
+          const unexpected = report.releaseBlockers.filter((blocker) => !allowed.has(blocker));
+          if (unexpected.length) throw new Error(`unexpected release blockers: ${unexpected.join(", ")}`);
           console.log(report);
           NODE
       - uses: actions/upload-artifact@v4
