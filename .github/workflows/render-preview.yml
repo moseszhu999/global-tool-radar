@@ -9,6 +9,7 @@ on:
       - "apps/worker/src/render-preview-video.mjs"
       - "apps/worker/src/run-video-quality-gate.mjs"
       - "packages/render-preview/**"
+      - "packages/video-gold-profile/**"
       - "packages/video-quality-gate/**"
       - "package.json"
   push:
@@ -20,6 +21,7 @@ on:
       - "apps/worker/src/render-preview-video.mjs"
       - "apps/worker/src/run-video-quality-gate.mjs"
       - "packages/render-preview/**"
+      - "packages/video-gold-profile/**"
       - "packages/video-quality-gate/**"
       - "package.json"
   workflow_dispatch:
@@ -56,7 +58,12 @@ jobs:
           if (report.releaseDecision !== "BLOCKED" || report.publicationAllowed !== false) {
             throw new Error("preview must remain blocked from release");
           }
-          const expected = ["OWNED_SCREEN_RECORDINGS_REQUIRED", "FINAL_VOICE_APPROVAL_REQUIRED", "HUMAN_QUALITY_REVIEW_REQUIRED"];
+          const expected = [
+            "OWNED_SCREEN_RECORDINGS_REQUIRED",
+            "FINAL_VOICE_APPROVAL_REQUIRED",
+            "HUMAN_QUALITY_REVIEW_REQUIRED",
+            "GOLD_CREATIVE_REVIEW_REQUIRED",
+          ];
           if (JSON.stringify(report.releaseBlockers) !== JSON.stringify(expected)) {
             throw new Error(`unexpected release blockers: ${report.releaseBlockers.join(", ")}`);
           }
