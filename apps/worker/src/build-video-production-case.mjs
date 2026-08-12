@@ -1,6 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { buildVideoProductionCase, validateVideoProductionCase } from "../../../packages/video-production-case/src/index.mjs";
+import { applyGoldDefaultsToProductionCase, validateGoldTarget } from "../../../packages/video-gold-profile/src/index.mjs";
 
 function parseArgs(argv) {
   const args = { input: null, output: null, generatedAt: null };
@@ -18,10 +19,11 @@ function parseArgs(argv) {
 const args = parseArgs(process.argv.slice(2));
 const inputPath = resolve(args.input);
 const input = JSON.parse(await readFile(inputPath, "utf8"));
-const productionCase = buildVideoProductionCase(input, {
+const productionCase = applyGoldDefaultsToProductionCase(buildVideoProductionCase(input, {
   generatedAt: args.generatedAt ?? new Date().toISOString(),
-});
+}));
 validateVideoProductionCase(productionCase);
+validateGoldTarget(productionCase);
 const output = `${JSON.stringify(productionCase, null, 2)}\n`;
 
 if (args.output) {
@@ -31,6 +33,8 @@ if (args.output) {
     schemaVersion: productionCase.schemaVersion,
     caseId: productionCase.caseId,
     status: productionCase.status,
+    qualityProfile: productionCase.qualityProfile,
+    goldBaselineTarget: productionCase.gates.goldBaselineTarget,
     outputPath,
   }));
 } else {

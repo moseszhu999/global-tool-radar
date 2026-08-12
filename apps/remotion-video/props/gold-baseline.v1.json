@@ -1,0 +1,87 @@
+{
+  "schema": "video.production.gold-baseline.v1",
+  "status": "candidate",
+  "derivedFrom": {
+    "reviewDate": "2026-08-12",
+    "humanReviewScore": 95,
+    "referenceBuild": "coldbrew-v4-real-motion"
+  },
+  "delivery": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "reviewHtmlRequired": true,
+    "contactSheetRequired": true,
+    "technicalEvidenceRequired": true
+  },
+  "camera": {
+    "shake": 0,
+    "allowSinCosMicroWobble": false,
+    "allowRandomDrift": false,
+    "allowDirectionReversalForSimpleMoves": false,
+    "monotonicMoveRequiredByDefault": true,
+    "highResolutionTransformWorkspaceRecommended": true
+  },
+  "motion": {
+    "cameraOnlyMotionAllowedAsFinalLanguage": false,
+    "realMotionEventMinimumForThirtySecondShort": 6,
+    "physicalContinuityPreferred": true
+  },
+  "cinematicInfographic": {
+    "requiredMode": "world-space",
+    "objectOrPathBindingRequired": true,
+    "physicalCausePreferred": true,
+    "forbiddenDefaultTreatments": [
+      "full-screen-card",
+      "dashboard-panel",
+      "generic-horizontal-meter",
+      "fixed-corner-label-without-object-binding",
+      "large-paragraph-over-passive-background"
+    ]
+  },
+  "typography": {
+    "subtitleMinimumPxAt1080x1920": 52,
+    "subtitleTargetPxAt1080x1920": 56,
+    "worldSpaceLabelMinimumEquivalentPx": 48,
+    "mobileSafeMarginsRequired": true,
+    "finalExportReadabilityReviewRequired": true
+  },
+  "voice": {
+    "naturalDurationRequired": true,
+    "timeStretchAllowed": false,
+    "perLineDirectionAllowed": true,
+    "humanNaturalnessMinimum": 85
+  },
+  "sound": {
+    "frameSynchronousEventMinimumForThirtySecondShort": 6,
+    "duckingUnderVoiceRequiredWhenBedPresent": true,
+    "technicalLoudnessEvidenceRequired": true,
+    "accidentalLongSilenceForbidden": true
+  },
+  "assets": {
+    "allApprovedProductionAssetsMustAppearInFinal": true,
+    "lowResolutionFullScreenUpscaleForbidden": true,
+    "heroMaterialRealismRequired": true
+  },
+  "brand": {
+    "brandGrammarFromFirstShotPreferred": true,
+    "logoOnlyAtEndIsInsufficientForBenchmarkWork": true
+  },
+  "qualityGates": {
+    "Voice_Naturalness": 85,
+    "Visual_Quality": 85,
+    "Visual_Consistency": 88,
+    "Material_Realism": 85,
+    "Motion_Quality": 85,
+    "Camera_Stability": 95,
+    "Sound_Design": 85,
+    "Caption_Readability": 90,
+    "Full_Watch_Review": "PASS",
+    "Technical_QC": "PASS"
+  },
+  "release": {
+    "automatedPromotionToFinalAllowed": false,
+    "humanFullWatchRequired": true,
+    "failStatus": "PREVIEW_ONLY / QUALITY_FAIL"
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "toolradar.creative-quality-evidence.v1",
+  "profile": "video.production.gold-baseline.v1",
+  "camera": {
+    "shake": 0,
+    "hasSinCosMicroWobble": false,
+    "hasRandomDrift": false,
+    "simpleMoveDirectionReversals": 0
+  },
+  "motion": {
+    "realMotionEvents": 8,
+    "cameraOnly": false
+  },
+  "infographic": {
+    "mode": "world-space",
+    "objectOrPathBound": true,
+    "forbiddenTreatmentsDetected": []
+  },
+  "typography": {
+    "subtitleMinimumPx": 56,
+    "worldSpaceLabelMinimumEquivalentPx": 52,
+    "mobileReadabilityReviewed": true
+  },
+  "voice": {
+    "naturalnessScore": 90,
+    "humanReviewed": true,
+    "timeStretchUsed": false
+  },
+  "sound": {
+    "designScore": 89,
+    "synchronousEventCount": 8,
+    "loudnessEvidencePresent": true
+  },
+  "visual": {
+    "qualityScore": 92,
+    "consistencyScore": 91,
+    "materialRealismScore": 90,
+    "motionQualityScore": 91,
+    "cameraStabilityScore": 98,
+    "captionReadabilityScore": 95
+  },
+  "review": {
+    "fullWatch": "PASS",
+    "technicalQc": "PASS",
+    "approvedAssetsUsed": true
+  }
+}
