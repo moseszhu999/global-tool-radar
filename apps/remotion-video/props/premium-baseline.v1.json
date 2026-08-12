@@ -1,0 +1,74 @@
+{
+  "schemaVersion": "video.production.premium.v1",
+  "extends": "video.production.gold-baseline.v1",
+  "targetBand": "95-105",
+  "purpose": "Escalation profile for benchmark-oriented short-form production after Gold fundamentals are satisfied.",
+  "camera": {
+    "goldStabilityStillRequired": true,
+    "unmotivatedAmbientDriftAllowed": false,
+    "continuousSinCosWobbleAllowed": false,
+    "shotMovementMustBeMotivated": true
+  },
+  "continuity": {
+    "physicalOrSemanticTransitionCoverageMinimum": 0.6,
+    "continuityScoreMinimum": 90,
+    "crossShotEventCarryRequired": true,
+    "crossfadeOnlyAsPrimaryGrammarAllowed": false
+  },
+  "motion": {
+    "advancedMotionScoreMinimum": 92,
+    "cameraOnlyAllowed": false,
+    "causalMotionRequired": true,
+    "minimumAdvancedMotionFamilies": 2,
+    "allowedFamilies": [
+      "physical",
+      "spatial",
+      "procedural",
+      "material",
+      "product-ui-native"
+    ]
+  },
+  "materials": {
+    "materialRealismMinimum": 92,
+    "lightingContinuityMinimum": 92,
+    "opticalInteractionScoreMinimum": 90,
+    "heroMaterialInteractionRequired": true
+  },
+  "brandWorld": {
+    "brandWorldScoreMinimum": 90,
+    "minimumRecurringMotifs": 2,
+    "motifCrossShotRecurrenceMinimum": 0.6,
+    "logoOnlyBrandingAllowed": false
+  },
+  "voice": {
+    "performanceScoreMinimum": 92,
+    "prosodyIntentCoverageMinimum": 0.9,
+    "humanReviewRequired": true,
+    "timeStretchAllowed": false
+  },
+  "sound": {
+    "soundNarrativeScoreMinimum": 92,
+    "bespokeMotifRequired": true,
+    "frameSynchronousSoundRequired": true,
+    "loudnessEvidenceRequired": true
+  },
+  "typography": {
+    "inheritsGoldMobileFloors": true,
+    "hierarchyScoreMinimum": 92,
+    "screenSpaceParagraphDumpAllowed": false
+  },
+  "benchmark": {
+    "humanComparisonRequired": true,
+    "minimumReferenceCount": 2,
+    "overallHumanReviewMinimum": 95,
+    "referenceCopyingAllowed": false,
+    "benchmarkMustPassGoldNonRegression": true
+  },
+  "release": {
+    "fullWatchRequired": true,
+    "technicalQcRequired": true,
+    "goldEvidenceRequired": true,
+    "premiumEvidenceRequired": true,
+    "publicationAllowed": false
+  }
+}
