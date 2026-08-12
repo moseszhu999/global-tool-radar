@@ -82,6 +82,7 @@ test("passes automated checks but blocks release on human-owned assets", () => {
   const report = buildVideoQualityReport({ renderPackage, renderReceipt: receipt, mediaProbe: probe, generatedAt: "2026-08-04T11:00:00.000Z" });
   assert.equal(report.automatedGate, "PASS");
   assert.equal(report.qualityProfile, "legacy");
+  assert.equal(report.qualityStage, "LEGACY");
   assert.equal(report.releaseDecision, "BLOCKED");
   assert.deepEqual(report.releaseBlockers, ["OWNED_SCREEN_RECORDINGS_REQUIRED", "FINAL_VOICE_APPROVAL_REQUIRED", "HUMAN_QUALITY_REVIEW_REQUIRED"]);
   assert.equal(report.publicationAllowed, false);
@@ -97,11 +98,51 @@ test("fails automated gate when media dimensions are wrong", () => {
   assert.ok(report.releaseBlockers.includes("AUTOMATED_QA_FAILED"));
 });
 
+test("Gold-target preview passes technical QA but remains blocked for creative review", () => {
+  const goldTargetPackage = structuredClone(renderPackage);
+  goldTargetPackage.qualityProfile = "video.production.gold-baseline.v1";
+  goldTargetPackage.gates.goldBaselineTarget = true;
+  goldTargetPackage.gates.goldBaselineRequired = false;
+
+  const report = buildVideoQualityReport({
+    renderPackage: goldTargetPackage,
+    renderReceipt: receipt,
+    mediaProbe: probe,
+  });
+
+  assert.equal(report.qualityProfile, "video.production.gold-baseline.v1");
+  assert.equal(report.qualityStage, "TARGET_PENDING");
+  assert.equal(report.automatedGate, "PASS");
+  assert.ok(report.releaseBlockers.includes("GOLD_CREATIVE_REVIEW_REQUIRED"));
+  assert.equal(report.nextMilestone, "REPLACE_OWNED_SCREEN_RECORDINGS");
+  assert.equal(validateVideoQualityReport(report), true);
+});
+
+test("Gold-target preview evaluates creative evidence when it is supplied", () => {
+  const goldTargetPackage = structuredClone(renderPackage);
+  goldTargetPackage.qualityProfile = "video.production.gold-baseline.v1";
+  goldTargetPackage.gates.goldBaselineTarget = true;
+  goldTargetPackage.gates.goldBaselineRequired = false;
+
+  const report = buildVideoQualityReport({
+    renderPackage: goldTargetPackage,
+    renderReceipt: receipt,
+    mediaProbe: probe,
+    creativeQualityEvidence: goldCreativeEvidence,
+  });
+
+  assert.equal(report.qualityStage, "REVIEW_EVALUATED");
+  assert.equal(report.automatedGate, "PASS");
+  assert.ok(!report.releaseBlockers.includes("GOLD_CREATIVE_REVIEW_REQUIRED"));
+  assert.ok(!report.releaseBlockers.includes("GOLD_BASELINE_QA_FAILED"));
+});
+
 test("gold baseline fails closed when creative-quality evidence is missing", () => {
   const goldPackage = structuredClone(renderPackage);
   goldPackage.gates.goldBaselineRequired = true;
   const report = buildVideoQualityReport({ renderPackage: goldPackage, renderReceipt: receipt, mediaProbe: probe });
   assert.equal(report.qualityProfile, "video.production.gold-baseline.v1");
+  assert.equal(report.qualityStage, "FINAL_ENFORCED");
   assert.equal(report.automatedGate, "FAIL");
   assert.ok(report.failedCheckIds.includes("creative.gold_evidence_required"));
   assert.ok(report.releaseBlockers.includes("GOLD_BASELINE_QA_FAILED"));
@@ -127,6 +168,7 @@ test("gold baseline accepts complete creative-quality evidence", () => {
   });
 
   assert.equal(report.qualityProfile, "video.production.gold-baseline.v1");
+  assert.equal(report.qualityStage, "FINAL_ENFORCED");
   assert.equal(report.automatedGate, "PASS");
   assert.equal(report.releaseDecision, "ELIGIBLE_FOR_HUMAN_RELEASE_APPROVAL");
   assert.equal(report.failedCheckIds.length, 0);
@@ -178,4 +220,20 @@ test("gold baseline rejects PPT-style infographic evidence and camera-only motio
   assert.ok(report.failedCheckIds.includes("creative.infographic_world_space"));
   assert.ok(report.failedCheckIds.includes("creative.infographic_object_binding"));
   assert.ok(report.failedCheckIds.includes("creative.infographic_no_forbidden_treatments"));
+});
+
+test("Gold evidence accepts product-UI-native infographic mode for UI product shots", () => {
+  const goldPackage = structuredClone(renderPackage);
+  goldPackage.gates.goldBaselineRequired = true;
+  const uiCreative = structuredClone(goldCreativeEvidence);
+  uiCreative.infographic.mode = "product-ui-native";
+
+  const report = buildVideoQualityReport({
+    renderPackage: goldPackage,
+    renderReceipt: receipt,
+    mediaProbe: probe,
+    creativeQualityEvidence: uiCreative,
+  });
+
+  assert.ok(!report.failedCheckIds.includes("creative.infographic_world_space"));
 });
