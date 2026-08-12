@@ -8,7 +8,61 @@ function sha256(value) {
   return typeof value === "string" && /^[a-f0-9]{64}$/.test(value);
 }
 
-export function buildVideoQualityReport({ renderPackage, renderReceipt, mediaProbe, generatedAt = new Date().toISOString() }) {
+const GOLD_PROFILE = "video.production.gold-baseline.v1";
+const CREATIVE_EVIDENCE_SCHEMA = "toolradar.creative-quality-evidence.v1";
+
+function finiteNumber(value) {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function goldCreativeChecks(evidence) {
+  if (!evidence) {
+    return [check("creative.gold_evidence_required", "creative", false, "gold creative-quality evidence is required")];
+  }
+
+  const camera = evidence.camera ?? {};
+  const motion = evidence.motion ?? {};
+  const infographic = evidence.infographic ?? {};
+  const typography = evidence.typography ?? {};
+  const voice = evidence.voice ?? {};
+  const sound = evidence.sound ?? {};
+  const visual = evidence.visual ?? {};
+  const review = evidence.review ?? {};
+  const forbiddenTreatments = Array.isArray(infographic.forbiddenTreatmentsDetected) ? infographic.forbiddenTreatmentsDetected : [];
+
+  return [
+    check("creative.schema", "creative", evidence.schemaVersion === CREATIVE_EVIDENCE_SCHEMA, String(evidence.schemaVersion)),
+    check("creative.profile", "creative", evidence.profile === GOLD_PROFILE, String(evidence.profile)),
+    check("creative.camera_shake", "creative", finiteNumber(camera.shake) && camera.shake === 0, `shake=${camera.shake}`),
+    check("creative.camera_micro_wobble", "creative", camera.hasSinCosMicroWobble === false, `sin/cos micro wobble=${camera.hasSinCosMicroWobble}`),
+    check("creative.camera_random_drift", "creative", camera.hasRandomDrift === false, `random drift=${camera.hasRandomDrift}`),
+    check("creative.camera_direction_reversal", "creative", camera.simpleMoveDirectionReversals === 0, `simple-move reversals=${camera.simpleMoveDirectionReversals}`),
+    check("creative.real_motion_events", "creative", finiteNumber(motion.realMotionEvents) && motion.realMotionEvents >= 6, `${motion.realMotionEvents} real motion events`),
+    check("creative.camera_not_sole_motion", "creative", motion.cameraOnly === false, `camera-only=${motion.cameraOnly}`),
+    check("creative.infographic_world_space", "creative", infographic.mode === "world-space", String(infographic.mode)),
+    check("creative.infographic_object_binding", "creative", infographic.objectOrPathBound === true, `object/path bound=${infographic.objectOrPathBound}`),
+    check("creative.infographic_no_forbidden_treatments", "creative", forbiddenTreatments.length === 0, forbiddenTreatments.join(",") || "none"),
+    check("creative.subtitle_size", "creative", finiteNumber(typography.subtitleMinimumPx) && typography.subtitleMinimumPx >= 52, `${typography.subtitleMinimumPx}px`),
+    check("creative.world_label_size", "creative", finiteNumber(typography.worldSpaceLabelMinimumEquivalentPx) && typography.worldSpaceLabelMinimumEquivalentPx >= 48, `${typography.worldSpaceLabelMinimumEquivalentPx}px`),
+    check("creative.mobile_readability_review", "creative", typography.mobileReadabilityReviewed === true, `reviewed=${typography.mobileReadabilityReviewed}`),
+    check("creative.voice_naturalness", "creative", finiteNumber(voice.naturalnessScore) && voice.naturalnessScore >= 85 && voice.humanReviewed === true, `${voice.naturalnessScore}/100 human=${voice.humanReviewed}`),
+    check("creative.voice_no_time_stretch", "creative", voice.timeStretchUsed === false, `time-stretch=${voice.timeStretchUsed}`),
+    check("creative.sound_design", "creative", finiteNumber(sound.designScore) && sound.designScore >= 85, `${sound.designScore}/100`),
+    check("creative.sync_sound_events", "creative", finiteNumber(sound.synchronousEventCount) && sound.synchronousEventCount >= 6, `${sound.synchronousEventCount} events`),
+    check("creative.loudness_evidence", "creative", sound.loudnessEvidencePresent === true, `present=${sound.loudnessEvidencePresent}`),
+    check("creative.visual_quality", "creative", finiteNumber(visual.qualityScore) && visual.qualityScore >= 85, `${visual.qualityScore}/100`),
+    check("creative.visual_consistency", "creative", finiteNumber(visual.consistencyScore) && visual.consistencyScore >= 88, `${visual.consistencyScore}/100`),
+    check("creative.material_realism", "creative", finiteNumber(visual.materialRealismScore) && visual.materialRealismScore >= 85, `${visual.materialRealismScore}/100`),
+    check("creative.motion_quality", "creative", finiteNumber(visual.motionQualityScore) && visual.motionQualityScore >= 85, `${visual.motionQualityScore}/100`),
+    check("creative.camera_stability", "creative", finiteNumber(visual.cameraStabilityScore) && visual.cameraStabilityScore >= 95, `${visual.cameraStabilityScore}/100`),
+    check("creative.caption_readability", "creative", finiteNumber(visual.captionReadabilityScore) && visual.captionReadabilityScore >= 90, `${visual.captionReadabilityScore}/100`),
+    check("creative.full_watch", "creative", review.fullWatch === "PASS", String(review.fullWatch)),
+    check("creative.technical_qc", "creative", review.technicalQc === "PASS", String(review.technicalQc)),
+    check("creative.asset_adoption", "creative", review.approvedAssetsUsed === true, `approved assets used=${review.approvedAssetsUsed}`),
+  ];
+}
+
+export function buildVideoQualityReport({ renderPackage, renderReceipt, mediaProbe, creativeQualityEvidence = null, generatedAt = new Date().toISOString() }) {
   if (renderPackage?.schemaVersion !== "toolradar.render-preview-package.v1") throw new TypeError("unsupported render package");
   if (renderReceipt?.schemaVersion !== "toolradar.render-preview-receipt.v1") throw new TypeError("unsupported render receipt");
   if (!mediaProbe?.format || !Array.isArray(mediaProbe.streams)) throw new TypeError("ffprobe media data is required");
@@ -19,6 +73,8 @@ export function buildVideoQualityReport({ renderPackage, renderReceipt, mediaPro
   const frameRateParts = String(video?.avg_frame_rate ?? "0/1").split("/").map(Number);
   const frameRate = frameRateParts[1] ? frameRateParts[0] / frameRateParts[1] : 0;
   const placeholders = renderPackage.placeholderSlideIds ?? [];
+  const goldBaselineRequired = renderPackage.gates?.goldBaselineRequired === true;
+  const creativeChecks = goldBaselineRequired ? goldCreativeChecks(creativeQualityEvidence) : [];
   const checks = [
     check("technical.duration", "technical", Math.abs(duration - renderPackage.timelineDurationSeconds) <= 0.1, `${duration}s vs ${renderPackage.timelineDurationSeconds}s`),
     check("technical.resolution", "technical", video?.width === renderPackage.format.width && video?.height === renderPackage.format.height, `${video?.width}x${video?.height}`),
@@ -32,14 +88,17 @@ export function buildVideoQualityReport({ renderPackage, renderReceipt, mediaPro
     check("safety.source_reuse_disabled", "safety", renderPackage.policy?.sourceVideoReuseAllowed === false, "source video reuse disabled"),
     check("safety.preview_not_publishable", "safety", renderReceipt.publicationAllowed === false && renderPackage.gates?.publicationAllowed === false, "publication disabled"),
     check("safety.placeholder_labels", "safety", renderPackage.renderSlides.filter((slide) => slide.placeholderRequired).every((slide) => slide.previewLabel.includes("待替换")), "all placeholder frames visibly labelled"),
+    ...creativeChecks,
   ];
 
   const failedChecks = checks.filter((item) => !item.passed);
+  const failedCreativeChecks = creativeChecks.filter((item) => !item.passed);
   const automatedGatePassed = failedChecks.length === 0;
   const releaseBlockers = [
     ...(placeholders.length ? ["OWNED_SCREEN_RECORDINGS_REQUIRED"] : []),
     ...(renderPackage.voiceover?.finalVoiceApprovalRequired ? ["FINAL_VOICE_APPROVAL_REQUIRED"] : []),
     ...(renderPackage.gates?.humanQualityReviewRequired ? ["HUMAN_QUALITY_REVIEW_REQUIRED"] : []),
+    ...(goldBaselineRequired && failedCreativeChecks.length ? ["GOLD_BASELINE_QA_FAILED"] : []),
     ...(!automatedGatePassed ? ["AUTOMATED_QA_FAILED"] : []),
   ];
 
@@ -48,6 +107,7 @@ export function buildVideoQualityReport({ renderPackage, renderReceipt, mediaPro
     reportId: `${renderPackage.previewId}:quality-report:v1`,
     generatedAt,
     sourcePreviewId: renderPackage.previewId,
+    qualityProfile: goldBaselineRequired ? GOLD_PROFILE : "legacy",
     automatedGate: automatedGatePassed ? "PASS" : "FAIL",
     releaseDecision: releaseBlockers.length ? "BLOCKED" : "ELIGIBLE_FOR_HUMAN_RELEASE_APPROVAL",
     checks: freeze(checks),
@@ -64,5 +124,8 @@ export function validateVideoQualityReport(report) {
   if (!Array.isArray(report.checks) || report.checks.length === 0) throw new TypeError("quality checks are required");
   if (report.publicationAllowed !== false) throw new TypeError("quality report cannot authorize publication");
   if (report.automatedGate === "PASS" && report.failedCheckIds.length) throw new TypeError("passed gate cannot contain failed checks");
+  if (report.qualityProfile === GOLD_PROFILE && report.checks.some((item) => item.category === "creative" && !item.passed) && report.automatedGate !== "FAIL") {
+    throw new TypeError("gold creative failure must fail the automated gate");
+  }
   return true;
 }
