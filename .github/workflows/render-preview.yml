@@ -86,3 +86,4 @@ jobs:
             build/replit-design-render-preview-package.json
             build/replit-design-render-receipt.json
             build/replit-design-video-quality-report.json
+            build/gold-creative-quality-pending.json
