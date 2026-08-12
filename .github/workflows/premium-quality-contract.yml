@@ -1,0 +1,94 @@
+name: premium-quality-contract
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/premium-quality-contract.yml"
+      - "apps/worker/src/apply-premium-video-profile.mjs"
+      - "apps/worker/src/build-render-preview-package.mjs"
+      - "packages/video-gold-profile/**"
+      - "packages/video-premium-profile/**"
+      - "apps/remotion-video/props/premium-baseline.v1.json"
+      - "apps/remotion-video/props/premium-quality.example.json"
+      - "package.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  premium-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --ignore-scripts
+      - name: Build default Gold render package
+        run: npm run production:render-package:replit
+      - name: Escalate Gold package to Premium target
+        run: npm run production:premium-package:replit
+      - name: Verify Premium target and pending evidence
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFile } from "node:fs/promises";
+
+          const gold = JSON.parse(await readFile("build/replit-design-render-preview-package.json", "utf8"));
+          const premium = JSON.parse(await readFile("build/replit-design-premium-render-package.json", "utf8"));
+          const evidence = JSON.parse(await readFile("build/premium-quality-pending.json", "utf8"));
+
+          if (gold.qualityProfile !== "video.production.gold-baseline.v1") throw new Error("source package must be Gold-targeted");
+          if (gold.gates?.goldBaselineTarget !== true) throw new Error("Gold target gate missing");
+
+          if (premium.qualityProfile !== "video.production.premium.v1") throw new Error("Premium profile missing");
+          if (premium.inheritedQualityProfile !== "video.production.gold-baseline.v1") throw new Error("Gold inheritance missing");
+          if (premium.qualityStage !== "PREMIUM_TARGET") throw new Error("Premium adapter must remain target-stage");
+          if (premium.gates?.goldBaselineTarget !== true) throw new Error("Premium must preserve Gold target");
+          if (premium.gates?.premiumBaselineTarget !== true) throw new Error("Premium target gate missing");
+          if (premium.gates?.premiumBaselineRequired !== false) throw new Error("Premium preview cannot auto-enforce final QA");
+          if (premium.gates?.publicationAllowed !== false) throw new Error("Premium adapter cannot authorize publication");
+
+          if (evidence.schemaVersion !== "toolradar.premium-quality-evidence.v1") throw new Error("Premium evidence schema mismatch");
+          if (evidence.profile !== "video.production.premium.v1") throw new Error("Premium evidence profile mismatch");
+          if (evidence.extends !== "video.production.gold-baseline.v1") throw new Error("Premium evidence must inherit Gold");
+          if (evidence.status !== "PENDING_HUMAN_REVIEW") throw new Error("Premium evidence must remain pending");
+          if (evidence.sourcePreviewId !== premium.previewId) throw new Error("Premium evidence must bind to the exact preview");
+
+          const forbiddenAutoValues = [
+            evidence.continuity?.continuityScore,
+            evidence.motion?.advancedMotionScore,
+            evidence.materials?.materialRealismScore,
+            evidence.brandWorld?.score,
+            evidence.voice?.performanceScore,
+            evidence.sound?.narrativeScore,
+            evidence.typography?.hierarchyScore,
+            evidence.benchmark?.overallHumanReviewScore,
+          ];
+          if (forbiddenAutoValues.some((value) => value !== null)) throw new Error("Premium human scores must not be fabricated");
+          if (evidence.review?.fullWatch !== "PENDING" || evidence.review?.technicalQc !== "PENDING") {
+            throw new Error("Premium human review must remain pending");
+          }
+
+          console.log(JSON.stringify({
+            goldProfile: gold.qualityProfile,
+            premiumProfile: premium.qualityProfile,
+            inheritedQualityProfile: premium.inheritedQualityProfile,
+            qualityStage: premium.qualityStage,
+            publicationAllowed: premium.gates.publicationAllowed,
+            evidenceStatus: evidence.status,
+            sourcePreviewId: evidence.sourcePreviewId,
+          }, null, 2));
+          NODE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: toolradar-premium-quality-contract
+          retention-days: 14
+          if-no-files-found: error
+          path: |
+            build/replit-design-render-preview-package.json
+            build/gold-creative-quality-pending.json
+            build/replit-design-premium-render-package.json
+            build/premium-quality-pending.json
