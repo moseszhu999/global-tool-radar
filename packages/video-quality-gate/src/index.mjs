@@ -183,8 +183,17 @@ export function validateVideoQualityReport(report) {
     throw new TypeError("pending Gold target must remain blocked for creative review");
   }
   if (report.qualityProfile === PREMIUM_PROFILE && report.qualityStage === "PREMIUM_TARGET_PENDING") {
-    if (!report.releaseBlockers.includes("GOLD_CREATIVE_REVIEW_REQUIRED")) throw new TypeError("Premium target must retain Gold review blocker until Gold evidence exists");
-    if (!report.releaseBlockers.includes("PREMIUM_CREATIVE_REVIEW_REQUIRED")) throw new TypeError("Premium target must remain blocked for Premium review");
+    const hasGoldChecks = report.checks.some((item) => item.category === "creative");
+    const hasPremiumChecks = report.checks.some((item) => item.category === "premium");
+    if (!hasGoldChecks && !report.releaseBlockers.includes("GOLD_CREATIVE_REVIEW_REQUIRED")) {
+      throw new TypeError("Premium target must retain Gold review blocker until Gold evidence exists");
+    }
+    if (!hasPremiumChecks && !report.releaseBlockers.includes("PREMIUM_CREATIVE_REVIEW_REQUIRED")) {
+      throw new TypeError("Premium target must remain blocked for Premium review until Premium evidence exists");
+    }
+    if (!report.releaseBlockers.includes("GOLD_CREATIVE_REVIEW_REQUIRED") && !report.releaseBlockers.includes("PREMIUM_CREATIVE_REVIEW_REQUIRED")) {
+      throw new TypeError("Premium target pending requires at least one outstanding review blocker");
+    }
   }
   return true;
 }
