@@ -14,21 +14,25 @@ const videoPath = resolve(arg("--video", "build/replit-design-preview.mp4"));
 const outputPath = resolve(arg("--output", "build/replit-design-video-quality-report.json"));
 const creativeQualityArg = arg("--creative-quality", null);
 const creativeQualityPath = creativeQualityArg ? resolve(creativeQualityArg) : null;
+const premiumQualityArg = arg("--premium-quality", null);
+const premiumQualityPath = premiumQualityArg ? resolve(premiumQualityArg) : null;
 const generatedAt = arg("--generated-at", new Date().toISOString());
 
 const probeResult = spawnSync("ffprobe", ["-v", "error", "-show_streams", "-show_format", "-of", "json", videoPath], { encoding: "utf8" });
 if (probeResult.status !== 0) throw new Error(`ffprobe failed: ${probeResult.stderr}`);
 
-const [renderPackage, renderReceipt, creativeQualityEvidence] = await Promise.all([
+const [renderPackage, renderReceipt, creativeQualityEvidence, premiumQualityEvidence] = await Promise.all([
   readFile(packagePath, "utf8").then(JSON.parse),
   readFile(receiptPath, "utf8").then(JSON.parse),
   creativeQualityPath ? readFile(creativeQualityPath, "utf8").then(JSON.parse) : Promise.resolve(null),
+  premiumQualityPath ? readFile(premiumQualityPath, "utf8").then(JSON.parse) : Promise.resolve(null),
 ]);
 const report = buildVideoQualityReport({
   renderPackage,
   renderReceipt,
   mediaProbe: JSON.parse(probeResult.stdout),
   creativeQualityEvidence,
+  premiumQualityEvidence,
   generatedAt,
 });
 validateVideoQualityReport(report);
@@ -37,6 +41,8 @@ await writeFile(outputPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
 console.log(JSON.stringify({
   outputPath,
   qualityProfile: report.qualityProfile,
+  inheritedQualityProfile: report.inheritedQualityProfile,
+  qualityStage: report.qualityStage,
   automatedGate: report.automatedGate,
   releaseDecision: report.releaseDecision,
   blockers: report.releaseBlockers,
