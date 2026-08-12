@@ -39,7 +39,7 @@ function goldCreativeChecks(evidence) {
     check("creative.camera_direction_reversal", "creative", camera.simpleMoveDirectionReversals === 0, `simple-move reversals=${camera.simpleMoveDirectionReversals}`),
     check("creative.real_motion_events", "creative", finiteNumber(motion.realMotionEvents) && motion.realMotionEvents >= 6, `${motion.realMotionEvents} real motion events`),
     check("creative.camera_not_sole_motion", "creative", motion.cameraOnly === false, `camera-only=${motion.cameraOnly}`),
-    check("creative.infographic_world_space", "creative", infographic.mode === "world-space", String(infographic.mode)),
+    check("creative.infographic_world_space", "creative", infographic.mode === "world-space" || infographic.mode === "product-ui-native", String(infographic.mode)),
     check("creative.infographic_object_binding", "creative", infographic.objectOrPathBound === true, `object/path bound=${infographic.objectOrPathBound}`),
     check("creative.infographic_no_forbidden_treatments", "creative", forbiddenTreatments.length === 0, forbiddenTreatments.join(",") || "none"),
     check("creative.subtitle_size", "creative", finiteNumber(typography.subtitleMinimumPx) && typography.subtitleMinimumPx >= 52, `${typography.subtitleMinimumPx}px`),
@@ -74,7 +74,10 @@ export function buildVideoQualityReport({ renderPackage, renderReceipt, mediaPro
   const frameRate = frameRateParts[1] ? frameRateParts[0] / frameRateParts[1] : 0;
   const placeholders = renderPackage.placeholderSlideIds ?? [];
   const goldBaselineRequired = renderPackage.gates?.goldBaselineRequired === true;
-  const creativeChecks = goldBaselineRequired ? goldCreativeChecks(creativeQualityEvidence) : [];
+  const goldBaselineTarget = goldBaselineRequired || renderPackage.gates?.goldBaselineTarget === true || renderPackage.qualityProfile === GOLD_PROFILE;
+  const hasCreativeEvidence = creativeQualityEvidence !== null && creativeQualityEvidence !== undefined;
+  const goldCreativeEvaluationRequested = goldBaselineRequired || (goldBaselineTarget && hasCreativeEvidence);
+  const creativeChecks = goldCreativeEvaluationRequested ? goldCreativeChecks(creativeQualityEvidence) : [];
   const checks = [
     check("technical.duration", "technical", Math.abs(duration - renderPackage.timelineDurationSeconds) <= 0.1, `${duration}s vs ${renderPackage.timelineDurationSeconds}s`),
     check("technical.resolution", "technical", video?.width === renderPackage.format.width && video?.height === renderPackage.format.height, `${video?.width}x${video?.height}`),
@@ -94,11 +97,17 @@ export function buildVideoQualityReport({ renderPackage, renderReceipt, mediaPro
   const failedChecks = checks.filter((item) => !item.passed);
   const failedCreativeChecks = creativeChecks.filter((item) => !item.passed);
   const automatedGatePassed = failedChecks.length === 0;
+  const qualityStage = goldBaselineRequired
+    ? "FINAL_ENFORCED"
+    : goldBaselineTarget
+      ? (hasCreativeEvidence ? "REVIEW_EVALUATED" : "TARGET_PENDING")
+      : "LEGACY";
   const releaseBlockers = [
     ...(placeholders.length ? ["OWNED_SCREEN_RECORDINGS_REQUIRED"] : []),
     ...(renderPackage.voiceover?.finalVoiceApprovalRequired ? ["FINAL_VOICE_APPROVAL_REQUIRED"] : []),
     ...(renderPackage.gates?.humanQualityReviewRequired ? ["HUMAN_QUALITY_REVIEW_REQUIRED"] : []),
-    ...(goldBaselineRequired && failedCreativeChecks.length ? ["GOLD_BASELINE_QA_FAILED"] : []),
+    ...(goldBaselineTarget && !goldBaselineRequired && !hasCreativeEvidence ? ["GOLD_CREATIVE_REVIEW_REQUIRED"] : []),
+    ...(goldCreativeEvaluationRequested && failedCreativeChecks.length ? ["GOLD_BASELINE_QA_FAILED"] : []),
     ...(!automatedGatePassed ? ["AUTOMATED_QA_FAILED"] : []),
   ];
 
@@ -107,7 +116,8 @@ export function buildVideoQualityReport({ renderPackage, renderReceipt, mediaPro
     reportId: `${renderPackage.previewId}:quality-report:v1`,
     generatedAt,
     sourcePreviewId: renderPackage.previewId,
-    qualityProfile: goldBaselineRequired ? GOLD_PROFILE : "legacy",
+    qualityProfile: goldBaselineTarget ? GOLD_PROFILE : "legacy",
+    qualityStage,
     automatedGate: automatedGatePassed ? "PASS" : "FAIL",
     releaseDecision: releaseBlockers.length ? "BLOCKED" : "ELIGIBLE_FOR_HUMAN_RELEASE_APPROVAL",
     checks: freeze(checks),
@@ -115,7 +125,11 @@ export function buildVideoQualityReport({ renderPackage, renderReceipt, mediaPro
     releaseBlockers: freeze(releaseBlockers),
     metrics: freeze({ durationSeconds: duration, width: video?.width, height: video?.height, frameRate, videoCodec: video?.codec_name, audioCodec: audio?.codec_name, bytes: renderReceipt.bytes, sha256: renderReceipt.sha256 }),
     publicationAllowed: false,
-    nextMilestone: releaseBlockers.includes("OWNED_SCREEN_RECORDINGS_REQUIRED") ? "REPLACE_OWNED_SCREEN_RECORDINGS" : "HUMAN_FINAL_QUALITY_REVIEW",
+    nextMilestone: releaseBlockers.includes("OWNED_SCREEN_RECORDINGS_REQUIRED")
+      ? "REPLACE_OWNED_SCREEN_RECORDINGS"
+      : releaseBlockers.includes("GOLD_CREATIVE_REVIEW_REQUIRED")
+        ? "COMPLETE_GOLD_CREATIVE_REVIEW"
+        : "HUMAN_FINAL_QUALITY_REVIEW",
   });
 }
 
@@ -126,6 +140,9 @@ export function validateVideoQualityReport(report) {
   if (report.automatedGate === "PASS" && report.failedCheckIds.length) throw new TypeError("passed gate cannot contain failed checks");
   if (report.qualityProfile === GOLD_PROFILE && report.checks.some((item) => item.category === "creative" && !item.passed) && report.automatedGate !== "FAIL") {
     throw new TypeError("gold creative failure must fail the automated gate");
+  }
+  if (report.qualityProfile === GOLD_PROFILE && report.qualityStage === "TARGET_PENDING" && !report.releaseBlockers.includes("GOLD_CREATIVE_REVIEW_REQUIRED")) {
+    throw new TypeError("pending Gold target must remain blocked for creative review");
   }
   return true;
 }
