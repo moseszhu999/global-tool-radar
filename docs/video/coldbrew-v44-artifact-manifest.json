@@ -1,46 +1,85 @@
 {
   "schemaVersion": "video.operation.review-artifact-manifest.v1",
-  "updatedAt": "2026-08-13T10:16:35+08:00",
+  "updatedAt": "2026-08-13T11:00:00+08:00",
   "status": "WORKING_REVIEW_CANDIDATE_NOT_FINAL",
   "repository": "moseszhu999/global-tool-radar",
   "handoffBranch": "agent/video-operation-v44-handoff-20260813",
   "artifact": {
-    "name": "V45_22fix.mp4",
-    "sha256": "1033d27a9e155dac4e391d8fbbf263c441bfbd6cff93a0879c71ee86d060a588",
-    "bytes": 16553692,
+    "name": "V46_clean.mp4",
+    "sha256": "2c9e698603f7e1483ecd030ffed88505b71a9e0cd47414c86def876e1b4efaa3",
+    "bytes": 9229392,
     "durationSeconds": 32.0,
-    "video": {"codec": "h264", "width": 1080, "height": 1920, "fps": 30},
-    "audio": {"codec": "aac", "sampleRate": 48000, "channels": 2},
+    "video": {
+      "codec": "h264",
+      "width": 1080,
+      "height": 1920,
+      "fps": 30,
+      "frames": 960,
+      "durationSeconds": 32.0
+    },
+    "audio": {
+      "codec": "aac",
+      "sampleRate": 48000,
+      "channels": 2,
+      "durationSeconds": 32.0
+    },
     "durableBinary": {
       "provider": "Google Drive",
-      "fileId": "1Q_5ep-SkAws1sVz_bWs7cqqcjkeSrYse",
-      "fileName": "VideoOperation-ColdBrew-V45-22fix-20260813.mp4",
+      "fileId": "18Xy90wtb26WzoNgprhHUj2cqhEBZagNj",
+      "fileName": "VideoOperation-ColdBrew-V46-clean-transitions-20260813.mp4",
       "verifiedByRedownload": true,
-      "redownloadSha256": "1033d27a9e155dac4e391d8fbbf263c441bfbd6cff93a0879c71ee86d060a588"
+      "redownloadSha256": "2c9e698603f7e1483ecd030ffed88505b71a9e0cd47414c86def876e1b4efaa3",
+      "byteForByteMatch": true
     }
   },
-  "previousArtifact": {
-    "name": "V44_fix.mp4",
-    "sha256": "2b7fe97addf219fd0957b7dff2480b1f08b58c01cc71fe3a358d91d642289a6f",
-    "driveFileId": "1O3kbT5EqwPXIzlpaXBBGdB4xsEFxAOZt"
-  },
+  "previousArtifacts": [
+    {
+      "name": "V45_22fix.mp4",
+      "sha256": "1033d27a9e155dac4e391d8fbbf263c441bfbd6cff93a0879c71ee86d060a588",
+      "driveFileId": "1Q_5ep-SkAws1sVz_bWs7cqqcjkeSrYse",
+      "status": "REJECTED_BY_HUMAN_REVIEW_AND_TECHNICALLY_REGRESSED",
+      "technicalFinding": "container duration was 32.000s but video stream was only 31.533333s / 946 frames while audio remained 32.000s"
+    },
+    {
+      "name": "V44_fix.mp4",
+      "sha256": "2b7fe97addf219fd0957b7dff2480b1f08b58c01cc71fe3a358d91d642289a6f",
+      "driveFileId": "1O3kbT5EqwPXIzlpaXBBGdB4xsEFxAOZt",
+      "status": "FULL_32S_SOURCE_BASE_FOR_V46"
+    }
+  ],
   "construction": {
-    "base": "V4.4 exact master",
-    "firstFixWindowSeconds": [4.35, 5.65],
-    "secondRepairWindowSeconds": [21.966667, 22.466667],
-    "secondRepair": "removed unreliable composite transition frames and replaced them with stable boundary-frame holds plus a clean hard cut; original 32s audio copied unchanged",
-    "cameraShake": 0
+    "base": "exact V4.4 master with 960 video frames / 32.000s video and 32.000s audio",
+    "strategy": "temporarily disable every complex cross-shot composite transition and replace each suspect transition interval with stable boundary-frame holds separated by a clean hard cut; preserve all non-transition V4.4 imagery and original audio",
+    "neutralizedTransitionWindowsSeconds": [
+      [5.00, 5.45],
+      [10.10, 10.45],
+      [15.60, 16.10],
+      [22.00, 22.38],
+      [26.70, 27.20]
+    ],
+    "cameraShake": 0,
+    "noBlurHide": true,
+    "noFogHide": true,
+    "noDarkeningHide": true,
+    "noDiagonalCompositeInNeutralizedWindows": true
   },
   "humanReviewTruth": {
-    "cameraLockV3": "user confirmed V3 no longer shakes",
-    "v44FirstWideWedge": "user confirmed the first ~5s wide diagonal black wedge was removed",
-    "v44SecondWideWedge": "user reported the ~22s wedge still appeared to remain",
-    "v45": "second-window clean-cut remediation candidate; awaiting human review"
+    "cameraLockV3": "user explicitly confirmed V3 no longer shakes",
+    "naturalDropRevision": "user preferred the revised natural local liquid response over geometric ripple effects",
+    "v45Review": "user reported that the ~5s and ~22s wide black holes were still visible in the 32-second V45 video and that there appeared to be another new one later",
+    "v46": "working transition-clean diagnostic candidate; awaiting human review; do not label Final/100/105"
   },
   "qa": {
-    "secondWindowFrameInspection": "PASS locally; suspect composite geometry removed",
-    "audioContinuity": "PASS; original audio stream copied unchanged",
+    "videoFrames": 960,
+    "videoDurationSeconds": 32.0,
+    "audioDurationSeconds": 32.0,
+    "transitionContactSheetInspection": "PASS locally for all five neutralized boundary windows; complex blend/composite frames are absent from the review path",
+    "driveRedownloadHash": "PASS",
     "humanReviewRequired": true
   },
-  "boundaries": {"merge": false, "deploy": false, "publication": false}
+  "boundaries": {
+    "merge": false,
+    "deploy": false,
+    "publication": false
+  }
 }
