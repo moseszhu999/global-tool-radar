@@ -1,22 +1,13 @@
 # Skill: Video Operation Premium Cinematic Iteration
 
-Version: `v1.0`  
+Version: `v1.1`  
 Scope: Video Operation / short-form vertical cinematic product-explainer production  
 Primary quality target: Gold non-regression + selected Premium escalation  
 Human review remains authoritative.
 
 ## Trigger
 
-Use this skill when iterating a Video Operation short that is already technically renderable and the task is to raise human-perceived quality through cinematic continuity, local motion, material realism, sound, typography, and review discipline.
-
-Especially use it when the user says things like:
-
-- “继续” after reviewing a video;
-- “不抖了，但是动画可以更强”;
-- “这个动画不自然”;
-- “这里有缝/黑洞/黑块”;
-- “别用页面，直接给视频”;
-- “做到更成熟/更高级”。
+Use this skill when iterating a technically renderable Video Operation short to improve human-perceived quality through local motion, material realism, sound, typography and review discipline.
 
 ## Core doctrine
 
@@ -27,91 +18,62 @@ A visually energetic video with micro-jitter is a regression.
 Hard defaults:
 
 - camera shake = 0;
-- ban generic whole-frame oscillation;
-- ban random camera drift;
-- ban `sin/cos` micro-wobble used as visual life support;
-- do not animate whole-frame scale/rotate/warp merely to avoid stillness.
+- no generic whole-frame oscillation;
+- no random camera drift;
+- no `sin/cos` micro-wobble;
+- no whole-frame scale/rotate/warp merely to avoid stillness.
 
-If camera motion is needed, it must be deliberate, monotonic, eased, and shot-motivated. Prefer locked camera plus moving materials/objects.
+Prefer a locked camera plus moving materials/objects.
 
 ### 2. Motion belongs to matter
 
-Premium motion should be caused by something:
+Premium motion should be physically motivated:
 
 - droplet falls because of gravity;
 - liquid reacts because of impact;
 - steam rises from heat;
-- condensation converges into a drop;
-- highlight travels because glass/liquid geometry changes;
-- particles are carried by a flow;
-- text inherits a real object/path motion.
+- condensation forms/slides locally;
+- highlights travel because glass/liquid/ice response changes;
+- sparse particles follow a material event.
 
-Do not add motion merely because the frame feels static.
+Do not add motion merely because a frame feels static.
 
-### 3. Natural local animation > obvious post effect
+### 3. Natural local animation > obvious effect layer
 
-Good local amplification:
+Good:
 
-- irregular liquid brightness response;
-- short caustic/refraction change;
-- sparse carried particles;
-- subtle steam/haze;
+- irregular liquid brightness/refraction response;
+- short caustic change;
 - believable droplet trajectory;
+- restrained steam/haze;
 - specular travel on glass/ice;
-- liquid contour continuation.
+- sparse physically tied particles.
 
-Bad amplification:
+Reject:
 
 - perfect circular ripple rings;
-- symmetric geometric wavefronts;
-- repeated identical transition gadgets;
-- neon paths that look pasted on;
-- generic glow portals;
-- transitions whose geometry is more noticeable than the physical event.
+- symmetric geometric waves;
+- repeated transition gadgets;
+- neon portals/paths;
+- visual effects more noticeable than the coffee/product.
 
-Human heuristic:
+### 4. Hard cuts are the safe scene-boundary grammar
 
-> The viewer should notice the event, not the effect layer.
+The prior failure family was a wide black wedge / black void caused by unsafe cross-shot compositing/transition geometry.
 
-### 4. Shot N should create shot N+1
+Permanent bans at scene boundaries:
 
-Use causal continuity where it survives cleanly:
+- cross-shot composite;
+- crossfade blend layers;
+- alpha/matte transitions;
+- diagonal-mask reveals;
+- rotated/skewed coverage tricks;
+- moving source-video footage at the boundary;
+- any transition capable of exposing empty/black geometry.
 
-- energy carry;
-- direction carry;
-- material carry;
-- optical carry;
-- sound carry;
-- semantic carry.
+A clean cut is preferable to a broken causal transition.
 
-Examples:
-
-- pour highlight becomes steam;
-- steam condenses toward a drip;
-- drip impact becomes local liquid response;
-- amber current becomes iced-liquid contour;
-- liquid/specular energy settles into hero-glass highlight.
-
-Do not force continuity if the composite becomes dirty. A clean cut is better than a broken causal transition.
-
-### 5. Never create visible composite holes
-
-Named hard defect: **wide black wedge / black void**.
-
-Reject any transition frame containing a dark diagonal/polygonal region that is not scene-authentic, especially when it is roughly 1/5–1/6 of frame width.
-
-Possible causes:
-
-- incomplete matte coverage;
-- transparent overlay interpreted as black;
-- crop/transform mismatch;
-- rotated/skewed layer exposing background;
-- premultiplied-alpha mismatch;
-- diagonal wipe/flow mask with empty area.
-
-Fix by repairing/removing invalid composite geometry or reverting to a known-good source window. Do **not** blur/darken it to hide it.
-
-### 6. Distinguish defects correctly
+### 5. Distinguish defects correctly
 
 Do not confuse:
 
@@ -119,41 +81,21 @@ Do not confuse:
 - a one-pixel seam;
 - a wide black wedge/void.
 
-Human feedback is literal. If the user says “黑的东西，很宽，斜着，大概五分之一画面”, investigate the large dark region first.
+If a dark diagonal region is roughly 1/5–1/6 of frame width, investigate composite coverage first.
 
-### 7. Infographic belongs in the world
+### 6. Infographic belongs in the world
 
-Preferred:
-
-- world-space labels;
-- object/path-attached information;
-- number/keyword emerging from measured object;
-- explanation expressed through material change.
-
-Avoid:
-
-- PPT/card-first design;
-- side-by-side UI panels;
-- generic progress bars;
-- screen-space explanatory furniture.
-
-Principle:
-
-> Do not explain the image on top of the image; make the explanation happen inside the image.
-
-### 8. Mobile readability floors remain mandatory
+Prefer world-space/object/path-attached explanation. Avoid PPT/card-first design, generic UI panels, progress bars and screen-space explanatory furniture.
 
 At 1080×1920 equivalent:
 
-- subtitles target >= 52 px;
-- world-space labels target >= 48 px;
-- preserve platform safe zones;
-- do not let particles/highlights collide with subtitles;
-- semantic labels must match narration.
+- subtitles target >= 52px;
+- world-space explanatory labels target >= 48px;
+- preserve mobile platform safe zones.
 
-### 9. Voice and sound
+### 7. Voice and sound
 
-Current preferred Chinese production baseline:
+Current preferred Chinese baseline until human-approved replacement:
 
 - `edge-tts`;
 - `zh-CN-XiaoxiaoNeural`;
@@ -161,71 +103,71 @@ Current preferred Chinese production baseline:
 - segmented synthesis;
 - no narration time-stretch.
 
-Sound design:
+Sound stays restrained, causal and frame-synchronous.
 
-- restrained;
-- event-synchronous;
-- causal;
-- recurring motif is allowed;
-- no impact spam;
-- no sound used to disguise visual defects.
+### 8. Review discipline
 
-### 10. Review delivery is part of quality
+For each candidate:
 
-For this user/workflow:
-
-- primary deliverable = direct MP4;
-- optional secondary = direct A/B MP4;
-- keep downloadable files small enough for the client/platform;
-- short filenames are preferred;
-- **do not use an HTML page as the primary video review path**.
-
-HTML may be generated for evidence/metadata only when useful, but it must not be the thing the user is told to open to watch the sample.
-
-## Iteration protocol
-
-When the user says “继续” after review:
-
-1. Identify exactly what was approved and what was rejected.
-2. Preserve approved aspects as non-regression constraints.
-3. Change only the smallest surface needed for the next hypothesis when possible.
-4. Produce an actual reviewable MP4, not only a plan.
-5. Compare against the latest human-approved baseline.
-6. Run hard-defect checks before claiming improvement.
-7. Deliver direct MP4 and concise notes.
-8. Wait for human review before labeling final/100/105.
+1. identify exactly what was human-approved and rejected;
+2. preserve approvals as non-regression constraints;
+3. change the smallest surface needed;
+4. produce a real reviewable MP4 when a new candidate is authorized;
+5. run hard-defect and technical checks before claiming improvement;
+6. never self-label Final / 100 / 105 without human review.
 
 ## Hard QA checklist
 
-Before handing a new candidate to the user, inspect:
+Before handing a new candidate to the user, verify:
 
-- [ ] camera does not micro-jitter;
-- [ ] no whole-frame accidental translate/scale/rotate/warp;
-- [ ] no wide black wedge/void at transitions;
-- [ ] no obvious alpha/matte edge;
+- [ ] no camera micro-jitter or accidental whole-frame transform;
+- [ ] no wide black wedge/void at scene boundaries;
+- [ ] no visible alpha/matte edge;
 - [ ] no regular geometric liquid effect unless physically justified;
-- [ ] subtitles remain legible and safe;
+- [ ] subtitles remain legible and inside safe zones;
 - [ ] no animation fights narration;
-- [ ] liquid/glass/ice material continuity is plausible;
+- [ ] liquid/glass/ice material continuity remains plausible;
 - [ ] transition sound is synchronized and restrained;
-- [ ] direct MP4 is downloadable;
-- [ ] file size is practical;
+- [ ] video decodes cleanly with stable timestamps/cadence;
+- [ ] A/V durations align;
+- [ ] no black tail or obvious audio drop/clipping;
+- [ ] exact artifact SHA-256/identity is recorded;
 - [ ] no merge/deploy/publication occurred without explicit permission.
 
-## Current reference hierarchy (2026-08-13)
+## Current reference hierarchy — SourceReset truth
 
-1. **Stability truth:** Premium Camera Lock V3 — user explicitly said it no longer shakes.
-2. **Natural animation direction:** revised natural-drop approach — user said it was better than the geometric-wave version.
-3. **Latest conservative full-film candidate:** V4.4 — V4.2 improvements retained except suspect ~5s and ~22s windows reverted to stable V3 source to remove wide-black-wedge hard defects.
+1. **Clean seam-free baseline:** `SourceReset0.mp4`. Human feedback: `至少那些讨厌的黑缝没了`. This is the authority for removing the prior wide-black-wedge defect family.
+2. **Current review candidate:** `SourceReset1_Scene1Motion.mp4`.
+   - SHA-256: `6dcedbe09a7859088c4c86a1e65a696c172cde32bf82629802ef2b3f8b6f3759`
+   - durable Drive file ID: `1yDzWrtJxpkkme1tFwI9D1cYHsW9KAs_X`
+   - only Scene 1 (`0–5.333s`) restores local material motion;
+   - Scene 2–6 remain SourceReset0-clean/static;
+   - Scene 1→2 remains a direct hard cut.
+3. **Current gate:** `HUMAN_SCENE1_MOTION_REVIEW_REQUIRED`.
+4. **Next-scene rule:** `SCENE2_MOTION=HOLD` until explicit human approval of Scene 1.
+5. **Historical references only:** Premium Camera Lock V3, natural-drop experiments and V4.x patch candidates may retain useful learning, but they are not current continuation baselines and must not override SourceReset0/SourceReset1 truth.
 
-Read `docs/video/coldbrew-premium-v44-handoff-20260813.md` for exact continuation state.
+Read `docs/video/coldbrew-premium-v44-handoff-20260813.md`, `docs/video/coldbrew-v44-artifact-manifest.json` and `docs/video/NEXT-WINDOW-PROMPT-VIDEO-OP-20260813.md` for exact continuation state.
+
+## One-scene-at-a-time protocol
+
+1. Human reviews SourceReset1 Scene 1 motion.
+2. If approved, freeze Scene 1 as non-regression truth.
+3. Animate Scene 2 only, using local material/object/light motion and preserving hard cuts.
+4. Re-run technical and visual hard-defect checks.
+5. Human reviews again.
+6. Continue through Scene 6 one scene at a time.
+7. Any regression returns to the latest human-approved SourceReset baseline.
+
+While a scene is awaiting human review, do not fabricate approval or produce the next scene merely to keep activity going. Useful evidence/QC work is allowed if it does not alter the candidate or cross the gate.
 
 ## Repository/product boundaries
 
 - Gold remains the default quality floor.
-- Premium is explicit escalation.
-- Premium does not authorize publication.
+- Premium is explicit escalation and does not authorize publication.
 - Human creative review is not replaceable by automated evidence.
-- Merge = NO unless explicitly approved.
-- Deploy = NO unless explicitly approved.
-- Publication = NO unless explicitly approved.
+- Current handoff/recovery owner is Draft PR #127; do not create a duplicate owner for the same continuation scope.
+- Reuse Shared Media / `media.render.v1`; do not create a second render engine, receipt store or job registry.
+- Merge=NO unless explicitly approved.
+- Deploy=NO unless explicitly approved.
+- Publication=NO unless explicitly approved.
