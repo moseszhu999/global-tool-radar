@@ -1,70 +1,46 @@
 {
   "schemaVersion": "video.operation.review-artifact-manifest.v1",
-  "createdAt": "2026-08-13T09:24:00+08:00",
+  "updatedAt": "2026-08-13T10:16:35+08:00",
   "status": "WORKING_REVIEW_CANDIDATE_NOT_FINAL",
   "repository": "moseszhu999/global-tool-radar",
   "handoffBranch": "agent/video-operation-v44-handoff-20260813",
   "artifact": {
-    "name": "V44_fix.mp4",
-    "historicalLocalPath": "/mnt/data/V44_fix.mp4",
-    "internalHistoricalPath": "/mnt/data/coldbrew-v44-wedge-fix/coldbrew-v44-wedge-fix-full.mp4",
-    "sha256": "2b7fe97addf219fd0957b7dff2480b1f08b58c01cc71fe3a358d91d642289a6f",
-    "bytes": 15261002,
+    "name": "V45_22fix.mp4",
+    "sha256": "1033d27a9e155dac4e391d8fbbf263c441bfbd6cff93a0879c71ee86d060a588",
+    "bytes": 16553692,
     "durationSeconds": 32.0,
-    "video": {
-      "codec": "h264",
-      "width": 1080,
-      "height": 1920,
-      "fps": 30
-    },
-    "audio": {
-      "codec": "aac",
-      "sampleRate": 48000,
-      "channels": 2
-    },
+    "video": {"codec": "h264", "width": 1080, "height": 1920, "fps": 30},
+    "audio": {"codec": "aac", "sampleRate": 48000, "channels": 2},
     "durableBinary": {
       "provider": "Google Drive",
-      "fileId": "1O3kbT5EqwPXIzlpaXBBGdB4xsEFxAOZt",
-      "url": "https://drive.google.com/file/d/1O3kbT5EqwPXIzlpaXBBGdB4xsEFxAOZt/view?usp=drivesdk",
-      "fileName": "VideoOperation-ColdBrew-V44-fix-20260813.mp4"
+      "fileId": "1Q_5ep-SkAws1sVz_bWs7cqqcjkeSrYse",
+      "fileName": "VideoOperation-ColdBrew-V45-22fix-20260813.mp4",
+      "verifiedByRedownload": true,
+      "redownloadSha256": "1033d27a9e155dac4e391d8fbbf263c441bfbd6cff93a0879c71ee86d060a588"
     }
   },
-  "problemAB": {
-    "name": "V44_fix_AB.mp4",
-    "historicalLocalPath": "/mnt/data/V44_fix_AB.mp4",
-    "sha256": "6742702840a71433d43878c00e2777085e1073a5336fc81516c7a97f130b4c5a",
-    "bytesApprox": 1900000,
-    "durableBinary": {
-      "provider": "Google Drive",
-      "fileId": "1fwvuAYKuXjHtsBMrQ2hdlTwaJ_Cgphwa",
-      "url": "https://drive.google.com/file/d/1fwvuAYKuXjHtsBMrQ2hdlTwaJ_Cgphwa/view?usp=drivesdk",
-      "fileName": "VideoOperation-ColdBrew-V44-fix-AB-20260813.mp4"
-    }
+  "previousArtifact": {
+    "name": "V44_fix.mp4",
+    "sha256": "2b7fe97addf219fd0957b7dff2480b1f08b58c01cc71fe3a358d91d642289a6f",
+    "driveFileId": "1O3kbT5EqwPXIzlpaXBBGdB4xsEFxAOZt"
   },
   "construction": {
-    "baseImprovedPass": "V4.2 natural-motion full pass",
-    "stabilityFallback": "Premium Camera Lock V3",
-    "fallbackWindowsSeconds": [
-      [4.35, 5.65],
-      [21.35, 22.65]
-    ],
-    "purpose": "remove/reduce the user-reported wide diagonal black wedge hard defect while preserving the rest of the natural-motion improvements"
+    "base": "V4.4 exact master",
+    "firstFixWindowSeconds": [4.35, 5.65],
+    "secondRepairWindowSeconds": [21.966667, 22.466667],
+    "secondRepair": "removed unreliable composite transition frames and replaced them with stable boundary-frame holds plus a clean hard cut; original 32s audio copied unchanged",
+    "cameraShake": 0
   },
   "humanReviewTruth": {
-    "cameraLockV3": "user explicitly said V3 no longer shakes",
-    "naturalDropRevision": "user said the revised natural version was better",
-    "v44": "not yet confirmed perfect by human review"
+    "cameraLockV3": "user confirmed V3 no longer shakes",
+    "v44FirstWideWedge": "user confirmed the first ~5s wide diagonal black wedge was removed",
+    "v44SecondWideWedge": "user reported the ~22s wedge still appeared to remain",
+    "v45": "second-window clean-cut remediation candidate; awaiting human review"
   },
-  "binaryPersistence": {
-    "masterCommittedToGit": false,
-    "durableExactMasterStored": true,
-    "strategy": "GitHub stores the canonical manifest, hash, construction state and continuation rules; the exact MP4 bytes are durably stored in Google Drive and referenced by immutable file ID from this manifest.",
-    "reasonMasterNotInGit": "The active GitHub connector can write UTF-8/base64 blobs but cannot ingest the 15MB local MP4 directly as a file parameter without impractical payload expansion. This manifest deliberately does not pretend the Git repository contains the binary.",
-    "requiredFollowup": "When a binary-upload-capable GitHub runtime/local runner is available, optionally copy the exact Drive master into a GitHub Release/LFS/artifact and verify SHA-256 equals 2b7fe97addf219fd0957b7dff2480b1f08b58c01cc71fe3a358d91d642289a6f."
+  "qa": {
+    "secondWindowFrameInspection": "PASS locally; suspect composite geometry removed",
+    "audioContinuity": "PASS; original audio stream copied unchanged",
+    "humanReviewRequired": true
   },
-  "boundaries": {
-    "merge": false,
-    "deploy": false,
-    "publication": false
-  }
+  "boundaries": {"merge": false, "deploy": false, "publication": false}
 }
