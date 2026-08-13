@@ -43,15 +43,10 @@ jobs:
           add_file() {
             local f="$1"
             [[ -f "$f" ]] || return 0
-            local real
-            real="$(python3 - "$f" <<'PY'
-import os,sys
-print(os.path.realpath(sys.argv[1]))
-PY
-)"
+            local real dur bytes sha base dst
+            real="$(python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$f")"
             [[ -n "${seen[$real]:-}" ]] && return 0
             seen[$real]=1
-            local dur bytes sha base dst
             dur="$(ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 "$f" 2>/dev/null || true)"
             bytes="$(stat -f%z "$f" 2>/dev/null || stat -c%s "$f")"
             sha="$(shasum -a 256 "$f" | awk '{print $1}')"
@@ -68,20 +63,13 @@ PY
             done
           done
 
-          # Broader fallback: cold brew-named MP4s around the expected 32s duration.
           for r in "${roots[@]}"; do
             [[ -d "$r" ]] || continue
             while IFS= read -r -d '' f; do
               dur="$(ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 "$f" 2>/dev/null || true)"
-              python3 - "$dur" <<'PY' >/dev/null 2>&1 || continue
-import sys
-try:
-    d=float(sys.argv[1])
-except Exception:
-    raise SystemExit(1)
-raise SystemExit(0 if 30 <= d <= 34 else 1)
-PY
-              add_file "$f"
+              if python3 -c 'import sys; d=float(sys.argv[1]); raise SystemExit(0 if 30 <= d <= 34 else 1)' "$dur" 2>/dev/null; then
+                add_file "$f"
+              fi
             done < <(find "$r" -type f \( -iname '*coldbrew*.mp4' -o -iname '*cold-brew*.mp4' -o -iname '*cold_brew*.mp4' \) -print0 2>/dev/null || true)
           done
 
