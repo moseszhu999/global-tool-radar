@@ -1,120 +1,147 @@
-# Cold Brew Premium — Source Reset Handoff (2026-08-13)
+# Cold Brew Premium — Source Reset Handoff (Scene 1 Motion Study, 2026-08-13)
 
-Status: **SOURCE RESET 0 — STATIC CLEAN BASELINE REVIEW**  
+Status: **SourceReset1 human review candidate; not final**  
 Merge: **NO**  
 Deploy: **NO**  
 Publication: **NO**
 
-## 1. Direction change from human review
+## 1. Human-approved truth
 
-The user explicitly stopped the local V3 recovery path and instructed the production flow to continue from any stable point available, with one decisive rule:
+The user reviewed `SourceReset0.mp4` and said:
 
-> **Do not use the thing that produces the black seam.**
+> **“至少那些讨厌的黑缝没了”**
 
-Therefore local V3 recovery is no longer a prerequisite. V4.4/V4.5/V4.6/CleanCut1 must not be used as direct moving-video render bases.
+This is now the critical baseline truth: the source-reset construction successfully removed the previously recurring black-seam / black-hole defect family.
 
-## 2. SourceReset0 is a true source reset
+Therefore SourceReset0 is the clean seam-free baseline. Never reintroduce the mechanisms that caused the prior failures.
 
-Current review artifact:
+## 2. Permanent transition ban
 
-- `SourceReset0.mp4`
-- SHA-256: `a9fa19e8b188f10ae0bc992b462e5dcfc6411eb98a40aa7865022b17bf808576`
-- 32.000s
-- H.264 1080×1920 @ 30fps
-- exactly 960 video frames
-- AAC 48kHz stereo / 32.000s
-- Drive file ID: `1G9H4UylYDZnr5foMkCKpZhqAJnQemG0G`
-- Drive filename: `VideoOperation-ColdBrew-SourceReset0-20260813.mp4`
+Across scene boundaries, forbid:
 
-## 3. Construction rule
+- cross-shot composite;
+- crossfade used as a hidden blend layer;
+- alpha/matte transition;
+- diagonal-mask reveal;
+- rotated/skewed coverage tricks;
+- moving source-video frames near a scene boundary;
+- any effect that can expose empty/black geometry.
 
-SourceReset0 does **not** reuse moving V4 transition footage.
+Scene changes are hard cuts only until a future transition family is separately proven safe. A clean cut is not a temporary compromise; it is the default safe grammar.
 
-Only six clean, mid-shot still frames were extracted from V4.4 at:
+## 3. Benchmark learning before restoring motion
 
-- 2.70s
-- 7.80s
-- 13.00s
-- 18.50s
-- 24.50s
-- 29.50s
+The next pass studied mature coffee/product motion references rather than inventing another gimmick.
 
-These six stills are held for the original six scene durations and connected only by hard cuts. Original 32s audio is preserved.
+Key references:
 
-Consequences:
+- Illy Iperespresso: coffee-fluid behavior is itself the narrative; macro material events carry the visual story.
+- NESCAFÉ Classic cinematic product commercial: organic texture, pour quality, brand reveal; product remains visually legible.
+- Lavazza Coffee 3D Motion: motion comes from coffee beans, extraction, smoke/steam and liquid simulation.
+- Aroma Dance / Nespresso-inspired CGI: stable product identity with movement assigned to objects/light/rhythm rather than camera shake.
 
-- no original transition frames;
-- no cross-shot composite;
-- no crossfade;
-- no alpha/matte transition;
-- no diagonal-mask reveal;
-- no moving source-video frame near a transition;
-- no whole-frame camera movement;
-- camera shake = 0.
+Shared lesson:
 
-This artifact is deliberately visually conservative. Its job is to establish a seam-free clean source baseline before adding motion.
+> **Keep the camera/product anchor stable; put motion into material, light, droplets, condensation, particles and physical events.**
 
-## 4. Rejected continuation bases
+This matches the user's earlier preference for natural local animation and rejection of geometric effectiness.
 
-Do not render forward from:
+## 4. Current review candidate — SourceReset1
 
-- `V44_fix.mp4`
-- `V45_22fix.mp4`
-- `V46_clean.mp4`
-- `CleanCut1.mp4`
+Filename:
 
-Reason: all remain dependent on moving source segments from the failed seam-producing chain, even when their transition windows were cut or replaced.
+- `SourceReset1_Scene1Motion.mp4`
+- SHA-256: `6dcedbe09a7859088c4c86a1e65a696c172cde32bf82629802ef2b3f8b6f3759`
+- size: `3,455,476 bytes`
+- duration: `32.000s`
+- video: H.264, `1080×1920`, `30fps`, **960 frames**
+- audio: AAC, `48kHz`, stereo, `32.000s`
 
-## 5. Permanent transition ban
+Durable exact binary:
 
-For this production, until a separate transition implementation is proven safe, forbid:
+- Google Drive file ID: `1yDzWrtJxpkkme1tFwI9D1cYHsW9KAs_X`
+- filename: `VideoOperation-ColdBrew-SourceReset1-Scene1Motion-20260813.mp4`
 
-- cross-shot composite transitions;
-- diagonal mask/wedge reveals;
-- alpha wipe transitions;
-- premultiplied-alpha transition tricks;
-- crossfade-only transition grammar;
-- rotated/skewed transition layers that can expose empty canvas.
+## 5. What changed
 
-Allowed boundary behavior is a clean cut.
+Only Scene 1 (`0.000s–5.333s`) changed.
 
-## 6. Motion may return only inside scenes
+Scenes 2–6 remain byte-content-equivalent in visual intent to SourceReset0: static clean source-reset frames with hard cuts.
 
-If SourceReset0 is human-confirmed clean, add motion one scene at a time using only local physical phenomena:
+Scene 1 still uses a locked whole-frame image. There is **no camera transform**. Local motion is added only inside material regions:
 
-- droplets;
-- steam;
-- liquid flow;
-- ice;
-- highlights/specular travel;
-- refraction/caustics;
-- sparse particles.
+1. a single controlled specular travel down the existing coffee stream;
+2. short asymmetric ice caustic flickers;
+3. three small condensation droplets that slide only a few pixels on the glass wall;
+4. one soft amber caustic travel through the lower liquid body;
+5. all local motion settles before the Scene 1 → Scene 2 hard cut.
 
-No whole-frame wobble, no fake handheld, no camera oscillation, and no cross-scene effect layer.
+No looping wobble, no global push/zoom, no geometric ring, no portal, no transition layer.
 
-Each new moving scene must A/B against its SourceReset0 still and must not modify any other scene in the same iteration.
+## 6. Scene 1 → Scene 2 boundary QA
 
-## 7. Information design / audio rules remain
+The boundary at approximately `5.333s` was extracted densely on both sides.
 
-- cinematic/world-space explanation, not PPT/card UI;
-- subtitle target >=52px equivalent at 1080×1920;
-- world-space label target >=48px equivalent;
-- restrained causal sound;
-- preferred voice remains Xiaoxiao / segmented / roughly +10% / no narration time-stretch.
+Observed locally:
 
-## 8. Review truth
+- last Scene 1 frames remain the original clean coffee-pour composition;
+- first Scene 2 frame is the clean HOT / FAST vs COLD / TIME composition;
+- there is a direct hard cut;
+- no blended frame, alpha hole, diagonal mask or wide black wedge appears in the boundary sequence.
 
-SourceReset0 is **not Final / 100 / 105**. Human review determines whether the black-seam family is actually absent in the delivered MP4.
+This is local QA only. Human review remains authoritative.
 
-If clean, SourceReset0 becomes the new source baseline and animation restarts from scene 1 only.
+## 7. One-scene-at-a-time rule
 
-If any black seam still appears in SourceReset0, do not patch the MP4. Inspect the selected still itself and replace only that still with another clean mid-shot source frame.
+Do **not** animate Scene 2 yet.
 
-## 9. Repository boundaries
+The production sequence is now:
 
-- Gold baseline PR #125 remains dependency background.
-- Premium PR #126 remains separate Draft/open runtime-contract work.
-- Handoff PR #127 persists the production artifact/evidence state only.
+1. human reviews SourceReset1 Scene 1 motion;
+2. if approved, freeze Scene 1;
+3. animate Scene 2 only;
+4. review again;
+5. proceed one scene at a time through Scene 6.
+
+Any regression immediately returns to the latest human-approved SourceReset baseline.
+
+## 8. Motion grammar going forward
+
+Preferred:
+
+- liquid specular travel;
+- believable droplet/condensation behavior;
+- ice highlights and refraction;
+- steam/aroma only where physically meaningful;
+- sparse particles tied to material motion;
+- small object-level motion;
+- restrained timing with a clear start/settle.
+
+Reject:
+
+- whole-frame camera shake/zoom drift;
+- continuous oscillation;
+- perfect circular ripple rings;
+- symmetric geometric waves;
+- neon portal paths;
+- transition gimmicks crossing shot boundaries;
+- effect layers more visible than the coffee itself.
+
+## 9. Review delivery
+
+Primary review deliverables:
+
+- full `SourceReset1_Scene1Motion.mp4`;
+- Scene-1-only `Scene1_StudyPass1.mp4` for fast A/B review;
+- HTML review page as secondary aid.
+
+Do not label Final / 100 / 105 until human review.
+
+## 10. Repository boundaries
+
+- Gold baseline PR `#125` remains dependency background.
+- Premium PR `#126` remains separate Draft/open runtime-contract work.
+- Handoff PR `#127` remains Draft/open.
 
 Merge = **NO**  
 Deploy = **NO**  
