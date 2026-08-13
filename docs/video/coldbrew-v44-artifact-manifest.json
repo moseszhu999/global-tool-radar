@@ -1,0 +1,56 @@
+{
+  "schemaVersion": "video.operation.review-artifact-manifest.v1",
+  "createdAt": "2026-08-13T09:24:00+08:00",
+  "status": "WORKING_REVIEW_CANDIDATE_NOT_FINAL",
+  "repository": "moseszhu999/global-tool-radar",
+  "handoffBranch": "agent/video-operation-v44-handoff-20260813",
+  "artifact": {
+    "name": "V44_fix.mp4",
+    "historicalLocalPath": "/mnt/data/V44_fix.mp4",
+    "internalHistoricalPath": "/mnt/data/coldbrew-v44-wedge-fix/coldbrew-v44-wedge-fix-full.mp4",
+    "sha256": "2b7fe97addf219fd0957b7dff2480b1f08b58c01cc71fe3a358d91d642289a6f",
+    "bytes": 15261002,
+    "durationSeconds": 32.0,
+    "video": {
+      "codec": "h264",
+      "width": 1080,
+      "height": 1920,
+      "fps": 30
+    },
+    "audio": {
+      "codec": "aac",
+      "sampleRate": 48000,
+      "channels": 2
+    }
+  },
+  "problemAB": {
+    "name": "V44_fix_AB.mp4",
+    "historicalLocalPath": "/mnt/data/V44_fix_AB.mp4",
+    "sha256": "6742702840a71433d43878c00e2777085e1073a5336fc81516c7a97f130b4c5a",
+    "bytesApprox": 1900000
+  },
+  "construction": {
+    "baseImprovedPass": "V4.2 natural-motion full pass",
+    "stabilityFallback": "Premium Camera Lock V3",
+    "fallbackWindowsSeconds": [
+      [4.35, 5.65],
+      [21.35, 22.65]
+    ],
+    "purpose": "remove/reduce the user-reported wide diagonal black wedge hard defect while preserving the rest of the natural-motion improvements"
+  },
+  "humanReviewTruth": {
+    "cameraLockV3": "user explicitly said V3 no longer shakes",
+    "naturalDropRevision": "user said the revised natural version was better",
+    "v44": "not yet confirmed perfect by human review"
+  },
+  "binaryPersistence": {
+    "masterCommittedToGit": false,
+    "reason": "The active GitHub connector can write UTF-8 text/blobs but cannot ingest the 15MB local MP4 directly as a file parameter. This manifest deliberately does not pretend otherwise.",
+    "requiredFollowup": "When a binary-upload-capable runtime is available, attach or commit the exact master and verify SHA-256 equals 2b7fe97addf219fd0957b7dff2480b1f08b58c01cc71fe3a358d91d642289a6f before calling persistence complete."
+  },
+  "boundaries": {
+    "merge": false,
+    "deploy": false,
+    "publication": false
+  }
+}
