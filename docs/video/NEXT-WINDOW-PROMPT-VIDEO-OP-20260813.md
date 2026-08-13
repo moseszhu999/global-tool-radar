@@ -12,9 +12,10 @@ Before changing anything:
 
 1. Read `docs/video/coldbrew-premium-v44-handoff-20260813.md` on branch `agent/video-operation-v44-handoff-20260813`.
 2. Read `skills/video-operation-premium-cinematic/SKILL.md` on the same branch.
-3. Read `docs/video/video-operation-premium-v1.md` from the Premium branch.
-4. Inspect current Draft PR #126 (`Add Video Operation Premium 95-105 escalation`) and its exact current head before making repo changes. Do not assume the old SHA is still current.
-5. Preserve existing Gold/Premium contract behavior. Do not merge/deploy/publish.
+3. Read `docs/video/coldbrew-v44-artifact-manifest.json` on the same branch. Treat its SHA-256 and durable file IDs as the artifact identity source of truth.
+4. Read `docs/video/video-operation-premium-v1.md` from the Premium branch.
+5. Inspect current Draft PR #126 (`Add Video Operation Premium 95-105 escalation`) and its exact current head before making repo changes. Do not assume an old SHA is still current.
+6. Preserve existing Gold/Premium contract behavior. Do not merge/deploy/publish.
 
 ## Human-review truth you must preserve
 
@@ -80,24 +81,42 @@ Do not hide it with blur/darkening. Remove invalid composite geometry or fall ba
 
 ### Current latest conservative candidate
 
-Latest working candidate produced in the previous window is called **V4.4 wedge fix**.
+Latest working candidate produced in the previous window is **V4.4 wedge fix**.
 
 It keeps the broader V4.2 natural-motion improvements but replaces two suspect windows with stable V3 camera-lock source:
 
 - about `4.35s–5.65s`
 - about `21.35s–22.65s`
 
-Previous-window filenames were:
+Canonical master identity:
 
-- full: `V44_fix.mp4`
-- short problem A/B: `V44_fix_AB.mp4`
+- filename: `V44_fix.mp4`
+- SHA-256: `2b7fe97addf219fd0957b7dff2480b1f08b58c01cc71fe3a358d91d642289a6f`
+- bytes: `15261002`
+- duration: `32.000s`
+- video: H.264, `1080×1920`, `30fps`
+- audio: AAC, `48kHz`, stereo
 
-The previous-window internal source names were:
+Durable exact master is stored in Google Drive and referenced from the GitHub manifest:
 
+- Drive file ID: `1O3kbT5EqwPXIzlpaXBBGdB4xsEFxAOZt`
+- filename: `VideoOperation-ColdBrew-V44-fix-20260813.mp4`
+
+Durable A/B review file:
+
+- SHA-256: `6742702840a71433d43878c00e2777085e1073a5336fc81516c7a97f130b4c5a`
+- Drive file ID: `1fwvuAYKuXjHtsBMrQ2hdlTwaJ_Cgphwa`
+- filename: `VideoOperation-ColdBrew-V44-fix-AB-20260813.mp4`
+
+Previous-window local paths were:
+
+- `/mnt/data/V44_fix.mp4`
+- `/mnt/data/V44_fix_AB.mp4`
 - `/mnt/data/coldbrew-v44-wedge-fix/coldbrew-v44-wedge-fix-full.mp4`
-- `/mnt/data/coldbrew-v44-wedge-fix/v44-problem-areas-reel.mp4`
 
-Treat these paths as historical references only; a new runtime may not contain them. Do not claim they exist until verified.
+Treat local paths as historical references only; a new runtime may not contain them. If retrieving from Drive, verify SHA-256 before treating the recovered file as the master.
+
+The Git repository stores the canonical manifest, exact hashes, construction metadata and continuation rules. The current connector did not directly commit the 15MB binary into Git; **do not falsely claim that it did**. The exact binary is durably stored in Drive. When a binary-upload-capable GitHub runtime/local runner is available, optionally mirror the exact master into a GitHub Release/LFS/artifact and verify the same SHA-256.
 
 V4.4 is **not final and not yet user-approved as perfect**.
 
@@ -171,9 +190,9 @@ Do not restart design from scratch.
 
 The next useful sequence is:
 
-1. Recover or reproduce the latest V4.4 wedge-fix candidate from durable repo instructions/artifacts.
-2. Verify the ~5s and ~22s wide-black-wedge defects are absent.
-3. Give the user a direct MP4 for review.
+1. Recover the exact V4.4 master from the durable artifact reference in `docs/video/coldbrew-v44-artifact-manifest.json` and verify SHA-256.
+2. Verify the ~5s and ~22s wide-black-wedge defects are absent in the recovered V4.4 candidate.
+3. Give the user a direct MP4 for review, not an HTML review page.
 4. If the user confirms those hard defects are gone, reintroduce/improve local animation in those two reverted windows **one at a time**.
 5. At every iteration, preserve camera lock and scan for:
    - wide black wedge/void;
@@ -183,14 +202,15 @@ The next useful sequence is:
    - subtitle/safe-zone regressions;
    - material/light discontinuity;
    - audio discontinuity.
-6. Do not self-label final/100/105 without human review.
+6. If a new candidate becomes the best-known version, update the GitHub handoff + manifest immediately and durably store the exact binary before the window becomes long.
+7. Do not self-label final/100/105 without human review.
 
 ## Repository rules
 
 - Repo: `moseszhu999/global-tool-radar`
 - Gold baseline PR #125 remains dependency context.
 - Premium PR #126 remains Draft/open unless the user explicitly changes that.
-- This handoff branch: `agent/video-operation-v44-handoff-20260813`.
+- Handoff branch: `agent/video-operation-v44-handoff-20260813`.
 - Do not destabilize the existing Gold/Premium contract merely to store review experiments.
 - Prefer separate evidence/handoff commits or a stacked draft PR.
 - Merge = NO.
