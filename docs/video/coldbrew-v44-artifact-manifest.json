@@ -21,13 +21,25 @@
       "codec": "aac",
       "sampleRate": 48000,
       "channels": 2
+    },
+    "durableBinary": {
+      "provider": "Google Drive",
+      "fileId": "1O3kbT5EqwPXIzlpaXBBGdB4xsEFxAOZt",
+      "url": "https://drive.google.com/file/d/1O3kbT5EqwPXIzlpaXBBGdB4xsEFxAOZt/view?usp=drivesdk",
+      "fileName": "VideoOperation-ColdBrew-V44-fix-20260813.mp4"
     }
   },
   "problemAB": {
     "name": "V44_fix_AB.mp4",
     "historicalLocalPath": "/mnt/data/V44_fix_AB.mp4",
     "sha256": "6742702840a71433d43878c00e2777085e1073a5336fc81516c7a97f130b4c5a",
-    "bytesApprox": 1900000
+    "bytesApprox": 1900000,
+    "durableBinary": {
+      "provider": "Google Drive",
+      "fileId": "1fwvuAYKuXjHtsBMrQ2hdlTwaJ_Cgphwa",
+      "url": "https://drive.google.com/file/d/1fwvuAYKuXjHtsBMrQ2hdlTwaJ_Cgphwa/view?usp=drivesdk",
+      "fileName": "VideoOperation-ColdBrew-V44-fix-AB-20260813.mp4"
+    }
   },
   "construction": {
     "baseImprovedPass": "V4.2 natural-motion full pass",
@@ -45,8 +57,10 @@
   },
   "binaryPersistence": {
     "masterCommittedToGit": false,
-    "reason": "The active GitHub connector can write UTF-8 text/blobs but cannot ingest the 15MB local MP4 directly as a file parameter. This manifest deliberately does not pretend otherwise.",
-    "requiredFollowup": "When a binary-upload-capable runtime is available, attach or commit the exact master and verify SHA-256 equals 2b7fe97addf219fd0957b7dff2480b1f08b58c01cc71fe3a358d91d642289a6f before calling persistence complete."
+    "durableExactMasterStored": true,
+    "strategy": "GitHub stores the canonical manifest, hash, construction state and continuation rules; the exact MP4 bytes are durably stored in Google Drive and referenced by immutable file ID from this manifest.",
+    "reasonMasterNotInGit": "The active GitHub connector can write UTF-8/base64 blobs but cannot ingest the 15MB local MP4 directly as a file parameter without impractical payload expansion. This manifest deliberately does not pretend the Git repository contains the binary.",
+    "requiredFollowup": "When a binary-upload-capable GitHub runtime/local runner is available, optionally copy the exact Drive master into a GitHub Release/LFS/artifact and verify SHA-256 equals 2b7fe97addf219fd0957b7dff2480b1f08b58c01cc71fe3a358d91d642289a6f."
   },
   "boundaries": {
     "merge": false,
