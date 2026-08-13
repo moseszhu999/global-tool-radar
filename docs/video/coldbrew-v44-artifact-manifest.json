@@ -1,81 +1,48 @@
 {
   "schemaVersion": "video.operation.review-artifact-manifest.v1",
-  "updatedAt": "2026-08-13T11:00:00+08:00",
-  "status": "WORKING_REVIEW_CANDIDATE_NOT_FINAL",
+  "updatedAt": "2026-08-13T11:19:00+08:00",
+  "status": "PATCH_CHAIN_REJECTED_RETURN_TO_V3",
   "repository": "moseszhu999/global-tool-radar",
   "handoffBranch": "agent/video-operation-v44-handoff-20260813",
-  "artifact": {
-    "name": "V46_clean.mp4",
-    "sha256": "2c9e698603f7e1483ecd030ffed88505b71a9e0cd47414c86def876e1b4efaa3",
-    "bytes": 9229392,
-    "durationSeconds": 32.0,
-    "video": {
-      "codec": "h264",
-      "width": 1080,
-      "height": 1920,
-      "fps": 30,
-      "frames": 960,
-      "durationSeconds": 32.0
-    },
-    "audio": {
-      "codec": "aac",
-      "sampleRate": 48000,
-      "channels": 2,
-      "durationSeconds": 32.0
-    },
-    "durableBinary": {
-      "provider": "Google Drive",
-      "fileId": "18Xy90wtb26WzoNgprhHUj2cqhEBZagNj",
-      "fileName": "VideoOperation-ColdBrew-V46-clean-transitions-20260813.mp4",
-      "verifiedByRedownload": true,
-      "redownloadSha256": "2c9e698603f7e1483ecd030ffed88505b71a9e0cd47414c86def876e1b4efaa3",
-      "byteForByteMatch": true
-    }
+  "canonicalHumanApprovedBaseline": {
+    "name": "Premium Camera Lock V3",
+    "expectedFileName": "coldbrew-premium-camera-lock-v3.mp4",
+    "historicalLocalPath": "/mnt/data/coldbrew-premium-camera-lock/coldbrew-premium-camera-lock-v3.mp4",
+    "humanReview": "user explicitly said: v3不抖了",
+    "cameraShake": 0,
+    "binaryRecoveryStatus": "EXACT_BINARY_NOT_YET_RECOVERED_IN_CURRENT_RUNTIME",
+    "knownEvidence": "A prior File Library review page titled 北纬39° Coffee｜Premium Camera Lock V3 explicitly references coldbrew-premium-camera-lock-v3.mp4 and mature-v2-vs-camera-lock-v3.mp4.",
+    "rule": "Do not synthesize, reconstruct, patch, or relabel another derivative as V3. Recover the exact original binary before further creative iteration."
   },
-  "previousArtifacts": [
+  "rejectedArtifacts": [
+    {
+      "name": "V44_fix.mp4",
+      "sha256": "2b7fe97addf219fd0957b7dff2480b1f08b58c01cc71fe3a358d91d642289a6f",
+      "driveFileId": "1O3kbT5EqwPXIzlpaXBBGdB4xsEFxAOZt",
+      "status": "REJECTED_AS_CONTINUATION_BASELINE",
+      "humanFinding": "black-hole/wedge defect family remained visible under later review"
+    },
     {
       "name": "V45_22fix.mp4",
       "sha256": "1033d27a9e155dac4e391d8fbbf263c441bfbd6cff93a0879c71ee86d060a588",
       "driveFileId": "1Q_5ep-SkAws1sVz_bWs7cqqcjkeSrYse",
       "status": "REJECTED_BY_HUMAN_REVIEW_AND_TECHNICALLY_REGRESSED",
-      "technicalFinding": "container duration was 32.000s but video stream was only 31.533333s / 946 frames while audio remained 32.000s"
+      "technicalFinding": "video stream only 31.533333s / 946 frames while audio remained 32.000s"
     },
     {
-      "name": "V44_fix.mp4",
-      "sha256": "2b7fe97addf219fd0957b7dff2480b1f08b58c01cc71fe3a358d91d642289a6f",
-      "driveFileId": "1O3kbT5EqwPXIzlpaXBBGdB4xsEFxAOZt",
-      "status": "FULL_32S_SOURCE_BASE_FOR_V46"
+      "name": "V46_clean.mp4",
+      "sha256": "2c9e698603f7e1483ecd030ffed88505b71a9e0cd47414c86def876e1b4efaa3",
+      "driveFileId": "18Xy90wtb26WzoNgprhHUj2cqhEBZagNj",
+      "status": "REJECTED_BY_HUMAN_REVIEW",
+      "humanFinding": "user reported the black-hole defect family became more numerous / increasingly out of control"
     }
   ],
-  "construction": {
-    "base": "exact V4.4 master with 960 video frames / 32.000s video and 32.000s audio",
-    "strategy": "temporarily disable every complex cross-shot composite transition and replace each suspect transition interval with stable boundary-frame holds separated by a clean hard cut; preserve all non-transition V4.4 imagery and original audio",
-    "neutralizedTransitionWindowsSeconds": [
-      [5.00, 5.45],
-      [10.10, 10.45],
-      [15.60, 16.10],
-      [22.00, 22.38],
-      [26.70, 27.20]
-    ],
-    "cameraShake": 0,
-    "noBlurHide": true,
-    "noFogHide": true,
-    "noDarkeningHide": true,
-    "noDiagonalCompositeInNeutralizedWindows": true
-  },
-  "humanReviewTruth": {
-    "cameraLockV3": "user explicitly confirmed V3 no longer shakes",
-    "naturalDropRevision": "user preferred the revised natural local liquid response over geometric ripple effects",
-    "v45Review": "user reported that the ~5s and ~22s wide black holes were still visible in the 32-second V45 video and that there appeared to be another new one later",
-    "v46": "working transition-clean diagnostic candidate; awaiting human review; do not label Final/100/105"
-  },
-  "qa": {
-    "videoFrames": 960,
-    "videoDurationSeconds": 32.0,
-    "audioDurationSeconds": 32.0,
-    "transitionContactSheetInspection": "PASS locally for all five neutralized boundary windows; complex blend/composite frames are absent from the review path",
-    "driveRedownloadHash": "PASS",
-    "humanReviewRequired": true
+  "stopRules": {
+    "noV47Patch": true,
+    "noFurtherCompositeRepairOnV44V45V46": true,
+    "noClaimSolvedWithoutHumanReview": true,
+    "noDerivativeMayBeCalledV3": true,
+    "resumeOnlyFromExactRecoveredV3Binary": true
   },
   "boundaries": {
     "merge": false,
