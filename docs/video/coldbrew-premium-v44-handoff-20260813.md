@@ -1,140 +1,120 @@
-# Cold Brew Premium — Recovery Handoff (2026-08-13)
+# Cold Brew Premium — Source Reset Handoff (2026-08-13)
 
-Status: **PATCH CHAIN REJECTED — RETURN TO EXACT CAMERA LOCK V3**  
+Status: **SOURCE RESET 0 — STATIC CLEAN BASELINE REVIEW**  
 Merge: **NO**  
 Deploy: **NO**  
 Publication: **NO**
 
-## 1. Human-review truth is authoritative
+## 1. Direction change from human review
 
-The user reported that the wide black-hole / black-wedge defects became more numerous and increasingly out of control across the V4.4 → V4.5 → V4.6 patch chain.
+The user explicitly stopped the local V3 recovery path and instructed the production flow to continue from any stable point available, with one decisive rule:
 
-Therefore:
+> **Do not use the thing that produces the black seam.**
 
-- V4.4 is rejected as a continuation baseline.
-- V4.5 is rejected as a continuation baseline and also had a real technical regression: 946 video frames / 31.533333s video stream while audio remained 32.000s.
-- V4.6 is rejected by human review as a continuation baseline.
-- **Do not create V4.7 by patching these files.**
+Therefore local V3 recovery is no longer a prerequisite. V4.4/V4.5/V4.6/CleanCut1 must not be used as direct moving-video render bases.
 
-## 2. Sole valid baseline
+## 2. SourceReset0 is a true source reset
 
-Return to the last version the user explicitly approved:
+Current review artifact:
 
-- conceptual name: `Premium Camera Lock V3`
-- expected file: `coldbrew-premium-camera-lock-v3.mp4`
-- historical local path: `/mnt/data/coldbrew-premium-camera-lock/coldbrew-premium-camera-lock-v3.mp4`
-- human feedback: **“v3不抖了。”**
+- `SourceReset0.mp4`
+- SHA-256: `a9fa19e8b188f10ae0bc992b462e5dcfc6411eb98a40aa7865022b17bf808576`
+- 32.000s
+- H.264 1080×1920 @ 30fps
+- exactly 960 video frames
+- AAC 48kHz stereo / 32.000s
+- Drive file ID: `1G9H4UylYDZnr5foMkCKpZhqAJnQemG0G`
+- Drive filename: `VideoOperation-ColdBrew-SourceReset0-20260813.mp4`
 
-A prior File Library review page titled `北纬39° Coffee｜Premium Camera Lock V3` exists and explicitly references:
+## 3. Construction rule
 
-- `coldbrew-premium-camera-lock-v3.mp4`
-- `mature-v2-vs-camera-lock-v3.mp4`
-- `evidence/contact-sheet.jpg`
-- `evidence/camera-lock-manifest.json`
-- `evidence/ffprobe.json`
+SourceReset0 does **not** reuse moving V4 transition footage.
 
-The sibling MP4/evidence files were not durably retained in File Library.
+Only six clean, mid-shot still frames were extracted from V4.4 at:
 
-## 3. Important negative evidence
+- 2.70s
+- 7.80s
+- 13.00s
+- 18.50s
+- 24.50s
+- 29.50s
 
-A separate historical page titled `冷萃 V3 重建预览` explicitly says the original MP4 temporary path had already expired and that `coldbrew-v3-rebuilt-silent.mp4` was reconstructed from saved S01/S02 frames and a six-shot contact sheet. It also explicitly says that reconstruction is only a review preview and **must not be treated as the final HD master**.
+These six stills are held for the original six scene durations and connected only by hard cuts. Original 32s audio is preserved.
 
-Therefore `coldbrew-v3-rebuilt-silent.mp4` is permanently excluded as the exact V3 source of truth.
+Consequences:
 
-## 4. Exact Mac recovery paths
+- no original transition frames;
+- no cross-shot composite;
+- no crossfade;
+- no alpha/matte transition;
+- no diagonal-mask reveal;
+- no moving source-video frame near a transition;
+- no whole-frame camera movement;
+- camera shake = 0.
 
-Historical Mac Remotion configuration records these real directories:
+This artifact is deliberately visually conservative. Its job is to establish a seam-free clean source baseline before adding motion.
 
-- project: `/Users/zhudapeng/Movies/RemotionActions/mac-remotion-action`
-- runtime: `/Users/zhudapeng/Library/Application Support/MacRemotionAction`
-- local service: `http://127.0.0.1:3210`
+## 4. Rejected continuation bases
 
-The old temporary Cloudflare URL is no longer a valid recovery path. GitHub does not contain a separate `mac-remotion-action` repository or the V3 binary.
+Do not render forward from:
 
-## 5. Recovery search strategy
+- `V44_fix.mp4`
+- `V45_22fix.mp4`
+- `V46_clean.mp4`
+- `CleanCut1.mp4`
 
-Do not search only by exact filename because the file may have been renamed by browser/download history.
+Reason: all remain dependent on moving source segments from the failed seam-producing chain, even when their transition windows were cut or replaced.
 
-When local filesystem access is available, recursively scan the two Mac directories above and other likely local folders for MP4 candidates. Rank candidates using:
+## 5. Permanent transition ban
 
-1. exact filename match;
-2. filename tokens: `coldbrew`, `premium`, `camera`, `lock`, `v3`, `mature`;
-3. duration approximately `32s`;
-4. frame size `1080×1920`;
-5. modification time close to the known V3 review window around `2026-08-12 19:26Z`;
-6. visual frame fingerprints at approximately `5s`, `15s`, `22s`, `28s`.
+For this production, until a separate transition implementation is proven safe, forbid:
 
-For any high-confidence candidate, compute SHA-256 and preserve the exact original bytes before doing any further editing.
+- cross-shot composite transitions;
+- diagonal mask/wedge reveals;
+- alpha wipe transitions;
+- premultiplied-alpha transition tricks;
+- crossfade-only transition grammar;
+- rotated/skewed transition layers that can expose empty canvas.
 
-## 6. Exact-binary rule
+Allowed boundary behavior is a clean cut.
 
-> Do not synthesize, reconstruct, re-edit, or relabel another derivative as V3.
+## 6. Motion may return only inside scenes
 
-Resume creative work only after the exact original `coldbrew-premium-camera-lock-v3.mp4` binary is recovered or a renamed local file is positively identified by metadata/visual review as that exact delivered binary.
+If SourceReset0 is human-confirmed clean, add motion one scene at a time using only local physical phenomena:
 
-## 7. Stop rules
+- droplets;
+- steam;
+- liquid flow;
+- ice;
+- highlights/specular travel;
+- refraction/caustics;
+- sparse particles.
 
-Until exact V3 recovery:
+No whole-frame wobble, no fake handheld, no camera oscillation, and no cross-scene effect layer.
 
-- no V4.7;
-- no more edits to V4.4/V4.5/V4.6;
-- no new transition experiments;
-- no matte/alpha fixes;
-- no hard-cut diagnostic derivatives;
-- no claim that the black-hole defect is solved;
-- no Final / 100 / 105 labels.
+Each new moving scene must A/B against its SourceReset0 still and must not modify any other scene in the same iteration.
 
-## 8. After exact V3 recovery
+## 7. Information design / audio rules remain
 
-Only then:
-
-1. deliver the recovered V3 MP4 to the user first;
-2. establish its hash/spec as durable source of truth;
-3. store exact binary durably (Drive/Release/LFS/artifact) and verify re-download hash;
-4. inspect whether any black-hole defect exists in V3 itself;
-5. if clean, add **one** local animation change at a time;
-6. every candidate must A/B directly against exact V3;
-7. if any black wedge, camera instability, alpha hole, or geometry regression appears, reject immediately and return to exact V3.
-
-## 9. Camera and creative constraints after recovery
-
-Camera stability remains permanent non-regression:
-
-- camera shake = 0
-- no whole-frame oscillation
-- no random drift
-- no fake handheld micro-jitter
-- no ambient rotate / warp
-- no `sin/cos` camera wobble
-
-Preserve:
-
-- natural local physics;
-- droplets / steam / liquid / ice / highlights / refraction carry motion;
-- no perfect circular ripple rings;
-- no geometric wavefronts;
-- no neon portal transitions;
-- cinematic world-space explanation, not PPT/card/UI overlays;
-- subtitles >= 52px equivalent at 1080×1920;
-- world-space explanatory labels >= 48px equivalent;
+- cinematic/world-space explanation, not PPT/card UI;
+- subtitle target >=52px equivalent at 1080×1920;
+- world-space label target >=48px equivalent;
 - restrained causal sound;
-- `edge-tts` / `zh-CN-XiaoxiaoNeural` / roughly `+10%` / segmented synthesis / no narration time-stretch.
+- preferred voice remains Xiaoxiao / segmented / roughly +10% / no narration time-stretch.
 
-## 10. Review delivery
+## 8. Review truth
 
-Primary review deliverable remains a **direct MP4**.
+SourceReset0 is **not Final / 100 / 105**. Human review determines whether the black-seam family is actually absent in the delivered MP4.
 
-HTML may exist only as a secondary recovery/status/evidence tool.
+If clean, SourceReset0 becomes the new source baseline and animation restarts from scene 1 only.
 
-## 11. Repository boundaries
+If any black seam still appears in SourceReset0, do not patch the MP4. Inspect the selected still itself and replace only that still with another clean mid-shot source frame.
 
-Repository: `moseszhu999/global-tool-radar`
+## 9. Repository boundaries
 
-- Gold baseline PR `#125` remains dependency background.
-- Premium PR `#126` remains separate Draft/open runtime-contract work.
-- Handoff Draft PR `#127` remains the recovery/evidence branch.
-
-Do not alter Gold/Premium runtime contracts for this recovery.
+- Gold baseline PR #125 remains dependency background.
+- Premium PR #126 remains separate Draft/open runtime-contract work.
+- Handoff PR #127 persists the production artifact/evidence state only.
 
 Merge = **NO**  
 Deploy = **NO**  
