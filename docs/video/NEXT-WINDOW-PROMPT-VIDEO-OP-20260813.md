@@ -1,224 +1,160 @@
-# Next Window Prompt — Video Operation Cold Brew Premium Continuation
+# Next Window Prompt — Video Operation Cold Brew SourceReset Continuation
 
-Copy/paste the block below into the next ChatGPT/Codex window. Do not shorten it before the next window has read the referenced repository files.
+Use this as the continuation truth for `moseszhu999/global-tool-radar`.
 
----
-
-You are continuing the `Video Operation` project in repository `moseszhu999/global-tool-radar`.
-
-## Mandatory startup sequence
+## Mandatory startup
 
 Before changing anything:
 
 1. Read `docs/video/coldbrew-premium-v44-handoff-20260813.md` on branch `agent/video-operation-v44-handoff-20260813`.
-2. Read `skills/video-operation-premium-cinematic/SKILL.md` on the same branch.
-3. Read `docs/video/coldbrew-v44-artifact-manifest.json` on the same branch. Treat its SHA-256 and durable file IDs as the artifact identity source of truth.
-4. Read `docs/video/video-operation-premium-v1.md` from the Premium branch.
-5. Inspect current Draft PR #126 (`Add Video Operation Premium 95-105 escalation`) and its exact current head before making repo changes. Do not assume an old SHA is still current.
-6. Preserve existing Gold/Premium contract behavior. Do not merge/deploy/publish.
+2. Read `docs/video/coldbrew-v44-artifact-manifest.json` on the same branch; its SHA-256 and durable file IDs are artifact identity truth.
+3. Read `skills/video-operation-premium-cinematic/SKILL.md` on the same branch.
+4. Refresh current `main`, Draft PR #127 exact head, changed paths, CI and current media evidence. Do not reuse an older receipt as truth.
+5. Preserve Gold/Premium contract behavior from PRs #125/#126. Merge=NO. Deploy=NO. Publication=NO.
 
-## Human-review truth you must preserve
+## Current human-review truth
 
-The user is reviewing a ~32s vertical 9:16 Chinese cold-brew café video (`北纬39° Coffee`) explaining why cold brew tastes smoother than iced Americano.
+The user is reviewing a ~32s vertical 9:16 Chinese cold-brew café video (`北纬39° Coffee`).
 
-The user prefers action over planning. If they say `继续`, execute the next smallest useful production step and return a real reviewable artifact. Do not repeatedly ask for confirmation when the next step is clear.
+### Clean baseline
 
-### Camera
+`SourceReset0.mp4` is the human-confirmed seam-free reset baseline. The user said:
 
-The user explicitly said of `Premium Camera Lock V3`: **“v3不抖了”**.
+> 至少那些讨厌的黑缝没了
 
-Therefore camera stability is a hard non-regression requirement:
+This approval is narrow but authoritative: the wide black wedge / black-hole defect family is gone in SourceReset0. Do not reintroduce the mechanisms that caused it.
 
-- camera shake = 0;
-- no generic whole-frame micro-translate;
-- no oscillating whole-frame scale;
-- no ambient rotate/warp;
-- no `sin/cos` camera wobble;
-- no random drift;
-- no fake handheld micro-jitter.
+Permanent scene-boundary bans:
 
-If animation is needed, animate the **material/object**, not the camera.
+- cross-shot composite;
+- crossfade blend layers;
+- alpha/matte transitions;
+- diagonal-mask reveals;
+- rotated/skewed coverage tricks;
+- moving source-video footage at shot boundaries;
+- any transition geometry capable of exposing empty/black regions.
 
-### Local animation
+Scene changes remain hard cuts unless a future transition family is separately proven safe.
 
-The user then asked to expand V3 animation, especially water-drop-like motion.
+### Current review candidate
 
-A stronger drop test with obvious regular impact-wave/ripple graphics was rejected as unnatural. A revised `natural drop` version using local liquid brightness/refraction/caustic response and sparse particles was judged **better**.
+The current candidate is **`SourceReset1_Scene1Motion.mp4`**.
 
-Therefore:
+Exact identity:
 
-- amplify natural physical response;
-- avoid perfect rings and symmetric geometric wavefronts;
-- avoid neon paths/portals;
-- avoid repeated transition gimmicks;
-- the viewer should notice the event, not notice “an effect layer”.
-
-### Current major defect under repair
-
-The user identified a visual hard defect near roughly **5s** and another near roughly **22s**.
-
-The user clarified several times that the problem is **NOT the thin 39° arc line**.
-
-The defect is:
-
-- black/dark;
-- diagonal;
-- very wide;
-- approximately **1/5 to 1/6 of frame width**;
-- looks like a black hole / black wedge / missing composite region.
-
-Do not misdiagnose it as a thin seam or brand arc.
-
-Likely technical families:
-
-- alpha/matte coverage hole;
-- transparent region composited as black;
-- transformed/cropped overlay leaving an uncovered wedge;
-- premultiplied-alpha mismatch;
-- diagonal mask or flow layer with empty region.
-
-Do not hide it with blur/darkening. Remove invalid composite geometry or fall back to a known-good source window.
-
-### Current latest conservative candidate
-
-Latest working candidate produced in the previous window is **V4.4 wedge fix**.
-
-It keeps the broader V4.2 natural-motion improvements but replaces two suspect windows with stable V3 camera-lock source:
-
-- about `4.35s–5.65s`
-- about `21.35s–22.65s`
-
-Canonical master identity:
-
-- filename: `V44_fix.mp4`
-- SHA-256: `2b7fe97addf219fd0957b7dff2480b1f08b58c01cc71fe3a358d91d642289a6f`
-- bytes: `15261002`
+- SHA-256: `6dcedbe09a7859088c4c86a1e65a696c172cde32bf82629802ef2b3f8b6f3759`
+- bytes: `3,455,476`
 - duration: `32.000s`
-- video: H.264, `1080×1920`, `30fps`
-- audio: AAC, `48kHz`, stereo
+- video: H.264, `1080×1920`, `30fps`, exactly `960` frames
+- audio: AAC, `48kHz`, stereo, `32.000s`
+- durable Drive file ID: `1yDzWrtJxpkkme1tFwI9D1cYHsW9KAs_X`
+- durable filename: `VideoOperation-ColdBrew-SourceReset1-Scene1Motion-20260813.mp4`
 
-Durable exact master is stored in Google Drive and referenced from the GitHub manifest:
+Only Scene 1 (`0–5.333s`) differs from SourceReset0. Scenes 2–6 remain the clean static reset baseline.
 
-- Drive file ID: `1O3kbT5EqwPXIzlpaXBBGdB4xsEFxAOZt`
-- filename: `VideoOperation-ColdBrew-V44-fix-20260813.mp4`
+Scene 1 has **no whole-frame camera transform**. Motion is confined to local material behavior:
 
-Durable A/B review file:
+- coffee-stream specular travel;
+- asymmetric ice caustic flickers;
+- tiny condensation droplet slide;
+- soft amber liquid-body caustic travel.
 
-- SHA-256: `6742702840a71433d43878c00e2777085e1073a5336fc81516c7a97f130b4c5a`
-- Drive file ID: `1fwvuAYKuXjHtsBMrQ2hdlTwaJ_Cgphwa`
-- filename: `VideoOperation-ColdBrew-V44-fix-AB-20260813.mp4`
+Scene 1 → Scene 2 is a direct hard cut.
 
-Previous-window local paths were:
+### Current technical evidence
 
-- `/mnt/data/V44_fix.mp4`
-- `/mnt/data/V44_fix_AB.mp4`
-- `/mnt/data/coldbrew-v44-wedge-fix/coldbrew-v44-wedge-fix-full.mp4`
+The current SourceReset1 binary has already passed bounded technical checks including:
 
-Treat local paths as historical references only; a new runtime may not contain them. If retrieving from Drive, verify SHA-256 before treating the recovered file as the master.
+- exact SHA-256 identity against the durable Drive binary;
+- H.264 1080×1920 / 30fps / 960-frame / 32s container verification;
+- AAC 48kHz stereo / 32s duration alignment;
+- full decode without decoder errors;
+- monotonic video/audio PTS;
+- stable 30fps cadence;
+- no detected black-frame interval under the recorded blackdetect gate;
+- bounded audio continuity / loudness / clipping / DC checks;
+- full-960-frame structural scan without a recurrence of the prior wide black wedge;
+- sampled Scene 1 and Scene 1→2 boundary visual checks.
 
-The Git repository stores the canonical manifest, exact hashes, construction metadata and continuation rules. The current connector did not directly commit the 15MB binary into Git; **do not falsely claim that it did**. The exact binary is durably stored in Drive. When a binary-upload-capable GitHub runtime/local runner is available, optionally mirror the exact master into a GitHub Release/LFS/artifact and verify the same SHA-256.
+These are technical and sampled-review facts. They do **not** replace human creative review.
 
-V4.4 is **not final and not yet user-approved as perfect**.
+## Current gate
 
-### Five continuity intentions
+`HUMAN_SCENE1_MOTION_REVIEW_REQUIRED`
 
-Keep the creative direction but do not force it:
+Do **not** animate Scene 2 yet.
 
-1. Pour → aroma: warm highlight/steam should emerge from the liquid, not open a glowing portal.
-2. Aroma → cold drip: condensation may converge toward the drip axis.
-3. Cold drip → flavor field: droplet impact may create short irregular local optical/liquid response; no perfect rings.
-4. Flavor current → iced liquid: amber flow should become actual liquid contour/motion, not a pasted ribbon.
-5. Iced liquid → hero glass: motion should settle into product highlight/ice/glass, not finish with another flashy wipe.
+One-scene-at-a-time production rule:
 
-Guideline: `Shot N should create shot N+1` through energy/material/direction/sound/meaning, but a clean cut is better than a broken causal transition.
+1. human reviews SourceReset1 Scene 1 motion;
+2. if approved, freeze Scene 1 as non-regression truth;
+3. animate Scene 2 only;
+4. review again;
+5. continue scene by scene through Scene 6;
+6. any regression returns to the latest human-approved SourceReset baseline.
 
-### Infographic / visual language
+The current Scene 1 motion is deliberately subtle. Automated freeze/salience diagnostics indicate low whole-frame motion salience, so do not self-label the creative motion as passed. Human review remains authoritative.
 
-The user dislikes PPT/card/UI-like explanatory graphics.
+## Motion grammar
+
+Preserve camera/product stability. Put motion into matter and light:
 
 Preferred:
 
-- cinematic imagery;
-- world-space labels;
-- information attached to steam/drip/liquid/object paths;
-- explanation happening inside the image.
+- liquid specular travel;
+- believable droplets/condensation;
+- ice highlights/refraction;
+- steam/aroma only where physically meaningful;
+- sparse particles tied to material motion;
+- restrained object-level motion with a clear start and settle.
 
-Avoid:
+Reject:
 
-- cards;
-- side-by-side panels;
-- progress bars;
-- generic screen-space UI;
-- presentation-board grammar.
+- camera micro-jitter or random drift;
+- whole-frame scale/rotate/warp used as visual life support;
+- continuous oscillation;
+- perfect circular ripple rings;
+- symmetric geometric waves;
+- neon portal paths;
+- transition gimmicks crossing shot boundaries;
+- effect layers more visible than the coffee itself.
 
-### Text floors
+## Visual / text / audio non-regression
 
-At 1080×1920 equivalent:
+- Prefer cinematic imagery and world-space/object-attached explanation, not PPT/card/UI grammar.
+- Subtitle target >= 52px at 1080×1920 equivalent.
+- World-space explanatory label target >= 48px.
+- Preserve platform safe zones.
+- Current Chinese voice baseline remains `edge-tts` / `zh-CN-XiaoxiaoNeural` / about `+10%` / segmented synthesis / no time-stretch until a better human-approved voice exists.
+- Sound stays restrained, causal and frame-synchronous.
 
-- subtitle target >= 52px;
-- world-space explanatory label target >= 48px;
-- preserve Douyin/Xiaohongshu safe zones;
-- decorative animation must not reduce subtitle readability.
+## Review delivery
 
-### Voice / audio
+Primary video review should be a direct MP4. An HTML evidence page may accompany the run when useful, but it does not replace the direct video artifact.
 
-Preferred current TTS baseline:
+## What to do next
 
-- `edge-tts`
-- `zh-CN-XiaoxiaoNeural`
-- around `+10%` rate
-- segmented synthesis
-- no time-stretch
+Do not restart from V4.4, V4.5 or V4.6. Those are historical/rejected patch-chain artifacts, not continuation baselines.
 
-Sound should be restrained, causal and frame-synchronous.
+For each new run:
 
-### Delivery rule — very important
+1. refresh exact current PR #127 head and CI;
+2. recover SourceReset1 by durable Drive ID and verify SHA-256 before using it;
+3. keep Scene 2 motion HOLD until there is explicit human approval of Scene 1;
+4. while blocked on human review, only perform useful evidence/technical-QC work that does not fabricate approval or generate an unauthorized next scene;
+5. once Scene 1 is explicitly approved, change only Scene 2 and keep all shot boundaries as hard cuts;
+6. run black-wedge, camera-stability, alpha/matte, safe-zone, material-continuity, audio-continuity and technical artifact checks before presenting a new candidate;
+7. update handoff + manifest whenever a new candidate becomes the best-known human-approved or active review version;
+8. never self-label Final / 100 / 105 without human review.
 
-The user explicitly complained when video review was presented through HTML.
-
-For samples/review:
-
-- **give a direct MP4**;
-- optional direct A/B MP4;
-- do not use an HTML page as the primary review mechanism;
-- keep files below practical platform download limits when possible;
-- use short filenames.
-
-### What to do next
-
-Do not restart design from scratch.
-
-The next useful sequence is:
-
-1. Recover the exact V4.4 master from the durable artifact reference in `docs/video/coldbrew-v44-artifact-manifest.json` and verify SHA-256.
-2. Verify the ~5s and ~22s wide-black-wedge defects are absent in the recovered V4.4 candidate.
-3. Give the user a direct MP4 for review, not an HTML review page.
-4. If the user confirms those hard defects are gone, reintroduce/improve local animation in those two reverted windows **one at a time**.
-5. At every iteration, preserve camera lock and scan for:
-   - wide black wedge/void;
-   - camera micro-jitter;
-   - artificial geometric liquid effects;
-   - visible alpha/matte boundaries;
-   - subtitle/safe-zone regressions;
-   - material/light discontinuity;
-   - audio discontinuity.
-6. If a new candidate becomes the best-known version, update the GitHub handoff + manifest immediately and durably store the exact binary before the window becomes long.
-7. Do not self-label final/100/105 without human review.
-
-## Repository rules
+## Repository boundaries
 
 - Repo: `moseszhu999/global-tool-radar`
-- Gold baseline PR #125 remains dependency context.
-- Premium PR #126 remains Draft/open unless the user explicitly changes that.
-- Handoff branch: `agent/video-operation-v44-handoff-20260813`.
-- Do not destabilize the existing Gold/Premium contract merely to store review experiments.
-- Prefer separate evidence/handoff commits or a stacked draft PR.
-- Merge = NO.
-- Deploy = NO.
-- Publication = NO.
-
-## Final behavioral instruction
-
-The user does not need another long planning lecture. After startup reads, continue the work and produce concrete reviewable results. Preserve what the user already approved, modify the smallest necessary surface, and report exactly what changed.
-
----
+- Gold PR #125 remains dependency context.
+- Premium PR #126 remains Draft/open dependency context.
+- Current handoff/recovery owner: Draft PR #127, branch `agent/video-operation-v44-handoff-20260813`.
+- Do not create a second owner for the same continuation scope.
+- Do not duplicate Shared Media / `media.render.v1` engine, receipt store or job registry.
+- Merge=NO.
+- Deploy=NO.
+- Publication=NO.
