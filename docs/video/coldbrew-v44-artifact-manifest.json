@@ -1,49 +1,68 @@
 {
   "schemaVersion": "video.operation.review-artifact-manifest.v1",
-  "updatedAt": "2026-08-13T13:31:00+08:00",
-  "status": "SOURCE_RESET_STATIC_CLEAN_BASELINE_REVIEW",
+  "updatedAt": "2026-08-13T15:03:00+08:00",
+  "status": "SOURCE_RESET_SCENE1_MOTION_REVIEW",
   "repository": "moseszhu999/global-tool-radar",
   "handoffBranch": "agent/video-operation-v44-handoff-20260813",
-  "currentArtifact": {
+  "baseline": {
     "name": "SourceReset0.mp4",
-    "sha256": "a9fa19e8b188f10ae0bc992b462e5dcfc6411eb98a40aa7865022b17bf808576",
+    "status": "HUMAN_CONFIRMED_BLACK_SEAMS_GONE",
+    "humanFeedback": "至少那些讨厌的黑缝没了",
+    "rule": "Never reintroduce seam-producing cross-shot composite, crossfade, alpha/matte, diagonal-mask, or moving boundary footage."
+  },
+  "artifact": {
+    "name": "SourceReset1_Scene1Motion.mp4",
+    "sha256": "6dcedbe09a7859088c4c86a1e65a696c172cde32bf82629802ef2b3f8b6f3759",
+    "bytes": 3455476,
     "durationSeconds": 32.0,
-    "video": {"codec":"h264","width":1080,"height":1920,"fps":30,"frames":960,"durationSeconds":32.0},
-    "audio": {"codec":"aac","sampleRate":48000,"channels":2,"durationSeconds":32.0},
+    "video": {"codec": "h264", "width": 1080, "height": 1920, "fps": 30, "frames": 960, "durationSeconds": 32.0},
+    "audio": {"codec": "aac", "sampleRate": 48000, "channels": 2, "durationSeconds": 32.0},
     "durableBinary": {
       "provider": "Google Drive",
-      "fileId": "1G9H4UylYDZnr5foMkCKpZhqAJnQemG0G",
-      "fileName": "VideoOperation-ColdBrew-SourceReset0-20260813.mp4"
+      "fileId": "1yDzWrtJxpkkme1tFwI9D1cYHsW9KAs_X",
+      "fileName": "VideoOperation-ColdBrew-SourceReset1-Scene1Motion-20260813.mp4"
     }
   },
   "construction": {
-    "purpose": "break dependency on all seam-producing transition/video frames",
-    "sourceReference": "V4.4 was used only to extract six clean mid-shot still frames and the original 32s audio; no transition frame or moving source-video frame is present in SourceReset0",
-    "sceneStillSourceTimesSeconds": [2.70,7.80,13.00,18.50,24.50,29.50],
-    "sceneDurationsSeconds": [5.333333,4.7,5.7,5.766667,5.7,4.8],
-    "transitionGrammar": "hard-cut-only",
-    "crossShotComposite": false,
-    "alphaTransition": false,
-    "diagonalMaskTransition": false,
-    "crossfade": false,
-    "wholeFrameMotion": false,
-    "cameraShake": 0
+    "base": "SourceReset0 clean six-shot hard-cut baseline",
+    "changedScene": 1,
+    "changedWindowSeconds": [0.0, 5.333333],
+    "unchangedScenes": [2,3,4,5,6],
+    "cameraMotion": 0,
+    "sceneBoundaryTransition": "hard_cut_only",
+    "localMotionFamilies": [
+      "coffee-stream specular travel",
+      "asymmetric ice caustic flickers",
+      "small condensation droplet slide",
+      "soft amber liquid-body caustic travel"
+    ],
+    "forbidden": [
+      "cross-shot composite",
+      "crossfade",
+      "alpha/matte transition",
+      "diagonal-mask reveal",
+      "whole-frame camera motion",
+      "perfect circular ripple",
+      "neon portal transition"
+    ]
   },
-  "humanDirection": {
-    "localRecoveryAbandoned": true,
-    "instruction": "do not recover V3 locally; start from any stable point available; stop using the thing that creates black seams",
-    "sourceReset0ReviewPending": true
+  "referenceLearning": {
+    "principle": "Keep product/camera stable; let liquid, steam/condensation, particles and specular light carry motion; product remains the visual anchor.",
+    "studiedReferences": [
+      "Illy Iperespresso commercial",
+      "NESCAFE Classic cinematic product commercial",
+      "Lavazza Coffee 3D Motion",
+      "Aroma Dance / Nespresso-inspired CGI"
+    ]
   },
-  "rejectedArtifacts": [
-    {"name":"V44_fix.mp4","status":"DO_NOT_USE_AS_RENDER_BASE"},
-    {"name":"V45_22fix.mp4","status":"REJECTED_HUMAN_AND_TECHNICAL_REGRESSION"},
-    {"name":"V46_clean.mp4","status":"REJECTED_BY_HUMAN_REVIEW"},
-    {"name":"CleanCut1.mp4","status":"REJECTED_AS_STILL_DEPENDENT_ON_BAD_MOVING_SOURCE_SEGMENTS"}
-  ],
-  "nextIfApproved": {
-    "rule": "animate only inside each scene from clean still assets; never reintroduce cross-shot composite/matte/alpha/diagonal-mask transitions",
-    "allowedMotion": ["droplet","steam","liquid","ice","highlight","refraction","particles"],
-    "forbiddenMotion": ["whole-frame wobble","cross-shot composite","diagonal mask reveal","alpha wipe","crossfade-only transition"]
+  "qa": {
+    "scene1Frames": 160,
+    "fullVideoFrames": 960,
+    "fullVideoDurationSeconds": 32.0,
+    "audioDurationSeconds": 32.0,
+    "scene1ToScene2Boundary": "dense-frame visual check: clean hard cut; no blend/mask wedge observed",
+    "humanReviewRequired": true
   },
-  "boundaries": {"merge":false,"deploy":false,"publication":false}
+  "nextRule": "Do not animate scene 2 until SourceReset1 scene-1 motion is human-reviewed. Restore motion one scene at a time.",
+  "boundaries": {"merge": false, "deploy": false, "publication": false}
 }
