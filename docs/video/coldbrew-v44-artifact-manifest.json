@@ -1,6 +1,6 @@
 {
   "schemaVersion": "video.operation.review-artifact-manifest.v1",
-  "updatedAt": "2026-08-15T16:37:00+08:00",
+  "updatedAt": "2026-08-15T17:36:00+08:00",
   "status": "SOURCE_RESET_SCENE1_MOTION_REVIEW",
   "repository": "moseszhu999/global-tool-radar",
   "handoffBranch": "agent/video-operation-v44-handoff-20260813",
@@ -83,7 +83,11 @@
         "id": "scene1.brand-footer.bottom-clip",
         "status": "CONFIRMED_FULL_SCENE1",
         "scope": "scene_1",
-        "evidence": "all 160 Scene-1 frames show footer glyph content reaching the final canvas row y=1919; representative frame review shows the lower portion of 北纬39° Coffee clipped by the 1080×1920 bottom boundary",
+        "originStatus": "INHERITED_FROM_SOURCERESET0_BASELINE",
+        "regressionStatus": "NOT_INTRODUCED_BY_SOURCERESET1_MOTION",
+        "baselineFramesTouchingCanvasEdge": 160,
+        "candidateFramesTouchingCanvasEdge": 160,
+        "evidence": "native 1080x1920 bottom-center footer scans show glyph content reaching final canvas row y=1919 in all 160 Scene-1 frames for both durable SourceReset0 and SourceReset1 binaries; representative review shows the lower portion of 北纬39° Coffee clipped by the bottom boundary",
         "sourceOwnerStatus": "NOT_PROVED",
         "correctionStatus": "BLOCKED_CHAT_ONLY_EXACT_SOURCE_NOT_LOCATED"
       }
@@ -96,6 +100,6 @@
     "scene2Motion": "HOLD",
     "finalVideo": "NOT_PROVED"
   },
-  "nextRule": "Do not animate scene 2 until SourceReset1 scene-1 motion is human-reviewed. Do not patch the clipped footer in pixels or with a parallel overlay/render path; correct it only inside an identified existing editable source/render owner, then re-render through the existing Shared Media / Remotion path.",
+  "nextRule": "Do not animate scene 2 until SourceReset1 scene-1 motion is human-reviewed. Treat the clipped footer as an inherited SourceReset0 baseline composition defect, not a SourceReset1 motion regression. Do not patch it in pixels or with a parallel overlay/render path; correct it only inside an identified existing editable source/render owner, then re-render through the existing Shared Media / Remotion path.",
   "boundaries": {"merge": false, "deploy": false, "publication": false}
 }
