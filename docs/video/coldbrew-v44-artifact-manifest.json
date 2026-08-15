@@ -1,6 +1,6 @@
 {
   "schemaVersion": "video.operation.review-artifact-manifest.v1",
-  "updatedAt": "2026-08-15T15:37:00+08:00",
+  "updatedAt": "2026-08-15T16:37:00+08:00",
   "status": "SOURCE_RESET_SCENE1_MOTION_REVIEW",
   "repository": "moseszhu999/global-tool-radar",
   "handoffBranch": "agent/video-operation-v44-handoff-20260813",
@@ -75,8 +75,27 @@
     "fullVideoDurationSeconds": 32.0,
     "audioDurationSeconds": 32.0,
     "scene1ToScene2Boundary": "dense-frame visual check: clean hard cut; no blend/mask wedge observed",
+    "blackSeamRegressionStatus": "NOT_OBSERVED_IN_RECORDED_TECHNICAL_AND_SAMPLED_CHECKS",
+    "scene1MotionReviewStatus": "HUMAN_REVIEW_REQUIRED",
+    "scene1MotionSalience": "LOW_WHOLE_FRAME_SALIENCE",
+    "compositionIssues": [
+      {
+        "id": "scene1.brand-footer.bottom-clip",
+        "status": "CONFIRMED_FULL_SCENE1",
+        "scope": "scene_1",
+        "evidence": "all 160 Scene-1 frames show footer glyph content reaching the final canvas row y=1919; representative frame review shows the lower portion of 北纬39° Coffee clipped by the 1080×1920 bottom boundary",
+        "sourceOwnerStatus": "NOT_PROVED",
+        "correctionStatus": "BLOCKED_CHAT_ONLY_EXACT_SOURCE_NOT_LOCATED"
+      }
+    ],
     "humanReviewRequired": true
   },
-  "nextRule": "Do not animate scene 2 until SourceReset1 scene-1 motion is human-reviewed. Restore motion one scene at a time.",
+  "gates": {
+    "scene1HumanMotionReview": "OPEN",
+    "scene1FooterCorrection": "BLOCKED_EXACT_EDITABLE_SOURCE_NOT_LOCATED",
+    "scene2Motion": "HOLD",
+    "finalVideo": "NOT_PROVED"
+  },
+  "nextRule": "Do not animate scene 2 until SourceReset1 scene-1 motion is human-reviewed. Do not patch the clipped footer in pixels or with a parallel overlay/render path; correct it only inside an identified existing editable source/render owner, then re-render through the existing Shared Media / Remotion path.",
   "boundaries": {"merge": false, "deploy": false, "publication": false}
 }
