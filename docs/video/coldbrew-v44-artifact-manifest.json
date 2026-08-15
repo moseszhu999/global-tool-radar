@@ -1,6 +1,6 @@
 {
   "schemaVersion": "video.operation.review-artifact-manifest.v1",
-  "updatedAt": "2026-08-13T15:03:00+08:00",
+  "updatedAt": "2026-08-15T15:37:00+08:00",
   "status": "SOURCE_RESET_SCENE1_MOTION_REVIEW",
   "repository": "moseszhu999/global-tool-radar",
   "handoffBranch": "agent/video-operation-v44-handoff-20260813",
@@ -22,6 +22,20 @@
       "fileId": "1yDzWrtJxpkkme1tFwI9D1cYHsW9KAs_X",
       "fileName": "VideoOperation-ColdBrew-SourceReset1-Scene1Motion-20260813.mp4"
     }
+  },
+  "provenance": {
+    "binaryIdentityStatus": "PROVED",
+    "editableSourceStatus": "MISSING_FROM_CURRENT_EVIDENCE",
+    "renderOwnerStatus": "MISSING_FROM_CURRENT_EVIDENCE",
+    "editableSourceAssetId": null,
+    "editableSourcePath": null,
+    "editableSourceDigest": null,
+    "sourcePackageId": null,
+    "renderEntrypoint": null,
+    "renderJobRef": null,
+    "renderReceiptRef": null,
+    "renderOwnerRef": null,
+    "rule": "Populate provenance fields only from durable source IDs/digests or existing render job/receipt/owner evidence; do not infer or fabricate them."
   },
   "construction": {
     "base": "SourceReset0 clean six-shot hard-cut baseline",
