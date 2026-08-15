@@ -78,6 +78,27 @@ The current SourceReset1 binary has already passed bounded technical checks incl
 
 These are technical and sampled-review facts. They do **not** replace human creative review.
 
+### Current inherited footer / provenance truth
+
+Do not attribute the bottom `北纬39° Coffee` footer clip to SourceReset1 motion. The same native Scene-1 edge scan found the footer touching the final canvas row in **160/160 frames in SourceReset0** and **160/160 frames in SourceReset1**.
+
+```text
+SCENE1_FOOTER_ORIGIN=INHERITED_FROM_SOURCERESET0_BASELINE
+SCENE1_FOOTER_REGRESSION=NOT_INTRODUCED_BY_SOURCERESET1_MOTION
+```
+
+The footer still blocks any Final claim, but the current evidence does not identify the exact editable source/render owner that produced it. The artifact manifest intentionally fails closed:
+
+```text
+SOURCE_RESET1_BINARY_PROVENANCE=PROVED
+SOURCE_RESET1_EDITABLE_SOURCE_PROVENANCE=MISSING_FROM_CURRENT_EVIDENCE
+SOURCE_RESET1_RENDER_OWNER_PROVENANCE=MISSING_FROM_CURRENT_EVIDENCE
+EXACT_EDITABLE_FOOTER_SOURCE_OWNER=NOT_PROVED
+FOOTER_CORRECTION=BLOCKED_CHAT_ONLY_EXACT_SOURCE_NOT_LOCATED
+```
+
+Do not patch final MP4 pixels, add a parallel overlay renderer, or create another Shared Media/Remotion implementation. Any footer correction must happen only after the existing editable source/render owner is recovered from real durable evidence.
+
 ## Current gate
 
 `HUMAN_SCENE1_MOTION_REVIEW_REQUIRED`
@@ -142,10 +163,12 @@ For each new run:
 2. recover SourceReset1 by durable Drive ID and verify SHA-256 before using it;
 3. keep Scene 2 motion HOLD until there is explicit human approval of Scene 1;
 4. while blocked on human review, only perform useful evidence/technical-QC work that does not fabricate approval or generate an unauthorized next scene;
-5. once Scene 1 is explicitly approved, change only Scene 2 and keep all shot boundaries as hard cuts;
-6. run black-wedge, camera-stability, alpha/matte, safe-zone, material-continuity, audio-continuity and technical artifact checks before presenting a new candidate;
-7. update handoff + manifest whenever a new candidate becomes the best-known human-approved or active review version;
-8. never self-label Final / 100 / 105 without human review.
+5. treat the footer clip as an inherited SourceReset0 baseline defect, not a SourceReset1 motion regression;
+6. do not attempt footer correction until an existing editable source/render owner is proved by durable source or render evidence;
+7. once Scene 1 is explicitly approved, change only Scene 2 and keep all shot boundaries as hard cuts;
+8. run black-wedge, camera-stability, alpha/matte, safe-zone, material-continuity, audio-continuity and technical artifact checks before presenting a new candidate;
+9. update handoff + manifest whenever a new candidate becomes the best-known human-approved or active review version;
+10. never self-label Final / 100 / 105 without human review.
 
 ## Repository boundaries
 
