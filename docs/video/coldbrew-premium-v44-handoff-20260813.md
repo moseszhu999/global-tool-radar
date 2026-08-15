@@ -91,6 +91,34 @@ Observed locally:
 
 This is local QA only. Human review remains authoritative.
 
+## 6A. Current inherited footer and provenance gate
+
+Fresh evidence after the initial SourceReset1 handoff established two important facts that future runs must not reconstruct from old review prose:
+
+- the bottom `北纬39° Coffee` footer touches the final canvas row in **160/160 Scene-1 frames in SourceReset0** and also **160/160 Scene-1 frames in SourceReset1**;
+- therefore the footer clip is an **inherited SourceReset0 baseline composition defect**, not a regression introduced by the SourceReset1 Scene-1 motion experiment.
+
+Machine-readable attribution truth:
+
+```text
+SCENE1_FOOTER_ORIGIN=INHERITED_FROM_SOURCERESET0_BASELINE
+SCENE1_FOOTER_REGRESSION=NOT_INTRODUCED_BY_SOURCERESET1_MOTION
+```
+
+The footer still requires correction before any Final claim, but its exact editable source/render owner is not proved. The artifact manifest now fails closed on this provenance gap:
+
+```text
+SOURCE_RESET1_BINARY_PROVENANCE=PROVED
+SOURCE_RESET1_EDITABLE_SOURCE_PROVENANCE=MISSING_FROM_CURRENT_EVIDENCE
+SOURCE_RESET1_RENDER_OWNER_PROVENANCE=MISSING_FROM_CURRENT_EVIDENCE
+EXACT_EDITABLE_FOOTER_SOURCE_OWNER=NOT_PROVED
+FOOTER_CORRECTION=BLOCKED_CHAT_ONLY_EXACT_SOURCE_NOT_LOCATED
+```
+
+Do not pixel-patch the final MP4, add a parallel overlay renderer, or create a second Shared Media/Remotion path just to move the footer. Correct it only after the existing editable source/render owner is recovered with real durable source or render evidence.
+
+The current Scene-1 motion is real but low-salience at whole-frame scale. This remains a human creative-review question, not an automated pass.
+
 ## 7. One-scene-at-a-time rule
 
 Do **not** animate Scene 2 yet.
