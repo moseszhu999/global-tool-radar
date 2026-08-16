@@ -117,8 +117,6 @@ FOOTER_CORRECTION=BLOCKED_CHAT_ONLY_EXACT_SOURCE_NOT_LOCATED
 
 Do not pixel-patch the final MP4, add a parallel overlay renderer, or create a second Shared Media/Remotion path just to move the footer. Correct it only after the existing editable source/render owner is recovered with real durable source or render evidence.
 
-The current Scene-1 motion is real but low-salience at whole-frame scale. This remains a human creative-review question, not an automated pass.
-
 ## 6B. Canonical `media.render.v1` terminal-evidence gate
 
 The durable SourceReset1 MP4 is a valid review binary, but it is **not yet proved** as canonical Shared Media terminal render evidence.
@@ -135,6 +133,31 @@ SOURCE_RESET1_TERMINAL_RECEIPT_BINDING=MISSING_FROM_CURRENT_EVIDENCE
 ```
 
 Do not treat the review MP4's SHA-256, ffprobe/container checks, or human-review handoff as a substitute for canonical `media.render.v1` terminal evidence. Before any Final claim, evidence must come from the **existing Shared Media render owner** and must bind the exact request/job/evidence identities, exact `inputManifestDigest`, render-log SHA-256, and canonical terminal receipt/result refs. Do not infer or fabricate these identities and do not create a second render engine or receipt store to manufacture them.
+
+## 6C. Current Scene-1 temporal-motion evidence
+
+Fresh frame-to-frame optical-flow analysis against the durable SourceReset0 baseline proves that Scene-1 motion is real, but strongly front-loaded rather than evenly visible through the shot.
+
+Recorded machine truth from `qa.temporalMotionEvidence`:
+
+```text
+SCENE1_TEMPORAL_MOTION_EXISTS=PROVED_BOUNDED
+SOURCE_RESET0_AVG_FLOW=0.000638_PX_PER_FRAME
+SOURCE_RESET1_AVG_FLOW=0.001621_PX_PER_FRAME
+SOURCE_RESET1_AVG_FLOW_RATIO=2.54X_BASELINE
+SOURCE_RESET1_PEAK_FLOW=0.01494_PX_PER_FRAME_AT_0.87S
+SOURCE_RESET1_0.5_TO_1.0S_FLOW_RATIO=12.8X_BASELINE
+SOURCE_RESET1_1.0_TO_1.5S_FLOW_RATIO=5.17X_BASELINE
+SOURCE_RESET1_AFTER_1.5S_FLOW_RATIO=1.08_TO_1.31X_BASELINE
+```
+
+Interpretation:
+
+- the added material motion is most visible in approximately `0.5–1.5s`;
+- after `1.5s`, Scene 1 returns close to the SourceReset0 temporal baseline for the remainder of the shot;
+- therefore the candidate can still feel mostly static during the mid/late shot despite containing real local motion.
+
+This does **not** constitute creative approval. Human review remains authoritative, and Scene 2 stays HOLD.
 
 ## 7. One-scene-at-a-time rule
 
@@ -177,7 +200,7 @@ Reject:
 Primary review deliverables:
 
 - full `SourceReset1_Scene1Motion.mp4`;
-- Scene-1-only `Scene1_StudyPass1.mp4` for fast A/B review;
+- Scene-1-only review derivative for fast A/B review;
 - HTML review page as secondary aid.
 
 Do not label Final / 100 / 105 until human review **and** canonical `media.render.v1` terminal evidence are both proved.
