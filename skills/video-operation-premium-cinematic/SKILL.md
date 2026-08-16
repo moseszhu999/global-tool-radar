@@ -1,6 +1,6 @@
 # Skill: Video Operation Premium Cinematic Iteration
 
-Version: `v1.1`  
+Version: `v1.2`  
 Scope: Video Operation / short-form vertical cinematic product-explainer production  
 Primary quality target: Gold non-regression + selected Premium escalation  
 Human review remains authoritative.
@@ -114,7 +114,8 @@ For each candidate:
 3. change the smallest surface needed;
 4. produce a real reviewable MP4 when a new candidate is authorized;
 5. run hard-defect and technical checks before claiming improvement;
-6. never self-label Final / 100 / 105 without human review.
+6. never self-label Final / 100 / 105 without human review;
+7. keep review-binary identity separate from canonical `media.render.v1` terminal evidence.
 
 ## Hard QA checklist
 
@@ -132,6 +133,7 @@ Before handing a new candidate to the user, verify:
 - [ ] A/V durations align;
 - [ ] no black tail or obvious audio drop/clipping;
 - [ ] exact artifact SHA-256/identity is recorded;
+- [ ] review-binary provenance and canonical render evidence are not conflated;
 - [ ] no merge/deploy/publication occurred without explicit permission.
 
 ## Current reference hierarchy — SourceReset truth
@@ -143,11 +145,41 @@ Before handing a new candidate to the user, verify:
    - only Scene 1 (`0–5.333s`) restores local material motion;
    - Scene 2–6 remain SourceReset0-clean/static;
    - Scene 1→2 remains a direct hard cut.
-3. **Current gate:** `HUMAN_SCENE1_MOTION_REVIEW_REQUIRED`.
-4. **Next-scene rule:** `SCENE2_MOTION=HOLD` until explicit human approval of Scene 1.
-5. **Historical references only:** Premium Camera Lock V3, natural-drop experiments and V4.x patch candidates may retain useful learning, but they are not current continuation baselines and must not override SourceReset0/SourceReset1 truth.
+3. **Current temporal-motion truth:** real added Scene-1 motion is proved but front-loaded.
+   - SourceReset1 average temporal flow ≈ `2.54x` SourceReset0 baseline;
+   - `0.5–1.0s ≈ 12.8x` baseline;
+   - `1.0–1.5s ≈ 5.17x` baseline;
+   - after `1.5s`, each 0.5s window remains only about `1.08–1.31x` baseline;
+   - this does not constitute creative approval.
+4. **Inherited footer truth:** the clipped bottom `北纬39° Coffee` footer is present in `160/160` Scene-1 frames in both SourceReset0 and SourceReset1, so it is an inherited SourceReset0 baseline composition defect, not a SourceReset1 motion regression.
+   - `EXACT_EDITABLE_FOOTER_SOURCE_OWNER=NOT_PROVED`;
+   - do not pixel-patch the final MP4 or create a parallel overlay/render path;
+   - correct it only inside an identified existing editable source/render owner.
+5. **Canonical render-evidence truth:** SourceReset1 is a valid review binary, but canonical `media.render.v1` terminal evidence is still `NOT_PROVED`.
+   - request/job/evidence identities are missing from current evidence;
+   - exact `inputManifestDigest` is missing;
+   - render-log SHA-256 is missing;
+   - terminal receipt/result binding is missing;
+   - never fabricate these fields or create a second render engine/receipt store/job registry.
+6. **Current gate:** `HUMAN_SCENE1_MOTION_REVIEW_REQUIRED`.
+7. **Next-scene rule:** `SCENE2_MOTION=HOLD` until explicit human approval of Scene 1.
+8. **Historical references only:** Premium Camera Lock V3, natural-drop experiments and V4.x patch candidates may retain useful learning, but they are not current continuation baselines and must not override SourceReset0/SourceReset1 truth.
 
 Read `docs/video/coldbrew-premium-v44-handoff-20260813.md`, `docs/video/coldbrew-v44-artifact-manifest.json` and `docs/video/NEXT-WINDOW-PROMPT-VIDEO-OP-20260813.md` for exact continuation state.
+
+## Canonical render evidence boundary
+
+A review MP4 can be technically valid without being canonical terminal render evidence.
+
+Before any Final claim, require evidence from the **existing Shared Media render owner** that binds:
+
+- exact request / job / evidence identities;
+- exact `inputManifestDigest`;
+- render-log SHA-256;
+- canonical terminal receipt/result references;
+- artifact SHA-256 and media inspection for the exact terminal output.
+
+Do not infer or fabricate missing render identities. Do not create a second Shared Media / Remotion engine, receipt store or job registry merely to manufacture evidence.
 
 ## One-scene-at-a-time protocol
 
