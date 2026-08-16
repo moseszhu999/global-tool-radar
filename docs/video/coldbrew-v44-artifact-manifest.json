@@ -1,6 +1,6 @@
 {
   "schemaVersion": "video.operation.review-artifact-manifest.v1",
-  "updatedAt": "2026-08-16T18:38:58+08:00",
+  "updatedAt": "2026-08-17T06:38:00+08:00",
   "status": "SOURCE_RESET_SCENE1_MOTION_REVIEW",
   "repository": "moseszhu999/global-tool-radar",
   "handoffBranch": "agent/video-operation-v44-handoff-20260813",
@@ -54,6 +54,20 @@
     "inputManifestDigestBindingStatus": "MISSING_FROM_CURRENT_EVIDENCE",
     "renderLogDigestStatus": "MISSING_FROM_CURRENT_EVIDENCE",
     "rule": "A valid Video Operation review MP4 is not equivalent to canonical media.render.v1 terminal evidence. Populate request/job/evidence identities, inputManifestDigest, render-log SHA-256, and terminal receipt/result refs only from the existing Shared Media render owner; do not infer or fabricate them and do not create a second render engine."
+  },
+  "formalReviewRouting": {
+    "status": "IDENTIFIED_NOT_READY",
+    "qualityReportContract": "toolradar.video-quality-report.v1",
+    "finalRenderEvidenceIntake": "packages/final-render-evidence-intake",
+    "finalHumanReview": "packages/final-human-review",
+    "renderCommandManifestId": null,
+    "qualityReportRef": null,
+    "qualityReportMediaSha256BindingStatus": "MISSING_FROM_CURRENT_EVIDENCE",
+    "automatedGateStatus": "NOT_PROVED_FOR_SOURCE_RESET1",
+    "finalRenderEvidenceIntakeStatus": "NOT_READY",
+    "finalHumanReviewInputStatus": "NOT_READY",
+    "releaseHandoffStatus": "BLOCKED",
+    "routingRule": "Reuse the existing source/render owner and existing quality/review contracts. Before formal final human review, require a real render execution bound to renderCommandManifestId, exact output SHA, valid technical media metadata, and a toolradar.video-quality-report.v1 bound to the same media SHA with automatedGate=PASS. Do not fabricate these bindings and do not create a second render/review engine."
   },
   "construction": {
     "base": "SourceReset0 clean six-shot hard-cut baseline",
@@ -133,9 +147,10 @@
     "scene1HumanMotionReview": "OPEN",
     "scene1FooterCorrection": "BLOCKED_EXACT_EDITABLE_SOURCE_NOT_LOCATED",
     "canonicalMediaRenderTerminalEvidence": "NOT_PROVED",
+    "formalFinalHumanReviewInput": "NOT_READY",
     "scene2Motion": "HOLD",
     "finalVideo": "NOT_PROVED"
   },
-  "nextRule": "Do not animate scene 2 until SourceReset1 scene-1 motion is human-reviewed. Treat the clipped footer as an inherited SourceReset0 baseline composition defect, not a SourceReset1 motion regression. Do not patch it in pixels or with a parallel overlay/render path; correct it only inside an identified existing editable source/render owner, then re-render through the existing Shared Media / Remotion path and require canonical media.render.v1 terminal receipt/evidence before any Final claim.",
+  "nextRule": "Do not animate scene 2 until SourceReset1 scene-1 motion is human-reviewed. Treat the clipped footer as an inherited SourceReset0 baseline composition defect, not a SourceReset1 motion regression. Do not patch it in pixels or with a parallel overlay/render path; correct it only inside an identified existing editable source/render owner, then re-render through the existing Shared Media / Remotion path. For formal review, reuse the existing final-render-evidence intake and final-human-review contracts and require a media-SHA-bound toolradar.video-quality-report.v1 plus canonical media.render.v1 terminal evidence before any Final or release-handoff claim.",
   "boundaries": {"merge": false, "deploy": false, "publication": false}
 }
