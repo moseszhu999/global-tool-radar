@@ -78,6 +78,29 @@ The current SourceReset1 binary has already passed bounded technical checks incl
 
 These are technical and sampled-review facts. They do **not** replace human creative review.
 
+### Current Scene-1 temporal-motion truth
+
+The latest machine-readable `qa.temporalMotionEvidence` sharpens the earlier generic “low-salience” description. Fresh Farneback optical-flow analysis compared frame-to-frame motion in durable SourceReset1 against durable SourceReset0 on a `270×480` analysis surface.
+
+```text
+SCENE1_TEMPORAL_MOTION_EXISTS=PROVED_BOUNDED
+SOURCE_RESET0_AVG_FLOW=0.000638_PX_PER_FRAME
+SOURCE_RESET1_AVG_FLOW=0.001621_PX_PER_FRAME
+SOURCE_RESET1_AVG_FLOW_RATIO=2.54X_BASELINE
+SOURCE_RESET1_PEAK_FLOW=0.01494_PX_PER_FRAME_AT_0.87S
+SOURCE_RESET1_0.5_TO_1.0S_FLOW_RATIO=12.8X_BASELINE
+SOURCE_RESET1_1.0_TO_1.5S_FLOW_RATIO=5.17X_BASELINE
+SOURCE_RESET1_AFTER_1.5S_FLOW_RATIO=1.08_TO_1.31X_BASELINE
+```
+
+Interpretation:
+
+- real added temporal motion is concentrated mainly in approximately `0.5–1.5s`;
+- after `1.5s`, the remaining Scene-1 motion stays close to the SourceReset0 temporal baseline;
+- this explains why Scene 1 can still feel mostly static during the mid/late shot despite containing genuine local material animation.
+
+This evidence does **not** approve the creative result. Human Scene-1 review remains mandatory.
+
 ### Current inherited footer / provenance truth
 
 Do not attribute the bottom `北纬39° Coffee` footer clip to SourceReset1 motion. The same native Scene-1 edge scan found the footer touching the final canvas row in **160/160 frames in SourceReset0** and **160/160 frames in SourceReset1**.
@@ -131,7 +154,7 @@ One-scene-at-a-time production rule:
 5. continue scene by scene through Scene 6;
 6. any regression returns to the latest human-approved SourceReset baseline.
 
-The current Scene 1 motion is deliberately subtle. Automated freeze/salience diagnostics indicate low whole-frame motion salience, so do not self-label the creative motion as passed. Human review remains authoritative.
+The current Scene 1 motion is deliberately subtle and temporally front-loaded. Automated evidence proves real added motion, but it is concentrated mainly in `0.5–1.5s`; after `1.5s`, frame-to-frame motion stays near the SourceReset0 baseline. Do not self-label the creative motion as passed. Human review remains authoritative.
 
 ## Motion grammar
 
@@ -180,13 +203,14 @@ For each new run:
 2. recover SourceReset1 by durable Drive ID and verify SHA-256 before using it;
 3. keep Scene 2 motion HOLD until there is explicit human approval of Scene 1;
 4. while blocked on human review, only perform useful evidence/technical-QC work that does not fabricate approval or generate an unauthorized next scene;
-5. treat the footer clip as an inherited SourceReset0 baseline defect, not a SourceReset1 motion regression;
-6. do not attempt footer correction until an existing editable source/render owner is proved by durable source or render evidence;
-7. do not claim Final until canonical `media.render.v1` terminal evidence from the existing Shared Media owner binds request/job/evidence identity, exact `inputManifestDigest`, render-log SHA-256 and terminal receipt/result refs;
-8. once Scene 1 is explicitly approved, change only Scene 2 and keep all shot boundaries as hard cuts;
-9. run black-wedge, camera-stability, alpha/matte, safe-zone, material-continuity, audio-continuity and technical artifact checks before presenting a new candidate;
-10. update handoff + manifest whenever a new candidate becomes the best-known human-approved or active review version;
-11. never self-label Final / 100 / 105 without human review and canonical render evidence.
+5. preserve the current temporal-motion truth: real added motion is concentrated mainly in `0.5–1.5s`; after `1.5s` motion remains near SourceReset0 baseline unless a later authorized Scene-1 revision changes that evidence;
+6. treat the footer clip as an inherited SourceReset0 baseline defect, not a SourceReset1 motion regression;
+7. do not attempt footer correction until an existing editable source/render owner is proved by durable source or render evidence;
+8. do not claim Final until canonical `media.render.v1` terminal evidence from the existing Shared Media owner binds request/job/evidence identity, exact `inputManifestDigest`, render-log SHA-256 and terminal receipt/result refs;
+9. once Scene 1 is explicitly approved, change only Scene 2 and keep all shot boundaries as hard cuts;
+10. run black-wedge, camera-stability, alpha/matte, safe-zone, material-continuity, audio-continuity and technical artifact checks before presenting a new candidate;
+11. update handoff + manifest whenever a new candidate becomes the best-known human-approved or active review version;
+12. never self-label Final / 100 / 105 without human review and canonical render evidence.
 
 ## Repository boundaries
 
