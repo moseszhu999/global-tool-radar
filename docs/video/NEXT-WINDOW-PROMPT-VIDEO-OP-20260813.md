@@ -139,6 +139,37 @@ SOURCE_RESET1_TERMINAL_RECEIPT_BINDING=MISSING_FROM_CURRENT_EVIDENCE
 
 Do not equate review-binary SHA-256, ffprobe/container checks, or a handoff document with canonical terminal render evidence. Before any Final claim, the **existing Shared Media render owner** must provide the exact request/job/evidence identities, exact `inputManifestDigest`, render-log SHA-256, and canonical terminal receipt/result refs. Never infer/fabricate these fields, and do not create a second render engine, receipt store, or job registry to manufacture them.
 
+### Current formal-review routing truth
+
+The existing repository already owns the formal review/evidence path. Do **not** create another human-review or render-evidence implementation for SourceReset1.
+
+Machine-readable routing truth from `formalReviewRouting`:
+
+```text
+SOURCE_RESET1_FORMAL_REVIEW_ROUTING=IDENTIFIED_NOT_READY
+QUALITY_REPORT_CONTRACT=toolradar.video-quality-report.v1
+FINAL_RENDER_EVIDENCE_INTAKE=packages/final-render-evidence-intake
+FINAL_HUMAN_REVIEW=packages/final-human-review
+SOURCE_RESET1_RENDER_COMMAND_MANIFEST_ID=MISSING_FROM_CURRENT_EVIDENCE
+SOURCE_RESET1_QUALITY_REPORT_REF=MISSING_FROM_CURRENT_EVIDENCE
+SOURCE_RESET1_QUALITY_REPORT_MEDIA_SHA256_BINDING=MISSING_FROM_CURRENT_EVIDENCE
+SOURCE_RESET1_AUTOMATED_GATE=NOT_PROVED_FOR_SOURCE_RESET1
+SOURCE_RESET1_FINAL_RENDER_EVIDENCE_INTAKE=NOT_READY
+SOURCE_RESET1_FINAL_HUMAN_REVIEW_INPUT=NOT_READY
+SOURCE_RESET1_RELEASE_HANDOFF=BLOCKED
+```
+
+Before formal Final human review, reuse the **existing** source/render/evidence/review owners and require:
+
+1. real render execution bound to a non-empty `renderCommandManifestId`;
+2. exact rendered output SHA matching the reviewed media;
+3. valid technical media metadata;
+4. a `toolradar.video-quality-report.v1` bound to the same media SHA with `automatedGate=PASS`;
+5. existing `final-render-evidence-intake` readiness;
+6. existing `final-human-review` input readiness.
+
+A human statement that Scene 1 motion looks acceptable does not by itself satisfy formal Final review input readiness or release-handoff readiness. Never fabricate the missing bindings and never create a second render/review engine to manufacture them.
+
 ## Current gate
 
 `HUMAN_SCENE1_MOTION_REVIEW_REQUIRED`
@@ -207,10 +238,11 @@ For each new run:
 6. treat the footer clip as an inherited SourceReset0 baseline defect, not a SourceReset1 motion regression;
 7. do not attempt footer correction until an existing editable source/render owner is proved by durable source or render evidence;
 8. do not claim Final until canonical `media.render.v1` terminal evidence from the existing Shared Media owner binds request/job/evidence identity, exact `inputManifestDigest`, render-log SHA-256 and terminal receipt/result refs;
-9. once Scene 1 is explicitly approved, change only Scene 2 and keep all shot boundaries as hard cuts;
-10. run black-wedge, camera-stability, alpha/matte, safe-zone, material-continuity, audio-continuity and technical artifact checks before presenting a new candidate;
-11. update handoff + manifest whenever a new candidate becomes the best-known human-approved or active review version;
-12. never self-label Final / 100 / 105 without human review and canonical render evidence.
+9. before any formal Final human-review or release-handoff claim, require existing `final-render-evidence-intake` readiness plus a media-SHA-bound `toolradar.video-quality-report.v1` with `automatedGate=PASS`, then feed that into the existing `final-human-review` path;
+10. once Scene 1 is explicitly approved, change only Scene 2 and keep all shot boundaries as hard cuts;
+11. run black-wedge, camera-stability, alpha/matte, safe-zone, material-continuity, audio-continuity and technical artifact checks before presenting a new candidate;
+12. update handoff + manifest whenever a new candidate becomes the best-known human-approved or active review version;
+13. never self-label Final / 100 / 105 without human review and canonical render evidence.
 
 ## Repository boundaries
 
