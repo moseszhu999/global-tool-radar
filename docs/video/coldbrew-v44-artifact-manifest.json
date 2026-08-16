@@ -1,6 +1,6 @@
 {
   "schemaVersion": "video.operation.review-artifact-manifest.v1",
-  "updatedAt": "2026-08-16T09:33:00+08:00",
+  "updatedAt": "2026-08-16T18:38:58+08:00",
   "status": "SOURCE_RESET_SCENE1_MOTION_REVIEW",
   "repository": "moseszhu999/global-tool-radar",
   "handoffBranch": "agent/video-operation-v44-handoff-20260813",
@@ -96,6 +96,23 @@
     "blackSeamRegressionStatus": "NOT_OBSERVED_IN_RECORDED_TECHNICAL_AND_SAMPLED_CHECKS",
     "scene1MotionReviewStatus": "HUMAN_REVIEW_REQUIRED",
     "scene1MotionSalience": "LOW_WHOLE_FRAME_SALIENCE",
+    "temporalMotionEvidence": {
+      "status": "PROVED_BOUNDED",
+      "method": "Farneback optical flow measured frame-to-frame on Scene 1 for durable SourceReset0 and SourceReset1 binaries using a 270x480 analysis surface",
+      "baselineSha256": "a9fa19e8b188f10ae0bc992b462e5dcfc6411eb98a40aa7865022b17bf808576",
+      "candidateSha256": "6dcedbe09a7859088c4c86a1e65a696c172cde32bf82629802ef2b3f8b6f3759",
+      "baselineAverageFlowPxPerFrame": 0.000638,
+      "candidateAverageFlowPxPerFrame": 0.001621,
+      "candidateToBaselineAverageRatio": 2.54,
+      "candidatePeakFlowPxPerFrame": 0.01494,
+      "candidatePeakTimeSeconds": 0.87,
+      "strongestAddedMotionWindowSeconds": [0.5, 1.0],
+      "strongestWindowRatioVsBaseline": 12.8,
+      "secondStrongWindowSeconds": [1.0, 1.5],
+      "secondStrongWindowRatioVsBaseline": 5.17,
+      "after1_5sWindowRatioRangeVsBaseline": [1.08, 1.31],
+      "interpretation": "Real temporal motion exists, but added motion is strongly front-loaded around 0.5-1.5s and remains near the static baseline after 1.5s; this does not replace human creative review."
+    },
     "compositionIssues": [
       {
         "id": "scene1.brand-footer.bottom-clip",
