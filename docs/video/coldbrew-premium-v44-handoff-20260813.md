@@ -119,6 +119,23 @@ Do not pixel-patch the final MP4, add a parallel overlay renderer, or create a s
 
 The current Scene-1 motion is real but low-salience at whole-frame scale. This remains a human creative-review question, not an automated pass.
 
+## 6B. Canonical `media.render.v1` terminal-evidence gate
+
+The durable SourceReset1 MP4 is a valid review binary, but it is **not yet proved** as canonical Shared Media terminal render evidence.
+
+The current artifact manifest intentionally fails closed on the missing canonical binding:
+
+```text
+SOURCE_RESET1_REVIEW_BINARY_IDENTITY=PROVED
+SOURCE_RESET1_CANONICAL_MEDIA_RENDER_V1_TERMINAL_EVIDENCE=NOT_PROVED
+SOURCE_RESET1_REQUEST_JOB_IDENTITY_BINDING=MISSING_FROM_CURRENT_EVIDENCE
+SOURCE_RESET1_INPUT_MANIFEST_DIGEST_BINDING=MISSING_FROM_CURRENT_EVIDENCE
+SOURCE_RESET1_RENDER_LOG_DIGEST=MISSING_FROM_CURRENT_EVIDENCE
+SOURCE_RESET1_TERMINAL_RECEIPT_BINDING=MISSING_FROM_CURRENT_EVIDENCE
+```
+
+Do not treat the review MP4's SHA-256, ffprobe/container checks, or human-review handoff as a substitute for canonical `media.render.v1` terminal evidence. Before any Final claim, evidence must come from the **existing Shared Media render owner** and must bind the exact request/job/evidence identities, exact `inputManifestDigest`, render-log SHA-256, and canonical terminal receipt/result refs. Do not infer or fabricate these identities and do not create a second render engine or receipt store to manufacture them.
+
 ## 7. One-scene-at-a-time rule
 
 Do **not** animate Scene 2 yet.
@@ -163,7 +180,7 @@ Primary review deliverables:
 - Scene-1-only `Scene1_StudyPass1.mp4` for fast A/B review;
 - HTML review page as secondary aid.
 
-Do not label Final / 100 / 105 until human review.
+Do not label Final / 100 / 105 until human review **and** canonical `media.render.v1` terminal evidence are both proved.
 
 ## 10. Repository boundaries
 
