@@ -99,6 +99,23 @@ FOOTER_CORRECTION=BLOCKED_CHAT_ONLY_EXACT_SOURCE_NOT_LOCATED
 
 Do not patch final MP4 pixels, add a parallel overlay renderer, or create another Shared Media/Remotion implementation. Any footer correction must happen only after the existing editable source/render owner is recovered from real durable evidence.
 
+### Current canonical render-evidence truth
+
+The durable SourceReset1 MP4 is a valid review binary, but it is **not yet proved** as canonical `media.render.v1` terminal evidence.
+
+The artifact manifest fails closed on this separate evidence gap:
+
+```text
+SOURCE_RESET1_REVIEW_BINARY_IDENTITY=PROVED
+SOURCE_RESET1_CANONICAL_MEDIA_RENDER_V1_TERMINAL_EVIDENCE=NOT_PROVED
+SOURCE_RESET1_REQUEST_JOB_IDENTITY_BINDING=MISSING_FROM_CURRENT_EVIDENCE
+SOURCE_RESET1_INPUT_MANIFEST_DIGEST_BINDING=MISSING_FROM_CURRENT_EVIDENCE
+SOURCE_RESET1_RENDER_LOG_DIGEST=MISSING_FROM_CURRENT_EVIDENCE
+SOURCE_RESET1_TERMINAL_RECEIPT_BINDING=MISSING_FROM_CURRENT_EVIDENCE
+```
+
+Do not equate review-binary SHA-256, ffprobe/container checks, or a handoff document with canonical terminal render evidence. Before any Final claim, the **existing Shared Media render owner** must provide the exact request/job/evidence identities, exact `inputManifestDigest`, render-log SHA-256, and canonical terminal receipt/result refs. Never infer/fabricate these fields, and do not create a second render engine, receipt store, or job registry to manufacture them.
+
 ## Current gate
 
 `HUMAN_SCENE1_MOTION_REVIEW_REQUIRED`
@@ -165,10 +182,11 @@ For each new run:
 4. while blocked on human review, only perform useful evidence/technical-QC work that does not fabricate approval or generate an unauthorized next scene;
 5. treat the footer clip as an inherited SourceReset0 baseline defect, not a SourceReset1 motion regression;
 6. do not attempt footer correction until an existing editable source/render owner is proved by durable source or render evidence;
-7. once Scene 1 is explicitly approved, change only Scene 2 and keep all shot boundaries as hard cuts;
-8. run black-wedge, camera-stability, alpha/matte, safe-zone, material-continuity, audio-continuity and technical artifact checks before presenting a new candidate;
-9. update handoff + manifest whenever a new candidate becomes the best-known human-approved or active review version;
-10. never self-label Final / 100 / 105 without human review.
+7. do not claim Final until canonical `media.render.v1` terminal evidence from the existing Shared Media owner binds request/job/evidence identity, exact `inputManifestDigest`, render-log SHA-256 and terminal receipt/result refs;
+8. once Scene 1 is explicitly approved, change only Scene 2 and keep all shot boundaries as hard cuts;
+9. run black-wedge, camera-stability, alpha/matte, safe-zone, material-continuity, audio-continuity and technical artifact checks before presenting a new candidate;
+10. update handoff + manifest whenever a new candidate becomes the best-known human-approved or active review version;
+11. never self-label Final / 100 / 105 without human review and canonical render evidence.
 
 ## Repository boundaries
 
