@@ -1,6 +1,6 @@
 # Skill: Video Operation Premium Cinematic Iteration
 
-Version: `v1.2`  
+Version: `v1.3`  
 Scope: Video Operation / short-form vertical cinematic product-explainer production  
 Primary quality target: Gold non-regression + selected Premium escalation  
 Human review remains authoritative.
@@ -115,7 +115,8 @@ For each candidate:
 4. produce a real reviewable MP4 when a new candidate is authorized;
 5. run hard-defect and technical checks before claiming improvement;
 6. never self-label Final / 100 / 105 without human review;
-7. keep review-binary identity separate from canonical `media.render.v1` terminal evidence.
+7. keep review-binary identity separate from canonical `media.render.v1` terminal evidence;
+8. route formal Final review through the existing render-evidence intake and final-human-review contracts rather than inventing a second review system.
 
 ## Hard QA checklist
 
@@ -134,6 +135,7 @@ Before handing a new candidate to the user, verify:
 - [ ] no black tail or obvious audio drop/clipping;
 - [ ] exact artifact SHA-256/identity is recorded;
 - [ ] review-binary provenance and canonical render evidence are not conflated;
+- [ ] formal Final review input uses the existing quality/report/review contracts and is bound to the exact media SHA;
 - [ ] no merge/deploy/publication occurred without explicit permission.
 
 ## Current reference hierarchy — SourceReset truth
@@ -161,9 +163,17 @@ Before handing a new candidate to the user, verify:
    - render-log SHA-256 is missing;
    - terminal receipt/result binding is missing;
    - never fabricate these fields or create a second render engine/receipt store/job registry.
-6. **Current gate:** `HUMAN_SCENE1_MOTION_REVIEW_REQUIRED`.
-7. **Next-scene rule:** `SCENE2_MOTION=HOLD` until explicit human approval of Scene 1.
-8. **Historical references only:** Premium Camera Lock V3, natural-drop experiments and V4.x patch candidates may retain useful learning, but they are not current continuation baselines and must not override SourceReset0/SourceReset1 truth.
+6. **Formal Final review routing truth:** the existing review path is identified, but SourceReset1 is not ready to enter it.
+   - `QUALITY_REPORT_CONTRACT=toolradar.video-quality-report.v1`;
+   - `FINAL_RENDER_EVIDENCE_INTAKE=packages/final-render-evidence-intake`;
+   - `FINAL_HUMAN_REVIEW=packages/final-human-review`;
+   - `renderCommandManifestId` is missing from current evidence;
+   - quality-report ref / exact media-SHA binding is missing;
+   - `automatedGate=PASS` is not proved for SourceReset1;
+   - formal final-human-review input remains `NOT_READY` and release handoff remains `BLOCKED`.
+7. **Current gate:** `HUMAN_SCENE1_MOTION_REVIEW_REQUIRED`.
+8. **Next-scene rule:** `SCENE2_MOTION=HOLD` until explicit human approval of Scene 1.
+9. **Historical references only:** Premium Camera Lock V3, natural-drop experiments and V4.x patch candidates may retain useful learning, but they are not current continuation baselines and must not override SourceReset0/SourceReset1 truth.
 
 Read `docs/video/coldbrew-premium-v44-handoff-20260813.md`, `docs/video/coldbrew-v44-artifact-manifest.json` and `docs/video/NEXT-WINDOW-PROMPT-VIDEO-OP-20260813.md` for exact continuation state.
 
@@ -180,6 +190,35 @@ Before any Final claim, require evidence from the **existing Shared Media render
 - artifact SHA-256 and media inspection for the exact terminal output.
 
 Do not infer or fabricate missing render identities. Do not create a second Shared Media / Remotion engine, receipt store or job registry merely to manufacture evidence.
+
+## Formal Final review routing boundary
+
+Formal human review and release handoff must reuse the repository's existing evidence/review path. The identified route is:
+
+```text
+existing source/render owner
+→ real render execution + non-empty renderCommandManifestId
+→ exact output SHA + valid technical metadata
+→ toolradar.video-quality-report.v1 bound to that same media SHA with automatedGate=PASS
+→ packages/final-render-evidence-intake
+→ packages/final-human-review
+→ release-handoff decision
+```
+
+Current SourceReset1 readiness is fail-closed:
+
+```text
+SOURCE_RESET1_FORMAL_REVIEW_ROUTING=IDENTIFIED_NOT_READY
+SOURCE_RESET1_RENDER_COMMAND_MANIFEST_ID=MISSING_FROM_CURRENT_EVIDENCE
+SOURCE_RESET1_QUALITY_REPORT_REF=MISSING_FROM_CURRENT_EVIDENCE
+SOURCE_RESET1_QUALITY_REPORT_MEDIA_SHA_BINDING=MISSING_FROM_CURRENT_EVIDENCE
+SOURCE_RESET1_AUTOMATED_GATE=NOT_PROVED_FOR_SOURCE_RESET1
+SOURCE_RESET1_FINAL_RENDER_EVIDENCE_INTAKE=NOT_READY
+SOURCE_RESET1_FORMAL_FINAL_HUMAN_REVIEW_INPUT=NOT_READY
+SOURCE_RESET1_RELEASE_HANDOFF=BLOCKED
+```
+
+Do not treat CI green, review-binary SHA/ffprobe checks, or an informal creative comment as a substitute for those formal bindings. Do not fabricate them and do not create a second quality-report contract, review runtime, render engine, receipt store or job registry.
 
 ## One-scene-at-a-time protocol
 
@@ -200,6 +239,7 @@ While a scene is awaiting human review, do not fabricate approval or produce the
 - Human creative review is not replaceable by automated evidence.
 - Current handoff/recovery owner is Draft PR #127; do not create a duplicate owner for the same continuation scope.
 - Reuse Shared Media / `media.render.v1`; do not create a second render engine, receipt store or job registry.
+- Reuse `packages/final-render-evidence-intake` and `packages/final-human-review`; do not create a second formal review path.
 - Merge=NO unless explicitly approved.
 - Deploy=NO unless explicitly approved.
 - Publication=NO unless explicitly approved.
