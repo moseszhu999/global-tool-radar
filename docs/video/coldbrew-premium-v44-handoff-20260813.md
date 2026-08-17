@@ -159,6 +159,36 @@ Interpretation:
 
 This does **not** constitute creative approval. Human review remains authoritative, and Scene 2 stays HOLD.
 
+## 6D. Formal Final review routing — identified, not ready
+
+The repository already owns the formal render-evidence and human-review path. Do **not** create another review runtime or render/evidence stack for SourceReset1.
+
+Current routing truth from `formalReviewRouting`:
+
+```text
+SOURCE_RESET1_FORMAL_REVIEW_ROUTING=IDENTIFIED_NOT_READY
+QUALITY_REPORT_CONTRACT=toolradar.video-quality-report.v1
+FINAL_RENDER_EVIDENCE_INTAKE=packages/final-render-evidence-intake
+FINAL_HUMAN_REVIEW=packages/final-human-review
+SOURCE_RESET1_RENDER_COMMAND_MANIFEST_ID=MISSING_FROM_CURRENT_EVIDENCE
+SOURCE_RESET1_QUALITY_REPORT_REF=MISSING_FROM_CURRENT_EVIDENCE
+SOURCE_RESET1_QUALITY_REPORT_MEDIA_SHA_BINDING=MISSING_FROM_CURRENT_EVIDENCE
+SOURCE_RESET1_AUTOMATED_GATE=NOT_PROVED_FOR_SOURCE_RESET1
+SOURCE_RESET1_FINAL_RENDER_EVIDENCE_INTAKE=NOT_READY
+SOURCE_RESET1_FORMAL_FINAL_HUMAN_REVIEW_INPUT=NOT_READY
+SOURCE_RESET1_RELEASE_HANDOFF=BLOCKED
+```
+
+Before formal Final human review or release-handoff claim, reuse the **existing** source/render owner and existing quality/review contracts. Require:
+
+1. a real render execution bound to a non-empty `renderCommandManifestId`;
+2. exact output SHA-256 plus valid technical media metadata;
+3. a `toolradar.video-quality-report.v1` bound to the same media SHA with `automatedGate=PASS`;
+4. existing `packages/final-render-evidence-intake` to accept that evidence;
+5. existing `packages/final-human-review` to produce the human-review receipt without upstream blockers.
+
+Do not infer or fabricate these bindings. Do not treat a technically valid review MP4, CI green, or an informal human comment as a substitute. Do not create a second render engine, receipt store, job registry, quality-report contract, or human-review runtime to manufacture readiness.
+
 ## 7. One-scene-at-a-time rule
 
 Do **not** animate Scene 2 yet.
@@ -203,7 +233,7 @@ Primary review deliverables:
 - Scene-1-only review derivative for fast A/B review;
 - HTML review page as secondary aid.
 
-Do not label Final / 100 / 105 until human review **and** canonical `media.render.v1` terminal evidence are both proved.
+Do not label Final / 100 / 105 until human review, canonical `media.render.v1` terminal evidence, and formal Final human-review input are all proved through the existing contracts.
 
 ## 10. Repository boundaries
 
