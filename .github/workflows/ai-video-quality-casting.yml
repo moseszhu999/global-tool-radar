@@ -1,11 +1,6 @@
 # isolated quality-casting probe 2026-08-11
 name: AI Video Quality Casting
 on:
-  push:
-    branches:
-      - agent/ai-video-quality-casting-20260811
-    paths:
-      - .github/workflows/ai-video-quality-casting.yml
   pull_request:
     branches:
       - main
