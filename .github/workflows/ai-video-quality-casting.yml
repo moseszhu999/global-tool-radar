@@ -31,7 +31,12 @@ jobs:
           cat > voice-casting/script.txt <<'TXT'
           你有没有发现，同样是冰咖啡，冷萃喝起来常常更顺口？关键不是“更淡”，而是萃取方式不同。冰美式先用热水快速萃取，再加冰降温；冷萃从一开始就用冷水，经过大约十二个小时慢慢萃取。低温和长时间，会让尖锐的酸苦感不那么突出，甜感和圆润感更容易被喝出来。所以，冷萃不是更没味道，而是风味走了另一条路线。本周，来北纬三十九度 Coffee，亲自喝一杯试试看。
           TXT
-          mapfile -t voices < <(awk '{print $1}' voice-casting/chinese-voices.txt | sed '/^$/d' | awk '!seen[$0]++' | head -3)
+          voices=()
+          while IFS= read -r voice; do
+            [ -n "$voice" ] || continue
+            voices[${#voices[@]}]="$voice"
+            [ ${#voices[@]} -ge 3 ] && break
+          done < <(awk '{print $1}' voice-casting/chinese-voices.txt | sed '/^$/d' | awk '!seen[$0]++')
           if [ ${#voices[@]} -eq 0 ]; then echo 'No Chinese voice found' >&2; exit 2; fi
           while [ ${#voices[@]} -lt 3 ]; do voices+=("${voices[0]}"); done
           rates=(184 176 168)
