@@ -20,6 +20,21 @@
     "render_log_sha256": "",
     "terminal_status": "NOT_PROVED"
   },
+  "input_manifest_cross_binding": {
+    "render_spec_ref": "render_spec.json",
+    "render_spec_sha256": "",
+    "render_spec_identity_status": "UNPROVED",
+    "input_manifest_digest": "",
+    "input_manifest_identity_status": "UNPROVED",
+    "final_audio_evidence_ref": "voice_casting.json#final_audio_evidence",
+    "final_audio_evidence_digest": "",
+    "final_audio_identity_status": "UNPROVED",
+    "timing_lock_ref": "voice_casting.json#timing_lock",
+    "timing_lock_evidence_digest": "",
+    "timing_lock_identity_status": "UNPROVED",
+    "voice_timing_cross_binding_status": "NOT_PROVED",
+    "render_input_cross_binding_status": "NOT_PROVED"
+  },
   "final_human_review_evidence": {
     "quality_report_contract": "toolradar.video-quality-report.v1",
     "quality_report_ref": "",
@@ -52,6 +67,9 @@
     "FINAL_RENDER_ARTIFACT_IDENTITY_REQUIRED",
     "FINAL_RENDER_FFPROBE_REQUIRED",
     "FINAL_RENDER_TERMINAL_EVIDENCE_REQUIRED",
+    "FINAL_RENDER_INPUT_MANIFEST_IDENTITY_REQUIRED",
+    "FINAL_RENDER_SPEC_IDENTITY_REQUIRED",
+    "FINAL_AUDIO_TIMING_CROSS_BINDING_REQUIRED",
     "FINAL_HUMAN_REVIEW_QUALITY_REPORT_REQUIRED",
     "FINAL_HUMAN_REVIEW_MEDIA_IDENTITY_REQUIRED",
     "FINAL_HUMAN_REVIEW_APPROVAL_REQUIRED"
