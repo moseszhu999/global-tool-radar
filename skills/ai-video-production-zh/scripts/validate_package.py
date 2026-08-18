@@ -128,6 +128,50 @@ try:
 except Exception as exc:
     errors.append(f"render voice/timing contract invalid: {exc}")
 
+try:
+    qc = json.loads((root / "templates/qc_report.json").read_text(encoding="utf-8"))
+    final_render = qc.get("final_render_evidence", {})
+    required_final_render = {
+        "render_contract_family": "media.render.v1",
+        "render_result_ref": "",
+        "render_evidence_ref": "",
+        "artifact_manifest_ref": "",
+        "artifact_path": "",
+        "artifact_sha256": "",
+        "artifact_identity_status": "UNPROVED",
+        "ffprobe_status": "NOT_PROVED",
+        "width": 0,
+        "height": 0,
+        "fps": 0,
+        "video_codec": "",
+        "audio_codec": "",
+        "duration_sec": 0,
+        "input_manifest_digest": "",
+        "render_log_sha256": "",
+        "terminal_status": "NOT_PROVED",
+    }
+    for key, expected in required_final_render.items():
+        if final_render.get(key) != expected:
+            errors.append(f"final render evidence template must default {key}={expected}")
+
+    if qc.get("final_ready") is not False:
+        errors.append("qc template must default final_ready=false")
+    if qc.get("gates", {}).get("artifact_record") != "PENDING":
+        errors.append("qc artifact_record gate must default PENDING")
+    if qc.get("gates", {}).get("technical") != "PENDING":
+        errors.append("qc technical gate must default PENDING")
+
+    qc_blockers = set(qc.get("blockers", []))
+    for blocker in [
+        "FINAL_RENDER_ARTIFACT_IDENTITY_REQUIRED",
+        "FINAL_RENDER_FFPROBE_REQUIRED",
+        "FINAL_RENDER_TERMINAL_EVIDENCE_REQUIRED",
+    ]:
+        if blocker not in qc_blockers:
+            errors.append(f"qc template missing fail-closed blocker: {blocker}")
+except Exception as exc:
+    errors.append(f"final render evidence contract invalid: {exc}")
+
 if errors:
     print("FAIL")
     for error in errors:
