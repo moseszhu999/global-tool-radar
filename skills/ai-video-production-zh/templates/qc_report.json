@@ -1,6 +1,25 @@
 {
   "status": "REVIEW_BUILD",
   "final_ready": false,
+  "final_render_evidence": {
+    "render_contract_family": "media.render.v1",
+    "render_result_ref": "",
+    "render_evidence_ref": "",
+    "artifact_manifest_ref": "",
+    "artifact_path": "",
+    "artifact_sha256": "",
+    "artifact_identity_status": "UNPROVED",
+    "ffprobe_status": "NOT_PROVED",
+    "width": 0,
+    "height": 0,
+    "fps": 0,
+    "video_codec": "",
+    "audio_codec": "",
+    "duration_sec": 0,
+    "input_manifest_digest": "",
+    "render_log_sha256": "",
+    "terminal_status": "NOT_PROVED"
+  },
   "gates": {
     "story": "PENDING",
     "continuity": "PENDING",
@@ -14,5 +33,9 @@
     "artifact_record": "PENDING"
   },
   "shot_quality": [],
-  "blockers": []
+  "blockers": [
+    "FINAL_RENDER_ARTIFACT_IDENTITY_REQUIRED",
+    "FINAL_RENDER_FFPROBE_REQUIRED",
+    "FINAL_RENDER_TERMINAL_EVIDENCE_REQUIRED"
+  ]
 }
