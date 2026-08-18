@@ -20,6 +20,20 @@
     "render_log_sha256": "",
     "terminal_status": "NOT_PROVED"
   },
+  "final_human_review_evidence": {
+    "quality_report_contract": "toolradar.video-quality-report.v1",
+    "quality_report_ref": "",
+    "quality_report_media_sha256": "",
+    "quality_report_media_identity_status": "UNPROVED",
+    "automated_gate_status": "NOT_PROVED",
+    "human_review_contract": "toolradar.final-human-review-receipt.v1",
+    "human_review_receipt_ref": "",
+    "human_review_media_sha256": "",
+    "human_review_media_identity_status": "UNPROVED",
+    "decision": "NOT_PROVED",
+    "release_handoff_allowed": false,
+    "publication_allowed": false
+  },
   "gates": {
     "story": "PENDING",
     "continuity": "PENDING",
@@ -30,12 +44,16 @@
     "caption_sync": "PENDING",
     "motion": "PENDING",
     "technical": "PENDING",
-    "artifact_record": "PENDING"
+    "artifact_record": "PENDING",
+    "human_review": "PENDING"
   },
   "shot_quality": [],
   "blockers": [
     "FINAL_RENDER_ARTIFACT_IDENTITY_REQUIRED",
     "FINAL_RENDER_FFPROBE_REQUIRED",
-    "FINAL_RENDER_TERMINAL_EVIDENCE_REQUIRED"
+    "FINAL_RENDER_TERMINAL_EVIDENCE_REQUIRED",
+    "FINAL_HUMAN_REVIEW_QUALITY_REPORT_REQUIRED",
+    "FINAL_HUMAN_REVIEW_MEDIA_IDENTITY_REQUIRED",
+    "FINAL_HUMAN_REVIEW_APPROVAL_REQUIRED"
   ]
 }
