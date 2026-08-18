@@ -154,23 +154,47 @@ try:
         if final_render.get(key) != expected:
             errors.append(f"final render evidence template must default {key}={expected}")
 
+    final_human_review = qc.get("final_human_review_evidence", {})
+    required_final_human_review = {
+        "quality_report_contract": "toolradar.video-quality-report.v1",
+        "quality_report_ref": "",
+        "quality_report_media_sha256": "",
+        "quality_report_media_identity_status": "UNPROVED",
+        "automated_gate_status": "NOT_PROVED",
+        "human_review_contract": "toolradar.final-human-review-receipt.v1",
+        "human_review_receipt_ref": "",
+        "human_review_media_sha256": "",
+        "human_review_media_identity_status": "UNPROVED",
+        "decision": "NOT_PROVED",
+        "release_handoff_allowed": False,
+        "publication_allowed": False,
+    }
+    for key, expected in required_final_human_review.items():
+        if final_human_review.get(key) != expected:
+            errors.append(f"final human review evidence template must default {key}={expected}")
+
     if qc.get("final_ready") is not False:
         errors.append("qc template must default final_ready=false")
     if qc.get("gates", {}).get("artifact_record") != "PENDING":
         errors.append("qc artifact_record gate must default PENDING")
     if qc.get("gates", {}).get("technical") != "PENDING":
         errors.append("qc technical gate must default PENDING")
+    if qc.get("gates", {}).get("human_review") != "PENDING":
+        errors.append("qc human_review gate must default PENDING")
 
     qc_blockers = set(qc.get("blockers", []))
     for blocker in [
         "FINAL_RENDER_ARTIFACT_IDENTITY_REQUIRED",
         "FINAL_RENDER_FFPROBE_REQUIRED",
         "FINAL_RENDER_TERMINAL_EVIDENCE_REQUIRED",
+        "FINAL_HUMAN_REVIEW_QUALITY_REPORT_REQUIRED",
+        "FINAL_HUMAN_REVIEW_MEDIA_IDENTITY_REQUIRED",
+        "FINAL_HUMAN_REVIEW_APPROVAL_REQUIRED",
     ]:
         if blocker not in qc_blockers:
             errors.append(f"qc template missing fail-closed blocker: {blocker}")
 except Exception as exc:
-    errors.append(f"final render evidence contract invalid: {exc}")
+    errors.append(f"final render/human review evidence contract invalid: {exc}")
 
 if errors:
     print("FAIL")
