@@ -25,10 +25,23 @@
 - audio track
 - no black frames / clipping
 
+## Final Render Evidence
+Final / FINAL_CANDIDATE 不能只记录“render success”。QC 必须引用既有 Shared Media `media.render.v1` render result / render evidence，而不是复制第二套 render engine，并绑定同一个最终 MP4 的：
+- exact artifact path + SHA-256
+- ffprobe 结果、真实宽高 / fps / video codec / audio codec / duration
+- artifact manifest ref
+- input manifest digest
+- render-log SHA-256
+- terminal render status
+
+`artifact_identity_status`、`ffprobe_status` 或 `terminal_status` 任一未证明时，`artifact_record` / `technical` gate 不得 PASS，`final_ready` 必须保持 false。CI green、preview success、review binary SHA 都不能代替 canonical terminal render evidence。
+
 ## Evidence
 - asset provenance
 - SHA
 - contact sheet
 - usage receipt
+- `media.render.v1` result/evidence refs
+- final artifact manifest + input manifest digest + render-log SHA
 
 所有 Gate PASS 才是 FINAL。
