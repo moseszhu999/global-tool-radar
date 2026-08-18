@@ -115,6 +115,25 @@ try:
         if audio.get(key) != expected:
             errors.append(f"render audio contract must default {key}={expected}")
 
+    input_identity = render.get("input_manifest_identity", {})
+    required_input_identity = {
+        "input_manifest_digest": "",
+        "identity_status": "UNPROVED",
+        "render_spec_ref": "render_spec.json",
+        "render_spec_sha256": "",
+        "render_spec_identity_status": "UNPROVED",
+        "final_audio_evidence_ref": "voice_casting.json#final_audio_evidence",
+        "final_audio_evidence_digest": "",
+        "final_audio_identity_status": "UNPROVED",
+        "timing_lock_ref": "voice_casting.json#timing_lock",
+        "timing_lock_evidence_digest": "",
+        "timing_lock_identity_status": "UNPROVED",
+        "voice_timing_cross_binding_status": "NOT_PROVED",
+    }
+    for key, expected in required_input_identity.items():
+        if input_identity.get(key) != expected:
+            errors.append(f"render input manifest identity must default {key}={expected}")
+
     blockers = set(render.get("preflight", {}).get("blockers", []))
     for blocker in [
         "FINAL_VOICE_APPROVAL_REQUIRED",
@@ -122,6 +141,9 @@ try:
         "TIMING_LOCK_REQUIRED",
         "CAPTIONS_RETIME_REQUIRED",
         "FINAL_MIX_REBUILD_REQUIRED",
+        "INPUT_MANIFEST_IDENTITY_REQUIRED",
+        "RENDER_SPEC_IDENTITY_REQUIRED",
+        "VOICE_TIMING_CROSS_BINDING_REQUIRED",
     ]:
         if blocker not in blockers:
             errors.append(f"render preflight missing fail-closed blocker: {blocker}")
@@ -153,6 +175,26 @@ try:
     for key, expected in required_final_render.items():
         if final_render.get(key) != expected:
             errors.append(f"final render evidence template must default {key}={expected}")
+
+    cross_binding = qc.get("input_manifest_cross_binding", {})
+    required_cross_binding = {
+        "render_spec_ref": "render_spec.json",
+        "render_spec_sha256": "",
+        "render_spec_identity_status": "UNPROVED",
+        "input_manifest_digest": "",
+        "input_manifest_identity_status": "UNPROVED",
+        "final_audio_evidence_ref": "voice_casting.json#final_audio_evidence",
+        "final_audio_evidence_digest": "",
+        "final_audio_identity_status": "UNPROVED",
+        "timing_lock_ref": "voice_casting.json#timing_lock",
+        "timing_lock_evidence_digest": "",
+        "timing_lock_identity_status": "UNPROVED",
+        "voice_timing_cross_binding_status": "NOT_PROVED",
+        "render_input_cross_binding_status": "NOT_PROVED",
+    }
+    for key, expected in required_cross_binding.items():
+        if cross_binding.get(key) != expected:
+            errors.append(f"qc input manifest cross-binding must default {key}={expected}")
 
     final_human_review = qc.get("final_human_review_evidence", {})
     required_final_human_review = {
@@ -187,6 +229,9 @@ try:
         "FINAL_RENDER_ARTIFACT_IDENTITY_REQUIRED",
         "FINAL_RENDER_FFPROBE_REQUIRED",
         "FINAL_RENDER_TERMINAL_EVIDENCE_REQUIRED",
+        "FINAL_RENDER_INPUT_MANIFEST_IDENTITY_REQUIRED",
+        "FINAL_RENDER_SPEC_IDENTITY_REQUIRED",
+        "FINAL_AUDIO_TIMING_CROSS_BINDING_REQUIRED",
         "FINAL_HUMAN_REVIEW_QUALITY_REPORT_REQUIRED",
         "FINAL_HUMAN_REVIEW_MEDIA_IDENTITY_REQUIRED",
         "FINAL_HUMAN_REVIEW_APPROVAL_REQUIRED",
