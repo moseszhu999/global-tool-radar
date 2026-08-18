@@ -1,64 +1,76 @@
-# isolated quality-casting probe 2026-08-11
-name: AI Video Quality Casting
+# isolated quality-casting / carrier validation 2026-08-18
+name: AI Video Voice Carrier Evidence
 on:
   pull_request:
     branches:
       - main
     paths:
       - .github/workflows/ai-video-quality-casting.yml
+
+permissions:
+  contents: read
+
 jobs:
-  cast:
-    runs-on: [self-hosted, macOS, ARM64]
-    timeout-minutes: 10
+  validate-carrier:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CARRIER_REPO: moseszhu999/training-learning-rails
+      CARRIER_HEAD: 0d2ff4df5fe073f7d13304bd7127de4f05eda43a
+      CARRIER_DIR: tmp/ai-video-voice-casting-20260811
     steps:
-      - name: Inspect Chinese voices
+      - name: Validate persisted voice candidates from existing MacRunner carrier
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p voice-casting
-          say -v '?' > voice-casting/all-voices.txt
-          grep -Ei 'zh_|Chinese|Tingting|Meijia|Sinji|Yu-shu|Li-mu|Flo|Shelley' voice-casting/all-voices.txt | tee voice-casting/chinese-voices.txt || true
-      - name: Generate three candidates
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p voice-casting
-          cat > voice-casting/script.txt <<'TXT'
-          你有没有发现，同样是冰咖啡，冷萃喝起来常常更顺口？关键不是“更淡”，而是萃取方式不同。冰美式先用热水快速萃取，再加冰降温；冷萃从一开始就用冷水，经过大约十二个小时慢慢萃取。低温和长时间，会让尖锐的酸苦感不那么突出，甜感和圆润感更容易被喝出来。所以，冷萃不是更没味道，而是风味走了另一条路线。本周，来北纬三十九度 Coffee，亲自喝一杯试试看。
-          TXT
-          voices=()
-          while IFS= read -r voice; do
-            [ -n "$voice" ] || continue
-            voices[${#voices[@]}]="$voice"
-            [ ${#voices[@]} -ge 3 ] && break
-          done < <(awk '{print $1}' voice-casting/chinese-voices.txt | sed '/^$/d' | awk '!seen[$0]++')
-          if [ ${#voices[@]} -eq 0 ]; then echo 'No Chinese voice found' >&2; exit 2; fi
-          while [ ${#voices[@]} -lt 3 ]; do voices+=("${voices[0]}"); done
-          rates=(184 176 168)
-          for i in 0 1 2; do
-            n=$((i+1)); v="${voices[$i]}"
-            echo "$v" > "voice-casting/candidate-${n}-voice.txt"
-            say -v "$v" -r "${rates[$i]}" -f voice-casting/script.txt -o "voice-casting/candidate-${n}.aiff"
-            afconvert -f WAVE -d LEI16@48000 "voice-casting/candidate-${n}.aiff" "voice-casting/candidate-${n}.wav"
-          done
-          shasum -a 256 voice-casting/*.wav > voice-casting/SHA256SUMS.txt
-      - name: Generate metadata
-        shell: bash
-        run: |
-          set -euo pipefail
+          mkdir -p voice-carrier-evidence
+          base="https://raw.githubusercontent.com/${CARRIER_REPO}/${CARRIER_HEAD}/${CARRIER_DIR}"
+
+          cat > voice-carrier-evidence/expected-sha256.txt <<'EOF'
+          cc9578327fff9a7125c004722de6c2247f449085ddab4c7ae8912433795f48c6  audition-flo.m4a
+          f73f3147b2a926ec89021d282d18b3ab542bb9b938ff413c0580c4f0f61592ef  audition-shelley.m4a
+          2f62445f2d830161988612a06bd969de62b2cca774eb5e55fa9a129403989425  audition-tingting.m4a
+          14bafbce3bac2c9e8edef1dd7f8bac6ec1b0de7b92c003aa348cec470bcc92eb  narration-flo-full.m4a
+          EOF
+
+          while read -r expected file; do
+            curl --fail --location --silent --show-error \
+              "${base}/${file}" \
+              --output "voice-carrier-evidence/${file}"
+            actual="$(sha256sum "voice-carrier-evidence/${file}" | awk '{print $1}')"
+            if [ "$actual" != "$expected" ]; then
+              echo "SHA mismatch for ${file}: expected ${expected}, got ${actual}" >&2
+              exit 3
+            fi
+          done < voice-carrier-evidence/expected-sha256.txt
+
           python3 - <<'PY'
-          import json, pathlib, wave
-          root=pathlib.Path('voice-casting'); out=[]
-          for i in range(1,4):
-              wav=root/f'candidate-{i}.wav'
-              with wave.open(str(wav),'rb') as w:
-                  dur=w.getnframes()/w.getframerate(); sr=w.getframerate(); ch=w.getnchannels()
-              out.append({'candidate':i,'voice':(root/f'candidate-{i}-voice.txt').read_text().strip(),'duration_s':round(dur,3),'sample_rate':sr,'channels':ch})
-          (root/'metadata.json').write_text(json.dumps(out,ensure_ascii=False,indent=2))
+          import hashlib, json, os, pathlib
+          root = pathlib.Path('voice-carrier-evidence')
+          samples = []
+          for path in sorted(root.glob('*.m4a')):
+              digest = hashlib.sha256(path.read_bytes()).hexdigest()
+              samples.append({
+                  'file': path.name,
+                  'bytes': path.stat().st_size,
+                  'sha256': digest,
+              })
+          manifest = {
+              'schemaVersion': 'toolradar.voice-carrier-evidence.v1',
+              'carrierRepo': os.environ['CARRIER_REPO'],
+              'carrierHead': os.environ['CARRIER_HEAD'],
+              'carrierDirectory': os.environ['CARRIER_DIR'],
+              'selectionStatus': 'HUMAN_REVIEW_REQUIRED',
+              'finalVoiceApproval': False,
+              'publicationAllowed': False,
+              'samples': samples,
+          }
+          (root / 'manifest.json').write_text(json.dumps(manifest, indent=2), encoding='utf-8')
           PY
-      - name: Upload candidates
+
+      - name: Upload bounded carrier evidence
         uses: actions/upload-artifact@v4
         with:
-          name: ai-video-quality-casting-20260811
-          path: voice-casting/
+          name: ai-video-voice-carrier-evidence-20260818
+          path: voice-carrier-evidence/
           retention-days: 7
