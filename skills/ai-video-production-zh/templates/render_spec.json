@@ -7,7 +7,15 @@
   "audio": {
     "narration": "",
     "music": "",
-    "sfx": []
+    "sfx": [],
+    "voice_casting_contract": "voice_casting.json",
+    "final_audio_evidence_ref": "voice_casting.json#final_audio_evidence",
+    "timing_lock_ref": "voice_casting.json#timing_lock",
+    "narration_identity_status": "UNPROVED",
+    "final_voice_approval_status": "NOT_PROVED",
+    "timeline_lock_status": "NOT_PROVED",
+    "captions_retime_status": "NOT_PROVED",
+    "final_mix_status": "NOT_PROVED"
   },
   "shots": [],
   "captions": {},
@@ -16,6 +24,12 @@
   "placeholder_policy": "forbidden_in_final",
   "preflight": {
     "render_authorized": false,
-    "blockers": []
+    "blockers": [
+      "FINAL_VOICE_APPROVAL_REQUIRED",
+      "FINAL_AUDIO_IDENTITY_REQUIRED",
+      "TIMING_LOCK_REQUIRED",
+      "CAPTIONS_RETIME_REQUIRED",
+      "FINAL_MIX_REBUILD_REQUIRED"
+    ]
   }
 }
