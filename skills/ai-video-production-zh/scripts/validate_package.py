@@ -98,6 +98,36 @@ try:
 except Exception as exc:
     errors.append(f"voice carrier contract invalid: {exc}")
 
+try:
+    render = json.loads((root / "templates/render_spec.json").read_text(encoding="utf-8"))
+    audio = render.get("audio", {})
+    required_audio = {
+        "voice_casting_contract": "voice_casting.json",
+        "final_audio_evidence_ref": "voice_casting.json#final_audio_evidence",
+        "timing_lock_ref": "voice_casting.json#timing_lock",
+        "narration_identity_status": "UNPROVED",
+        "final_voice_approval_status": "NOT_PROVED",
+        "timeline_lock_status": "NOT_PROVED",
+        "captions_retime_status": "NOT_PROVED",
+        "final_mix_status": "NOT_PROVED",
+    }
+    for key, expected in required_audio.items():
+        if audio.get(key) != expected:
+            errors.append(f"render audio contract must default {key}={expected}")
+
+    blockers = set(render.get("preflight", {}).get("blockers", []))
+    for blocker in [
+        "FINAL_VOICE_APPROVAL_REQUIRED",
+        "FINAL_AUDIO_IDENTITY_REQUIRED",
+        "TIMING_LOCK_REQUIRED",
+        "CAPTIONS_RETIME_REQUIRED",
+        "FINAL_MIX_REBUILD_REQUIRED",
+    ]:
+        if blocker not in blockers:
+            errors.append(f"render preflight missing fail-closed blocker: {blocker}")
+except Exception as exc:
+    errors.append(f"render voice/timing contract invalid: {exc}")
+
 if errors:
     print("FAIL")
     for error in errors:
