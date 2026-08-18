@@ -65,6 +65,36 @@ try:
     approval = voice.get("final_voice_approval", {})
     if approval.get("status") != "NOT_PROVED":
         errors.append("voice final approval template must fail closed as NOT_PROVED")
+
+    final_audio = voice.get("final_audio_evidence", {})
+    for key in [
+        "path",
+        "sha256",
+        "media_identity_status",
+        "ffprobe_status",
+        "codec",
+        "sample_rate_hz",
+        "channels",
+        "duration_sec",
+    ]:
+        if key not in final_audio:
+            errors.append(f"voice final audio evidence missing: {key}")
+    if final_audio.get("media_identity_status") != "UNPROVED":
+        errors.append("voice final audio identity template must fail closed as UNPROVED")
+    if final_audio.get("ffprobe_status") != "NOT_PROVED":
+        errors.append("voice ffprobe template must fail closed as NOT_PROVED")
+
+    timing_lock = voice.get("timing_lock", {})
+    for key in ["status", "duration_source", "timeline_relocked", "captions_retimed", "final_mix_rebuilt"]:
+        if key not in timing_lock:
+            errors.append(f"voice timing lock contract missing: {key}")
+    if timing_lock.get("status") != "NOT_PROVED":
+        errors.append("voice timing lock template must fail closed as NOT_PROVED")
+    if timing_lock.get("duration_source") != "final_audio_evidence.duration_sec":
+        errors.append("voice timing lock duration source must bind to final_audio_evidence.duration_sec")
+    for key in ["timeline_relocked", "captions_retimed", "final_mix_rebuilt"]:
+        if timing_lock.get(key) is not False:
+            errors.append(f"voice timing lock template must default {key}=false")
 except Exception as exc:
     errors.append(f"voice carrier contract invalid: {exc}")
 
