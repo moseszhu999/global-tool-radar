@@ -35,16 +35,27 @@ jobs:
           python3 - <<'PY'
           import json, os, pathlib
           root = pathlib.Path('voice-carrier-evidence')
+          carrier_repo = os.environ['CARRIER_REPO']
+          carrier_head = os.environ['CARRIER_HEAD']
+          carrier_dir = os.environ['CARRIER_DIR']
           samples = []
           for line in (root / 'expected-sha256.txt').read_text().splitlines():
               sha256, file = line.split(None, 1)
-              samples.append({'file': file.strip(), 'expectedSha256': sha256})
+              file = file.strip()
+              source_path = f'{carrier_dir}/{file}'
+              samples.append({
+                  'file': file,
+                  'expectedSha256': sha256,
+                  'sourcePath': source_path,
+                  'sourceLocator': f'github://{carrier_repo}@{carrier_head}/{source_path}',
+              })
           manifest = {
               'schemaVersion': 'toolradar.voice-carrier-reference.v1',
-              'carrierRepo': os.environ['CARRIER_REPO'],
+              'carrierRepo': carrier_repo,
               'carrierPr': int(os.environ['CARRIER_PR']),
-              'carrierHead': os.environ['CARRIER_HEAD'],
-              'carrierDirectory': os.environ['CARRIER_DIR'],
+              'carrierHead': carrier_head,
+              'carrierDirectory': carrier_dir,
+              'carrierExactHeadLocked': True,
               'externalMediaIdentityRefetchedByThisWorkflow': False,
               'externalMediaIdentityEvidence': 'REQUIRES_EXISTING_CARRIER_EXACT_HEAD_OR_CHAT_GITHUB_CONNECTOR_EVIDENCE',
               'crossRepoCredentialAdded': False,
