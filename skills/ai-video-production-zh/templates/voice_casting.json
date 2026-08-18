@@ -28,6 +28,23 @@
     "approved_voice_id": null,
     "approved_media_sha256": null
   },
+  "final_audio_evidence": {
+    "path": "",
+    "sha256": null,
+    "media_identity_status": "UNPROVED",
+    "ffprobe_status": "NOT_PROVED",
+    "codec": null,
+    "sample_rate_hz": null,
+    "channels": null,
+    "duration_sec": null
+  },
+  "timing_lock": {
+    "status": "NOT_PROVED",
+    "duration_source": "final_audio_evidence.duration_sec",
+    "timeline_relocked": false,
+    "captions_retimed": false,
+    "final_mix_rebuilt": false
+  },
   "final_audio_path": "",
   "actual_duration_sec": null
 }
