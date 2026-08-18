@@ -40,6 +40,34 @@ for path in (root / "templates").glob("*.json"):
     except Exception as exc:
         errors.append(f"invalid json {path.name}: {exc}")
 
+try:
+    voice = json.loads((root / "templates/voice_casting.json").read_text(encoding="utf-8"))
+    carrier = voice.get("carrier_evidence", {})
+    for key in [
+        "carrier_repo",
+        "carrier_exact_head",
+        "carrier_exact_head_locked",
+        "external_media_identity_refetched_by_this_workflow",
+        "cross_repo_credential_added",
+    ]:
+        if key not in carrier:
+            errors.append(f"voice carrier contract missing: {key}")
+
+    candidates = voice.get("candidates")
+    if not isinstance(candidates, list) or not candidates:
+        errors.append("voice carrier contract requires a candidate evidence shape")
+    else:
+        candidate = candidates[0]
+        for key in ["voice_id", "source_path", "source_locator", "expected_sha256", "media_identity_status", "human_listening_status"]:
+            if key not in candidate:
+                errors.append(f"voice candidate contract missing: {key}")
+
+    approval = voice.get("final_voice_approval", {})
+    if approval.get("status") != "NOT_PROVED":
+        errors.append("voice final approval template must fail closed as NOT_PROVED")
+except Exception as exc:
+    errors.append(f"voice carrier contract invalid: {exc}")
+
 if errors:
     print("FAIL")
     for error in errors:
