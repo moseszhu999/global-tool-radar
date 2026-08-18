@@ -17,6 +17,20 @@
     "captions_retime_status": "NOT_PROVED",
     "final_mix_status": "NOT_PROVED"
   },
+  "input_manifest_identity": {
+    "input_manifest_digest": "",
+    "identity_status": "UNPROVED",
+    "render_spec_ref": "render_spec.json",
+    "render_spec_sha256": "",
+    "render_spec_identity_status": "UNPROVED",
+    "final_audio_evidence_ref": "voice_casting.json#final_audio_evidence",
+    "final_audio_evidence_digest": "",
+    "final_audio_identity_status": "UNPROVED",
+    "timing_lock_ref": "voice_casting.json#timing_lock",
+    "timing_lock_evidence_digest": "",
+    "timing_lock_identity_status": "UNPROVED",
+    "voice_timing_cross_binding_status": "NOT_PROVED"
+  },
   "shots": [],
   "captions": {},
   "asset_manifest": "asset_manifest.json",
@@ -29,7 +43,10 @@
       "FINAL_AUDIO_IDENTITY_REQUIRED",
       "TIMING_LOCK_REQUIRED",
       "CAPTIONS_RETIME_REQUIRED",
-      "FINAL_MIX_REBUILD_REQUIRED"
+      "FINAL_MIX_REBUILD_REQUIRED",
+      "INPUT_MANIFEST_IDENTITY_REQUIRED",
+      "RENDER_SPEC_IDENTITY_REQUIRED",
+      "VOICE_TIMING_CROSS_BINDING_REQUIRED"
     ]
   }
 }
