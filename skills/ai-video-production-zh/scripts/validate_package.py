@@ -220,6 +220,15 @@ try:
         if final_human_review.get(key) != expected:
             errors.append(f"final human review evidence template must default {key}={expected}")
 
+    final_media_sha = final_render.get("artifact_sha256", "")
+    quality_media_sha = final_human_review.get("quality_report_media_sha256", "")
+    human_media_sha = final_human_review.get("human_review_media_sha256", "")
+    populated_media_shas = [sha for sha in [final_media_sha, quality_media_sha, human_media_sha] if sha]
+    if populated_media_shas and (
+        len(populated_media_shas) != 3 or len(set(populated_media_shas)) != 1
+    ):
+        errors.append("qc final render, quality report, and human review media SHA-256 identities must all be populated and equal")
+
     if qc.get("final_ready") is not False:
         errors.append("qc template must default final_ready=false")
     if qc.get("gates", {}).get("artifact_record") != "PENDING":
@@ -240,6 +249,7 @@ try:
         "FINAL_RENDER_INPUT_MANIFEST_DIGEST_MATCH_REQUIRED",
         "FINAL_HUMAN_REVIEW_QUALITY_REPORT_REQUIRED",
         "FINAL_HUMAN_REVIEW_MEDIA_IDENTITY_REQUIRED",
+        "FINAL_HUMAN_REVIEW_MEDIA_SHA_MATCH_REQUIRED",
         "FINAL_HUMAN_REVIEW_AUTOMATED_GATE_REQUIRED",
         "FINAL_HUMAN_REVIEW_APPROVAL_REQUIRED",
     ]:
