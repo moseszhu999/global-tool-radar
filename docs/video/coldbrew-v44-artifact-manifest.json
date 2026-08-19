@@ -1,0 +1,179 @@
+{
+  "schemaVersion": "video.operation.review-artifact-manifest.v1",
+  "updatedAt": "2026-08-19T21:34:00+08:00",
+  "status": "SOURCE_RESET_SCENE1_MOTION_REVIEW",
+  "repository": "moseszhu999/global-tool-radar",
+  "handoffBranch": "agent/video-operation-v44-handoff-20260813",
+  "baseline": {
+    "name": "SourceReset0.mp4",
+    "status": "HUMAN_CONFIRMED_BLACK_SEAMS_GONE",
+    "humanFeedback": "至少那些讨厌的黑缝没了",
+    "rule": "Never reintroduce seam-producing cross-shot composite, crossfade, alpha/matte, diagonal-mask, or moving boundary footage."
+  },
+  "artifact": {
+    "name": "SourceReset1_Scene1Motion.mp4",
+    "sha256": "6dcedbe09a7859088c4c86a1e65a696c172cde32bf82629802ef2b3f8b6f3759",
+    "bytes": 3455476,
+    "durationSeconds": 32.0,
+    "video": {"codec": "h264", "width": 1080, "height": 1920, "fps": 30, "frames": 960, "durationSeconds": 32.0},
+    "audio": {"codec": "aac", "sampleRate": 48000, "channels": 2, "durationSeconds": 32.0},
+    "durableBinary": {
+      "provider": "Google Drive",
+      "fileId": "1yDzWrtJxpkkme1tFwI9D1cYHsW9KAs_X",
+      "fileName": "VideoOperation-ColdBrew-SourceReset1-Scene1Motion-20260813.mp4"
+    }
+  },
+  "provenance": {
+    "binaryIdentityStatus": "PROVED",
+    "editableSourceStatus": "MISSING_FROM_CURRENT_EVIDENCE",
+    "renderOwnerStatus": "MISSING_FROM_CURRENT_EVIDENCE",
+    "editableSourceAssetId": null,
+    "editableSourcePath": null,
+    "editableSourceDigest": null,
+    "sourcePackageId": null,
+    "renderEntrypoint": null,
+    "renderJobRef": null,
+    "renderReceiptRef": null,
+    "renderOwnerRef": null,
+    "rule": "Populate provenance fields only from durable source IDs/digests or existing render job/receipt/owner evidence; do not infer or fabricate them."
+  },
+  "canonicalRenderEvidence": {
+    "contract": "media.render.v1",
+    "status": "NOT_PROVED",
+    "reviewBinaryIdentityStatus": "PROVED",
+    "artifactSha256Status": "PROVED_AT_REVIEW_ARTIFACT_LEVEL",
+    "requestId": null,
+    "jobId": null,
+    "evidenceId": null,
+    "inputManifestDigest": null,
+    "renderLogSha256": null,
+    "renderReceiptRef": null,
+    "renderResultRef": null,
+    "terminalReceiptBindingStatus": "MISSING_FROM_CURRENT_EVIDENCE",
+    "requestJobIdentityBindingStatus": "MISSING_FROM_CURRENT_EVIDENCE",
+    "inputManifestDigestBindingStatus": "MISSING_FROM_CURRENT_EVIDENCE",
+    "renderLogDigestStatus": "MISSING_FROM_CURRENT_EVIDENCE",
+    "rule": "A valid Video Operation review MP4 is not equivalent to canonical media.render.v1 terminal evidence. Populate request/job/evidence identities, inputManifestDigest, render-log SHA-256, and terminal receipt/result refs only from the existing Shared Media render owner; do not infer or fabricate them and do not create a second render engine."
+  },
+  "formalReviewRouting": {
+    "status": "IDENTIFIED_NOT_READY",
+    "qualityReportContract": "toolradar.video-quality-report.v1",
+    "finalRenderEvidenceIntake": "packages/final-render-evidence-intake",
+    "finalHumanReview": "packages/final-human-review",
+    "renderCommandManifestId": null,
+    "qualityReportRef": null,
+    "qualityReportMediaSha256BindingStatus": "MISSING_FROM_CURRENT_EVIDENCE",
+    "automatedGateStatus": "NOT_PROVED_FOR_SOURCE_RESET1",
+    "finalRenderEvidenceIntakeStatus": "NOT_READY",
+    "finalHumanReviewInputStatus": "NOT_READY",
+    "releaseHandoffStatus": "BLOCKED",
+    "finalRenderEvidenceIntakeContractAudit": {
+      "auditedRef": "main@23d92ffc4674f1581c4191e595d279a20008be53:packages/final-render-evidence-intake/src/index.mjs",
+      "status": "INSUFFICIENT_ALONE_FOR_CANONICAL_MEDIA_RENDER_V1_TERMINAL_EVIDENCE",
+      "intakeCurrentlyRequires": [
+        "renderExecutionPerformed=true",
+        "outputPath readable",
+        "expectedSha256 exact match",
+        "positive duration",
+        "positive width/height",
+        "positive audioSampleRateHz",
+        "non-empty renderCommandManifestId"
+      ],
+      "canonicalEvidenceStillAdditionallyRequires": [
+        "requestId",
+        "jobId",
+        "evidenceId",
+        "requestJobIdentityBinding",
+        "inputManifestDigest",
+        "renderLogSha256",
+        "terminal render receipt/result binding"
+      ],
+      "rule": "READY_FOR_M10_REVIEW from final-render-evidence-intake is a bounded review-intake result only and must not be promoted to canonical media.render.v1 terminal evidence unless the existing Shared Media render owner separately supplies and binds the canonical request/job/evidence/input-manifest/render-log/terminal receipt chain."
+    },
+    "routingRule": "Reuse the existing source/render owner and existing quality/review contracts. Before formal final human review, require a real render execution bound to renderCommandManifestId, exact output SHA, valid technical media metadata, a toolradar.video-quality-report.v1 bound to the same media SHA with automatedGate=PASS, and canonical media.render.v1 terminal evidence from the existing Shared Media render owner. Do not fabricate these bindings and do not create a second render/review engine."
+  },
+  "construction": {
+    "base": "SourceReset0 clean six-shot hard-cut baseline",
+    "changedScene": 1,
+    "changedWindowSeconds": [0.0, 5.333333],
+    "unchangedScenes": [2,3,4,5,6],
+    "cameraMotion": 0,
+    "sceneBoundaryTransition": "hard_cut_only",
+    "localMotionFamilies": [
+      "coffee-stream specular travel",
+      "asymmetric ice caustic flickers",
+      "small condensation droplet slide",
+      "soft amber liquid-body caustic travel"
+    ],
+    "forbidden": [
+      "cross-shot composite",
+      "crossfade",
+      "alpha/matte transition",
+      "diagonal-mask reveal",
+      "whole-frame camera motion",
+      "perfect circular ripple",
+      "neon portal transition"
+    ]
+  },
+  "referenceLearning": {
+    "principle": "Keep product/camera stable; let liquid, steam/condensation, particles and specular light carry motion; product remains the visual anchor.",
+    "studiedReferences": [
+      "Illy Iperespresso commercial",
+      "NESCAFE Classic cinematic product commercial",
+      "Lavazza Coffee 3D Motion",
+      "Aroma Dance / Nespresso-inspired CGI"
+    ]
+  },
+  "qa": {
+    "scene1Frames": 160,
+    "fullVideoFrames": 960,
+    "fullVideoDurationSeconds": 32.0,
+    "audioDurationSeconds": 32.0,
+    "scene1ToScene2Boundary": "dense-frame visual check: clean hard cut; no blend/mask wedge observed",
+    "blackSeamRegressionStatus": "NOT_OBSERVED_IN_RECORDED_TECHNICAL_AND_SAMPLED_CHECKS",
+    "scene1MotionReviewStatus": "HUMAN_REVIEW_REQUIRED",
+    "scene1MotionSalience": "LOW_WHOLE_FRAME_SALIENCE",
+    "temporalMotionEvidence": {
+      "status": "PROVED_BOUNDED",
+      "method": "Farneback optical flow measured frame-to-frame on Scene 1 for durable SourceReset0 and SourceReset1 binaries using a 270x480 analysis surface",
+      "baselineSha256": "a9fa19e8b188f10ae0bc992b462e5dcfc6411eb98a40aa7865022b17bf808576",
+      "candidateSha256": "6dcedbe09a7859088c4c86a1e65a696c172cde32bf82629802ef2b3f8b6f3759",
+      "baselineAverageFlowPxPerFrame": 0.000638,
+      "candidateAverageFlowPxPerFrame": 0.001621,
+      "candidateToBaselineAverageRatio": 2.54,
+      "candidatePeakFlowPxPerFrame": 0.01494,
+      "candidatePeakTimeSeconds": 0.87,
+      "strongestAddedMotionWindowSeconds": [0.5, 1.0],
+      "strongestWindowRatioVsBaseline": 12.8,
+      "secondStrongWindowSeconds": [1.0, 1.5],
+      "secondStrongWindowRatioVsBaseline": 5.17,
+      "after1_5sWindowRatioRangeVsBaseline": [1.08, 1.31],
+      "interpretation": "Real temporal motion exists, but added motion is strongly front-loaded around 0.5-1.5s and remains near the static baseline after 1.5s; this does not replace human creative review."
+    },
+    "compositionIssues": [
+      {
+        "id": "scene1.brand-footer.bottom-clip",
+        "status": "CONFIRMED_FULL_SCENE1",
+        "scope": "scene_1",
+        "originStatus": "INHERITED_FROM_SOURCERESET0_BASELINE",
+        "regressionStatus": "NOT_INTRODUCED_BY_SOURCERESET1_MOTION",
+        "baselineFramesTouchingCanvasEdge": 160,
+        "candidateFramesTouchingCanvasEdge": 160,
+        "evidence": "native 1080x1920 bottom-center footer scans show glyph content reaching final canvas row y=1919 in all 160 Scene-1 frames for both durable SourceReset0 and SourceReset1 binaries; representative review shows the lower portion of 北纬39° Coffee clipped by the bottom boundary",
+        "sourceOwnerStatus": "NOT_PROVED",
+        "correctionStatus": "BLOCKED_CHAT_ONLY_EXACT_SOURCE_NOT_LOCATED"
+      }
+    ],
+    "humanReviewRequired": true
+  },
+  "gates": {
+    "scene1HumanMotionReview": "OPEN",
+    "scene1FooterCorrection": "BLOCKED_EXACT_EDITABLE_SOURCE_NOT_LOCATED",
+    "canonicalMediaRenderTerminalEvidence": "NOT_PROVED",
+    "formalFinalHumanReviewInput": "NOT_READY",
+    "scene2Motion": "HOLD",
+    "finalVideo": "NOT_PROVED"
+  },
+  "nextRule": "Do not animate scene 2 until SourceReset1 scene-1 motion is human-reviewed. Treat the clipped footer as an inherited SourceReset0 baseline composition defect, not a SourceReset1 motion regression. Do not patch it in pixels or with a parallel overlay/render path; correct it only inside an identified existing editable source/render owner, then re-render through the existing Shared Media / Remotion path. For formal review, reuse the existing final-render-evidence intake and final-human-review contracts, but treat final-render-evidence-intake READY_FOR_M10_REVIEW as review-intake evidence only; require a media-SHA-bound toolradar.video-quality-report.v1 plus separately bound canonical media.render.v1 terminal evidence before any Final or release-handoff claim.",
+  "boundaries": {"merge": false, "deploy": false, "publication": false}
+}
