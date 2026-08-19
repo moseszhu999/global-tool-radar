@@ -54,6 +54,7 @@ try:
             errors.append(f"voice carrier contract missing: {key}")
 
     candidates = voice.get("candidates")
+    candidate_voice_ids = set()
     if not isinstance(candidates, list) or not candidates:
         errors.append("voice carrier contract requires a candidate evidence shape")
     else:
@@ -61,10 +62,22 @@ try:
         for key in ["voice_id", "source_path", "source_locator", "expected_sha256", "media_identity_status", "human_listening_status"]:
             if key not in candidate:
                 errors.append(f"voice candidate contract missing: {key}")
+        candidate_voice_ids = {
+            item.get("voice_id") for item in candidates
+            if isinstance(item, dict) and item.get("voice_id")
+        }
 
     approval = voice.get("final_voice_approval", {})
     if approval.get("status") != "NOT_PROVED":
         errors.append("voice final approval template must fail closed as NOT_PROVED")
+
+    selected_voice = voice.get("selected_voice")
+    approved_voice_id = approval.get("approved_voice_id")
+    if selected_voice or approved_voice_id:
+        if not selected_voice or not approved_voice_id or selected_voice != approved_voice_id:
+            errors.append("voice selected_voice and final_voice_approval.approved_voice_id must both be populated and equal")
+        elif selected_voice not in candidate_voice_ids:
+            errors.append("voice selected/approved voice_id must exist in candidates")
 
     final_audio = voice.get("final_audio_evidence", {})
     for key in [
@@ -83,6 +96,12 @@ try:
         errors.append("voice final audio identity template must fail closed as UNPROVED")
     if final_audio.get("ffprobe_status") != "NOT_PROVED":
         errors.append("voice ffprobe template must fail closed as NOT_PROVED")
+
+    approved_media_sha = approval.get("approved_media_sha256")
+    final_audio_sha = final_audio.get("sha256")
+    if approved_media_sha or final_audio_sha:
+        if not approved_media_sha or not final_audio_sha or approved_media_sha != final_audio_sha:
+            errors.append("voice approved_media_sha256 and final_audio_evidence.sha256 must both be populated and equal")
 
     timing_lock = voice.get("timing_lock", {})
     for key in ["status", "duration_source", "timeline_relocked", "captions_retimed", "final_mix_rebuilt"]:
@@ -124,7 +143,7 @@ try:
         "render_spec_identity_status": "UNPROVED",
         "final_audio_evidence_ref": "voice_casting.json#final_audio_evidence",
         "final_audio_evidence_digest": "",
-        "final_audio_identity_status": "UNPROVED",
+        "final_audio_identity_status": "UNPROVEN",
         "timing_lock_ref": "voice_casting.json#timing_lock",
         "timing_lock_evidence_digest": "",
         "timing_lock_identity_status": "UNPROVED",
