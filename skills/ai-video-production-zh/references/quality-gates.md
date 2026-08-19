@@ -49,6 +49,8 @@ Final / FINAL_CANDIDATE 还必须复用仓库现有的人审链，而不是另�
 - human review decision 必须为 `APPROVED_FOR_RELEASE_HANDOFF`，且 `release_handoff_allowed=true`；
 - human-review receipt 的 `publication_allowed` 必须保持 false；正式发布授权属于后续独立边界。
 
+`FINAL_HUMAN_REVIEW_AUTOMATED_GATE_REQUIRED` 是显式 fail-closed blocker：只要 `automated_gate_status` 未证明为 PASS，正式 human-review gate 不得被接受为通过，即使 quality report、媒体 SHA 或人工 decision 字段已经存在。
+
 任一 media identity 未证明、automated gate 未 PASS、human review 未批准或 receipt 仍有 blocker 时，`human_review` gate 不得 PASS，`final_ready` 必须保持 false。人工口头认可、PR comment、CI green 或 review-binary SHA 都不能替代正式 human-review receipt。
 
 ## Evidence
