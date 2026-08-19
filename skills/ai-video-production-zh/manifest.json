@@ -1,0 +1,36 @@
+{
+  "name": "ai-video-production-zh",
+  "version": "2.0.0",
+  "status": "canonical-candidate",
+  "supersedes": "1.0.0",
+  "retired": [
+    "1.1.0-chat-draft"
+  ],
+  "entry": "SKILL.md",
+  "generated_on": "2026-08-11",
+  "files": [
+    {"path":"CHANGELOG.md","sha256":"0259a93b3d5c6466d0acf5497cadd7a9abf1aa38eb65c5d5c93cfd029ac02d97"},
+    {"path":"README.md","sha256":"4ef417ef7e97b7520eba228c34fb8559d10eacd2e3446c64534fe7eb0d96bc12"},
+    {"path":"SKILL.md","sha256":"cfa3530fd48d07e82cb6799ef2274b16e70439e886e4b0b86f11a709ff3a2fac"},
+    {"path":"examples/cold-brew-30s/STATUS.md","sha256":"d0e8aa01504e0af4731e0be6778321ab2924c34ed0b3bbeb42dd93f4450d40a0"},
+    {"path":"examples/cold-brew-30s/creative_brief.json","sha256":"ff37c5f0541b65c8158619019a311d96e9599db9fabd2abf527c352b4a0bc4c5"},
+    {"path":"references/architecture.md","sha256":"750f57972381eb174eb3cf08192265b33ce3b19fdde03daa76b2dda6cd78b7c3"},
+    {"path":"references/asset-promotion.md","sha256":"0fe0dcd3ba6d79ce8ae0acaf80099be8107aaec691af06f2af6da30e858467ee"},
+    {"path":"references/production-formats.md","sha256":"42f76c5e1678dbba486dcadfa3c395bdf40df0512f3ce7ff9c86f104aa294590"},
+    {"path":"references/quality-gates.md","sha256":"d1a7952cd84ef2bcb3f944cbac193763416dd26fe77eb43934dad1e29c9b5fd1"},
+    {"path":"references/remotion-handoff.md","sha256":"59eea79fcbd924bc45cf3f3b5441be1ec6743e2d2a4a89eb5e7275dab509da2d"},
+    {"path":"references/voice-and-timing.md","sha256":"ad17e735f1b2aad1c490ef9bfbd36a5a64ab9f55a80880d85bc815c462994d55"},
+    {"path":"scripts/validate_package.py","sha256":"2b34e641883d1324ac051859f2e1a26242c93a88cf1af073be26a6011e200f8a"},
+    {"path":"templates/asset_manifest.json","sha256":"3c5a06adb788b8976af971597f2edda82acab6e963594acbb1cfdffcd016d49b"},
+    {"path":"templates/asset_usage_receipt.json","sha256":"5a071b9906ed539cbb79de502f97297727da546622f34e30372ecf4847a16451"},
+    {"path":"templates/character_bible.json","sha256":"cd8bd179c8392e0d92aa8f8be507fe570d2c532c617289a5ebdd16fe525c9219"},
+    {"path":"templates/creative_brief.json","sha256":"cd5f0e9a2f1c8c0aa3bb8044c312df26e3ecb44410fc6e96c5ca3a601b9b4145"},
+    {"path":"templates/motion_plan.json","sha256":"7839d318b9e691532e23ec61dc85b612c7546cc219672f9a07dac92f93ceafb9"},
+    {"path":"templates/qc_report.json","sha256":"7189369fa7d780f4a0e5e4186676f2dae46c9816e746b1897a4b6e1615a1e961"},
+    {"path":"templates/render_spec.json","sha256":"0eb9baca0c8b5b52f774f475e2369bd9ee84f9200cb067b45a8c4f28926fbb76"},
+    {"path":"templates/shot_asset_binding.json","sha256":"496f1087107f2e303505dfad23884e3a7928d15b929079d3c5cf948b256e1859"},
+    {"path":"templates/shotlist.json","sha256":"40f2605f66e8d43bd6ba3f3641e35c811b650efd32bc843de314b52551698cd0"},
+    {"path":"templates/style_bible.json","sha256":"862d48396da09b623b4c0d178b9b874847afd4d9c113b89929bb7a43a0999a1b"},
+    {"path":"templates/voice_casting.json","sha256":"54cdd5b42a0274561960ff6384a25348755a1b6f67b2ffbdc87051619bbd0f36"}
+  ]
+}

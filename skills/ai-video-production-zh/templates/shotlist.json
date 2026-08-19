@@ -1,0 +1,23 @@
+{
+  "shots": [
+    {
+      "shot_id": "S01",
+      "purpose": "",
+      "duration_sec": 5.0,
+      "narration": "",
+      "subject": "",
+      "action": "",
+      "location": "",
+      "composition": "",
+      "camera": "",
+      "lighting": "",
+      "emotion": "",
+      "character_ids": [],
+      "style_id": "style_001",
+      "continuity_from": null,
+      "continuity_to": "S02",
+      "asset_requirements": [],
+      "transition": ""
+    }
+  ]
+}

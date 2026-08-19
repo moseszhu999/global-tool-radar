@@ -1,0 +1,23 @@
+{
+  "contract": "media.shot.asset-binding.v1",
+  "bindings": [
+    {
+      "shot_id": "S01",
+      "frame_range": [0, 150],
+      "assets": [
+        {
+          "asset_id": "ast_S01_001",
+          "role": "hero_visual",
+          "layer": 20,
+          "required": true,
+          "animation": {"preset": "slow_push"}
+        }
+      ]
+    }
+  ],
+  "render_policy": {
+    "fail_if_required_asset_missing": true,
+    "fail_if_asset_unpromoted": true,
+    "allow_placeholder_in_final": false
+  }
+}

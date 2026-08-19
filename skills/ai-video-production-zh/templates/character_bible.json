@@ -1,0 +1,24 @@
+{
+  "characters": [
+    {
+      "character_id": "char_001",
+      "name": "",
+      "role": "",
+      "age_read": "",
+      "body_shape": "",
+      "face_shape": "",
+      "hair": "",
+      "eyes": "",
+      "skin_or_material": "",
+      "signature_clothes": "",
+      "signature_props": [],
+      "silhouette": "",
+      "palette_words": [],
+      "personality_visual_cues": [],
+      "negative_constraints": [],
+      "reference_assets": [],
+      "production_mode": "2d|2_5d|3d",
+      "3d_asset": null
+    }
+  ]
+}

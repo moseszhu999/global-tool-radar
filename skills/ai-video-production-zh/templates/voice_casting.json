@@ -1,0 +1,50 @@
+{
+  "schema_version": "media.voice.casting.v2",
+  "language": "zh-CN",
+  "carrier_evidence": {
+    "carrier_repo": null,
+    "carrier_exact_head": null,
+    "carrier_exact_head_locked": false,
+    "external_media_identity_refetched_by_this_workflow": false,
+    "cross_repo_credential_added": false
+  },
+  "candidates": [
+    {
+      "voice_id": null,
+      "source_path": null,
+      "source_locator": null,
+      "expected_sha256": null,
+      "media_identity_status": "UNPROVED",
+      "human_listening_status": "PENDING"
+    }
+  ],
+  "selected_voice": null,
+  "human_listening_gate": {
+    "status": "PENDING",
+    "criteria": ["自然度", "断句", "情绪", "速度", "语气", "视觉匹配"]
+  },
+  "final_voice_approval": {
+    "status": "NOT_PROVED",
+    "approved_voice_id": null,
+    "approved_media_sha256": null
+  },
+  "final_audio_evidence": {
+    "path": "",
+    "sha256": null,
+    "media_identity_status": "UNPROVED",
+    "ffprobe_status": "NOT_PROVED",
+    "codec": null,
+    "sample_rate_hz": null,
+    "channels": null,
+    "duration_sec": null
+  },
+  "timing_lock": {
+    "status": "NOT_PROVED",
+    "duration_source": "final_audio_evidence.duration_sec",
+    "timeline_relocked": false,
+    "captions_retimed": false,
+    "final_mix_rebuilt": false
+  },
+  "final_audio_path": "",
+  "actual_duration_sec": null
+}

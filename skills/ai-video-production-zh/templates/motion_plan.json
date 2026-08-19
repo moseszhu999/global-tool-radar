@@ -1,0 +1,20 @@
+{
+  "shots": [
+    {
+      "shot_id": "S01",
+      "source_asset_ids": ["ast_S01_001"],
+      "duration_sec": 5.0,
+      "entrance": "",
+      "exit": "",
+      "camera_motion": "",
+      "parallax_layers": [],
+      "character_motion": "",
+      "object_motion": "",
+      "text_overlays": [],
+      "captions": true,
+      "sound_cues": [],
+      "transition": "",
+      "safe_area": "9:16-mobile"
+    }
+  ]
+}

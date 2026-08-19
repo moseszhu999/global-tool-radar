@@ -1,0 +1,28 @@
+{
+  "contract": "media.asset.promotion.v1",
+  "assets": [
+    {
+      "asset_id": "ast_S01_001",
+      "source": {
+        "kind": "generated_image",
+        "uri": "",
+        "sha256": ""
+      },
+      "promotion": {
+        "status": "PROMOTED",
+        "approved_by": "",
+        "reason": ""
+      },
+      "production": {
+        "class": "raster",
+        "primary_format": "webp",
+        "components": []
+      },
+      "animation_profile": {
+        "allowed": ["translate", "scale", "opacity"],
+        "preferred": "slow_push"
+      },
+      "must_appear_in_render": true
+    }
+  ]
+}
