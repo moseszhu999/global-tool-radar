@@ -196,6 +196,11 @@ try:
         if cross_binding.get(key) != expected:
             errors.append(f"qc input manifest cross-binding must default {key}={expected}")
 
+    final_manifest_digest = final_render.get("input_manifest_digest", "")
+    cross_manifest_digest = cross_binding.get("input_manifest_digest", "")
+    if (final_manifest_digest or cross_manifest_digest) and final_manifest_digest != cross_manifest_digest:
+        errors.append("qc final render input_manifest_digest must match input_manifest_cross_binding.input_manifest_digest")
+
     final_human_review = qc.get("final_human_review_evidence", {})
     required_final_human_review = {
         "quality_report_contract": "toolradar.video-quality-report.v1",
@@ -232,6 +237,7 @@ try:
         "FINAL_RENDER_INPUT_MANIFEST_IDENTITY_REQUIRED",
         "FINAL_RENDER_SPEC_IDENTITY_REQUIRED",
         "FINAL_AUDIO_TIMING_CROSS_BINDING_REQUIRED",
+        "FINAL_RENDER_INPUT_MANIFEST_DIGEST_MATCH_REQUIRED",
         "FINAL_HUMAN_REVIEW_QUALITY_REPORT_REQUIRED",
         "FINAL_HUMAN_REVIEW_MEDIA_IDENTITY_REQUIRED",
         "FINAL_HUMAN_REVIEW_AUTOMATED_GATE_REQUIRED",
