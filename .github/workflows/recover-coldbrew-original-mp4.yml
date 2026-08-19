@@ -1,4 +1,5 @@
 name: Recover cold brew original MP4
+# Controlled exact-head rerun marker: 2026-08-20 editable-source provenance scan
 
 on:
   push:
