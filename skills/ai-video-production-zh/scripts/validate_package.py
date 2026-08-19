@@ -143,7 +143,7 @@ try:
         "render_spec_identity_status": "UNPROVED",
         "final_audio_evidence_ref": "voice_casting.json#final_audio_evidence",
         "final_audio_evidence_digest": "",
-        "final_audio_identity_status": "UNPROVEN",
+        "final_audio_identity_status": "UNPROVED",
         "timing_lock_ref": "voice_casting.json#timing_lock",
         "timing_lock_evidence_digest": "",
         "timing_lock_identity_status": "UNPROVED",
