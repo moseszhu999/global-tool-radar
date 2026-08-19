@@ -18,7 +18,9 @@ jobs:
           rm -rf "$OUT"
           mkdir -p "$OUT/files"
           MAN="$OUT/recovery-manifest.tsv"
+          SRC_MAN="$OUT/editable-source-manifest.tsv"
           printf 'source\tduration_seconds\tbytes\tsha256\n' > "$MAN"
+          printf 'source\tbytes\tsha256\tmatch_kind\n' > "$SRC_MAN"
 
           roots=(
             "/Users/zhudapeng/Downloads"
@@ -73,11 +75,55 @@ jobs:
             done < <(find "$r" -type f \( -iname '*coldbrew*.mp4' -o -iname '*cold-brew*.mp4' -o -iname '*cold_brew*.mp4' \) -print0 2>/dev/null || true)
           done
 
-          echo "Recovered candidate count: $(find "$OUT/files" -type f | wc -l | tr -d ' ')"
+          # Editable-source provenance scan. Do not copy source bytes into the public artifact:
+          # record only real path, byte size, SHA-256, and why the file matched.
+          declare -A source_seen
+          add_source_candidate() {
+            local f="$1" kind="$2"
+            [[ -f "$f" ]] || return 0
+            local real bytes sha
+            real="$(python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$f")"
+            [[ -n "${source_seen[$real]:-}" ]] && return 0
+            source_seen[$real]=1
+            bytes="$(stat -f%z "$f" 2>/dev/null || stat -c%s "$f")"
+            sha="$(shasum -a 256 "$f" | awk '{print $1}')"
+            printf '%s\t%s\t%s\t%s\n' "$real" "$bytes" "$sha" "$kind" >> "$SRC_MAN"
+          }
+
+          for r in "${roots[@]}"; do
+            [[ -d "$r" ]] || continue
+
+            while IFS= read -r -d '' f; do
+              add_source_candidate "$f" "filename"
+            done < <(
+              find "$r" \
+                \( -type d \( -name node_modules -o -name .git -o -name dist -o -name build \) -prune \) -o \
+                \( -type f \
+                  \( -iname '*coldbrew*.tsx' -o -iname '*coldbrew*.ts' -o -iname '*coldbrew*.jsx' -o -iname '*coldbrew*.js' -o -iname '*coldbrew*.json' -o -iname '*coldbrew*.svg' -o -iname '*coldbrew*.html' -o -iname '*coldbrew*.css' -o -iname '*coldbrew*.py' \
+                     -o -iname '*cold-brew*.tsx' -o -iname '*cold-brew*.ts' -o -iname '*cold-brew*.jsx' -o -iname '*cold-brew*.js' -o -iname '*cold-brew*.json' -o -iname '*cold-brew*.svg' -o -iname '*cold-brew*.html' -o -iname '*cold-brew*.css' -o -iname '*cold-brew*.py' \
+                     -o -iname '*source-reset*.tsx' -o -iname '*source-reset*.ts' -o -iname '*sourcereset*.tsx' -o -iname '*sourcereset*.ts' \) \
+                  -print0 \) 2>/dev/null || true
+            )
+
+            while IFS= read -r -d '' f; do
+              if grep -Eqi 'cold[ _-]?brew|SourceReset|coffee-stream|condensation droplet|ice caustic' "$f" 2>/dev/null; then
+                add_source_candidate "$f" "content"
+              fi
+            done < <(
+              find "$r" \
+                \( -type d \( -name node_modules -o -name .git -o -name dist -o -name build \) -prune \) -o \
+                \( -type f \( -name '*.tsx' -o -name '*.ts' -o -name '*.jsx' -o -name '*.js' -o -name '*.json' -o -name '*.svg' -o -name '*.html' -o -name '*.css' -o -name '*.py' \) -print0 \) \
+                2>/dev/null || true
+            )
+          done
+
+          echo "Recovered MP4 candidate count: $(find "$OUT/files" -type f | wc -l | tr -d ' ')"
+          echo "Editable-source candidate count: $(( $(wc -l < "$SRC_MAN") - 1 ))"
           cat "$MAN"
+          cat "$SRC_MAN"
           echo "RECOVERY_DIR=$OUT" >> "$GITHUB_ENV"
 
-      - name: Upload recovered candidates
+      - name: Upload recovered candidates and source manifest
         uses: actions/upload-artifact@v4
         with:
           name: coldbrew-original-recovery
