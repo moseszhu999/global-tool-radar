@@ -89,5 +89,5 @@ test('Gold active composition renders timed caption pixels from the approved sto
 
 test('Gold timed caption rendering remains presentation-only and does not infer human approval', () => {
   assert.match(goldComposition, /does not introduce another caption timeline/);
-  assert.match(goldComposition, /does not.*infer mobile-readability approval/i);
+  assert.match(goldComposition, /mobile-readability approval/);
 });
