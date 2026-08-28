@@ -14,34 +14,18 @@ const storyboard = JSON.parse(
   ),
 );
 
-const normalizeTechnicalDurations = (value) => ({
-  ...value,
-  storyboard: {
-    ...value.storyboard,
-    shots: value.storyboard.shots.map((shot) => ({
-      ...shot,
-      durationSeconds: shot.endSecond - shot.startSecond,
-    })),
-  },
-});
-
-const normalizedStoryboard = normalizeTechnicalDurations(storyboard);
-const renderPackage = buildRenderPreviewPackage(normalizedStoryboard, {
-  generatedAt: '2026-08-28T08:38:00.000Z',
+const renderPackage = buildRenderPreviewPackage(storyboard, {
+  generatedAt: '2026-08-28T09:38:00.000Z',
 });
 const srt = buildSrt(renderPackage);
 
-test('exact approved storyboard currently exposes a Shared Media floating-point strict-equality blocker', () => {
+test('exact approved storyboard passes Shared Media timeline validation despite binary float representation', () => {
   assert.equal(storyboard.storyboard.shots[1].durationSeconds, 15.412);
   assert.equal(storyboard.storyboard.shots[1].endSecond - storyboard.storyboard.shots[1].startSecond, 15.411999999999999);
-  assert.throws(
-    () => buildRenderPreviewPackage(storyboard, {generatedAt: '2026-08-28T08:38:00.000Z'}),
-    /shot:02 must form a contiguous timeline/,
-  );
+  assert.equal(validateRenderPreviewPackage(renderPackage), true);
 });
 
-test('the existing Shared Media caption contract accepts the same approved timing after technical duration normalization only', () => {
-  assert.equal(validateRenderPreviewPackage(renderPackage), true);
+test('existing Shared Media caption contract accepts the exact approved active timeline without normalization', () => {
   assert.equal(renderPackage.sourceStoryboardPackageId, storyboard.packageId);
   assert.equal(renderPackage.timelineDurationSeconds, storyboard.timelineDurationSeconds);
   assert.equal(renderPackage.subtitleCues.length, storyboard.storyboard.shots.length);
@@ -50,7 +34,7 @@ test('the existing Shared Media caption contract accepts the same approved timin
   assert.equal(renderPackage.gates.publicationAllowed, false);
 });
 
-test('normalized caption cues remain bound to the exact approved start/end timing and narration text', () => {
+test('caption cues remain bound to the exact approved start/end timing and narration text', () => {
   for (const [index, shot] of storyboard.storyboard.shots.entries()) {
     const cue = renderPackage.subtitleCues[index];
     assert.equal(cue.index, index + 1);
