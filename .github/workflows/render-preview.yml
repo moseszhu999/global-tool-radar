@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - ".github/workflows/render-preview.yml"
+      - "apps/web/data/ai-design-workflow-storyboard-package.json"
       - "apps/web/data/replit-design-storyboard-package.json"
       - "apps/worker/src/build-render-preview-package.mjs"
       - "apps/worker/src/render-preview-video.mjs"
@@ -16,6 +17,7 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/render-preview.yml"
+      - "apps/web/data/ai-design-workflow-storyboard-package.json"
       - "apps/web/data/replit-design-storyboard-package.json"
       - "apps/worker/src/build-render-preview-package.mjs"
       - "apps/worker/src/render-preview-video.mjs"
@@ -43,13 +45,69 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg espeak-ng librsvg2-bin fonts-noto-cjk
       - run: npm install --ignore-scripts
-      - name: Build source-bound render package
+      - name: Verify active AI Design Gold binding
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFile, writeFile, mkdir } from "node:fs/promises";
+          import { buildRenderPreviewPackage, validateRenderPreviewPackage } from "./packages/render-preview/src/index.mjs";
+          import { applyGoldDefaultsToRenderPreviewPackage, validateGoldTarget } from "./packages/video-gold-profile/src/index.mjs";
+
+          const sourcePath = "apps/web/data/ai-design-workflow-storyboard-package.json";
+          const storyboard = JSON.parse(await readFile(sourcePath, "utf8"));
+          if (storyboard.assetManifest?.captureTasks?.length !== 0) throw new Error("active AI Design storyboard must not require capture tasks");
+          if (storyboard.gates?.humanCaptureRequired !== false) throw new Error("active AI Design storyboard must not require human capture");
+          if (storyboard.policy?.screenRecordingRequired !== false) throw new Error("active AI Design storyboard must not require screen recording");
+          if (storyboard.selectedVoice?.humanAudioApproved !== true) throw new Error("active AI Design storyboard must retain human-approved voice identity");
+
+          const renderPackage = applyGoldDefaultsToRenderPreviewPackage(
+            buildRenderPreviewPackage(storyboard, { generatedAt: "2026-08-07T06:18:00.000Z" }),
+          );
+          validateRenderPreviewPackage(renderPackage);
+          validateGoldTarget(renderPackage);
+          if (renderPackage.sourceStoryboardPackageId !== storyboard.packageId) throw new Error("Gold package source storyboard identity drift");
+          if (renderPackage.placeholderSlideIds.length !== 0) throw new Error("active AI Design Gold package must have zero placeholders");
+          if (renderPackage.gates.finalRenderAllowed !== true) throw new Error("active AI Design Gold package must clear the asset-completeness render gate");
+          if (renderPackage.gates.humanAssetReplacementRequired !== false) throw new Error("active AI Design Gold package must not require screen-recording replacement");
+          if (renderPackage.qualityProfile !== "video.production.gold-baseline.v1") throw new Error("Gold quality profile missing");
+          if (renderPackage.qualityStage !== "PREVIEW_TARGET") throw new Error("Gold preview stage mismatch");
+          if (renderPackage.gates.publicationAllowed !== false) throw new Error("publication boundary must remain closed");
+
+          const evidence = {
+            schemaVersion: "toolradar.active-ai-design-gold-binding.v1",
+            sourcePath,
+            sourcePackageId: storyboard.packageId,
+            selectedVoiceSha256: storyboard.selectedVoice?.wavSha256 ?? null,
+            selectedVoiceHumanApproved: storyboard.selectedVoice?.humanAudioApproved === true,
+            captureTaskCount: storyboard.assetManifest.captureTasks.length,
+            humanCaptureRequired: storyboard.gates.humanCaptureRequired,
+            screenRecordingRequired: storyboard.policy.screenRecordingRequired,
+            goldPreviewId: renderPackage.previewId,
+            qualityProfile: renderPackage.qualityProfile,
+            qualityStage: renderPackage.qualityStage,
+            placeholderSlideIds: renderPackage.placeholderSlideIds,
+            finalRenderAllowedByAssetCompleteness: renderPackage.gates.finalRenderAllowed,
+            humanAssetReplacementRequired: renderPackage.gates.humanAssetReplacementRequired,
+            publicationAllowed: renderPackage.gates.publicationAllowed,
+            activePathBinding: "PROVED",
+            realMp4RenderedByThisStep: false,
+          };
+          await mkdir("build", { recursive: true });
+          await writeFile("build/ai-design-gold-binding.json", `${JSON.stringify(evidence, null, 2)}\n`, "utf8");
+          console.log(evidence);
+          NODE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: toolradar-active-ai-design-gold-binding
+          retention-days: 14
+          if-no-files-found: error
+          path: build/ai-design-gold-binding.json
+      - name: Build historical Replit fixture render package
         run: npm run production:render-package:replit
-      - name: Render 9:16 MP4 preview
+      - name: Render historical Replit 9:16 MP4 fixture
         run: npm run production:render-preview:replit
-      - name: Run M10 automated video quality gate
+      - name: Run historical Replit M10 automated video quality gate
         run: npm run production:quality-gate:replit
-      - name: Verify release remains blocked
+      - name: Verify historical Replit fixture remains blocked
         run: |
           node --input-type=module <<'NODE'
           import { readFile } from "node:fs/promises";
@@ -77,7 +135,7 @@ jobs:
           NODE
       - uses: actions/upload-artifact@v4
         with:
-          name: toolradar-replit-design-render-preview
+          name: toolradar-replit-design-render-preview-historical-fixture
           retention-days: 14
           if-no-files-found: error
           path: |
