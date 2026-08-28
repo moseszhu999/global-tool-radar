@@ -1,5 +1,5 @@
 import React from 'react';
-import {AbsoluteFill, useCurrentFrame, useVideoConfig} from 'remotion';
+import {AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig} from 'remotion';
 import {ToolRadarVideo} from './tool-radar-video';
 
 export type ToolRadarGoldMotionPolishProps = {
@@ -10,56 +10,124 @@ export type ToolRadarGoldMotionPolishProps = {
 };
 
 /**
- * Gold-only visual polish wrapper for the existing self-owned AI Design composition.
+ * Gold-only motion layer for the existing self-owned AI Design composition.
  *
- * This stays composition-level on purpose: ToolRadarVideo remains the content source
- * and the existing Remotion/Shared Media render path remains authoritative. The wrapper
- * adds bounded camera drift and ambient depth so long card-oriented beats do not read
- * as fully static presentation slides.
+ * The camera stays locked. Motion is restricted to monotonic, path-bound infographic
+ * signals and a continuous progress rail, matching the Gold rule that finished motion
+ * must not come from random/sinusoidal camera wobble. ToolRadarVideo remains the content
+ * source and the existing Remotion/Shared Media render path remains authoritative.
  */
 export const ToolRadarGoldMotionPolishV1: React.FC<ToolRadarGoldMotionPolishProps> = (props) => {
   const frame = useCurrentFrame();
-  const {fps} = useVideoConfig();
-  const seconds = frame / fps;
+  const {durationInFrames, fps} = useVideoConfig();
 
-  const driftX = Math.sin(seconds * 0.38) * 8;
-  const driftY = Math.cos(seconds * 0.31) * 10;
-  const scale = 1.012 + Math.sin(seconds * 0.22) * 0.004;
-  const glowX = Math.sin(seconds * 0.18) * 90;
-  const glowY = Math.cos(seconds * 0.16) * 80;
-  const sweepX = -420 + ((frame % Math.round(fps * 12)) / (fps * 12)) * 1920;
+  const globalProgress = interpolate(frame, [0, durationInFrames - 1], [0, 1], {
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
+  });
+  const cycleFrames = Math.round(fps * 8);
+  const pathProgress = (frame % cycleFrames) / cycleFrames;
+  const sweepX = interpolate(pathProgress, [0, 1], [-260, 1340]);
+  const nodeA = interpolate(pathProgress, [0, 1], [-120, 1200]);
+  const nodeB = interpolate(pathProgress, [0, 1], [1160, -140]);
 
   return (
     <AbsoluteFill style={{overflow: 'hidden', backgroundColor: '#07111f'}}>
-      <AbsoluteFill
-        style={{
-          transform: `translate3d(${driftX}px, ${driftY}px, 0) scale(${scale})`,
-          transformOrigin: '50% 50%',
-        }}
-      >
-        <ToolRadarVideo {...props} />
+      <ToolRadarVideo {...props} />
+
+      <AbsoluteFill style={{pointerEvents: 'none'}}>
+        <div
+          style={{
+            position: 'absolute',
+            top: 330,
+            left: 58,
+            right: 58,
+            height: 1,
+            background: 'linear-gradient(90deg, transparent, rgba(120,183,255,.18), transparent)',
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            top: 330,
+            left: nodeA,
+            width: 120,
+            height: 3,
+            borderRadius: 999,
+            background: 'linear-gradient(90deg, transparent, rgba(120,183,255,.72), transparent)',
+            boxShadow: '0 0 24px rgba(120,183,255,.28)',
+          }}
+        />
+
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 226,
+            left: 58,
+            right: 58,
+            height: 1,
+            background: 'linear-gradient(90deg, transparent, rgba(116,224,173,.14), transparent)',
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 226,
+            left: nodeB,
+            width: 96,
+            height: 3,
+            borderRadius: 999,
+            background: 'linear-gradient(90deg, transparent, rgba(116,224,173,.66), transparent)',
+            boxShadow: '0 0 22px rgba(116,224,173,.24)',
+          }}
+        />
+
+        <div
+          style={{
+            position: 'absolute',
+            top: -240,
+            bottom: -240,
+            left: sweepX,
+            width: 150,
+            transform: 'rotate(11deg)',
+            background: 'linear-gradient(90deg, transparent, rgba(255,255,255,.032), transparent)',
+          }}
+        />
+
+        <div
+          style={{
+            position: 'absolute',
+            right: 26,
+            top: 120,
+            bottom: 120,
+            width: 3,
+            borderRadius: 999,
+            backgroundColor: 'rgba(159,178,199,.13)',
+            overflow: 'hidden',
+          }}
+        >
+          <div
+            style={{
+              width: '100%',
+              height: `${globalProgress * 100}%`,
+              background: 'linear-gradient(180deg, #78b7ff, #74e0ad)',
+              boxShadow: '0 0 18px rgba(120,183,255,.35)',
+            }}
+          />
+        </div>
+        <div
+          style={{
+            position: 'absolute',
+            right: 20,
+            top: 114 + globalProgress * 1680,
+            width: 15,
+            height: 15,
+            borderRadius: '50%',
+            backgroundColor: '#eef6ff',
+            boxShadow: '0 0 18px rgba(120,183,255,.65)',
+          }}
+        />
       </AbsoluteFill>
-
-      <AbsoluteFill
-        style={{
-          pointerEvents: 'none',
-          background: `radial-gradient(circle at calc(78% + ${glowX}px) calc(18% + ${glowY}px), rgba(120,183,255,.11), transparent 28%), radial-gradient(circle at calc(18% - ${glowX * 0.45}px) calc(80% - ${glowY * 0.5}px), rgba(116,224,173,.07), transparent 24%)`,
-          mixBlendMode: 'screen',
-        }}
-      />
-
-      <div
-        style={{
-          position: 'absolute',
-          top: -180,
-          bottom: -180,
-          left: sweepX,
-          width: 220,
-          transform: 'rotate(12deg)',
-          background: 'linear-gradient(90deg, transparent, rgba(255,255,255,.035), transparent)',
-          pointerEvents: 'none',
-        }}
-      />
     </AbsoluteFill>
   );
 };
