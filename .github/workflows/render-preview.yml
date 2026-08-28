@@ -49,28 +49,24 @@ jobs:
         run: |
           node --input-type=module <<'NODE'
           import { readFile, writeFile, mkdir } from "node:fs/promises";
-          import { buildRenderPreviewPackage, validateRenderPreviewPackage } from "./packages/render-preview/src/index.mjs";
-          import { applyGoldDefaultsToRenderPreviewPackage, validateGoldTarget } from "./packages/video-gold-profile/src/index.mjs";
+          import { applyGoldDefaultsToStoryboardPackage, validateGoldTarget } from "./packages/video-gold-profile/src/index.mjs";
 
           const sourcePath = "apps/web/data/ai-design-workflow-storyboard-package.json";
           const storyboard = JSON.parse(await readFile(sourcePath, "utf8"));
+          const remotionPackage = JSON.parse(await readFile("apps/remotion-video/package.json", "utf8"));
           if (storyboard.assetManifest?.captureTasks?.length !== 0) throw new Error("active AI Design storyboard must not require capture tasks");
           if (storyboard.gates?.humanCaptureRequired !== false) throw new Error("active AI Design storyboard must not require human capture");
           if (storyboard.policy?.screenRecordingRequired !== false) throw new Error("active AI Design storyboard must not require screen recording");
           if (storyboard.selectedVoice?.humanAudioApproved !== true) throw new Error("active AI Design storyboard must retain human-approved voice identity");
+          if (!remotionPackage.scripts?.["render:preview"]?.includes("ToolRadarAIDesignPortrait")) throw new Error("active Remotion preview composition drift");
+          if (!remotionPackage.scripts?.["render:final"]?.includes("ToolRadarAIDesignPortrait")) throw new Error("active Remotion final composition drift");
 
-          const renderPackage = applyGoldDefaultsToRenderPreviewPackage(
-            buildRenderPreviewPackage(storyboard, { generatedAt: "2026-08-07T06:18:00.000Z" }),
-          );
-          validateRenderPreviewPackage(renderPackage);
-          validateGoldTarget(renderPackage);
-          if (renderPackage.sourceStoryboardPackageId !== storyboard.packageId) throw new Error("Gold package source storyboard identity drift");
-          if (renderPackage.placeholderSlideIds.length !== 0) throw new Error("active AI Design Gold package must have zero placeholders");
-          if (renderPackage.gates.finalRenderAllowed !== true) throw new Error("active AI Design Gold package must clear the asset-completeness render gate");
-          if (renderPackage.gates.humanAssetReplacementRequired !== false) throw new Error("active AI Design Gold package must not require screen-recording replacement");
-          if (renderPackage.qualityProfile !== "video.production.gold-baseline.v1") throw new Error("Gold quality profile missing");
-          if (renderPackage.qualityStage !== "PREVIEW_TARGET") throw new Error("Gold preview stage mismatch");
-          if (renderPackage.gates.publicationAllowed !== false) throw new Error("publication boundary must remain closed");
+          const goldStoryboard = applyGoldDefaultsToStoryboardPackage(storyboard);
+          validateGoldTarget(goldStoryboard);
+          if (goldStoryboard.packageId !== storyboard.packageId) throw new Error("Gold storyboard identity drift");
+          if (goldStoryboard.qualityProfile !== "video.production.gold-baseline.v1") throw new Error("Gold quality profile missing");
+          if (goldStoryboard.gates?.goldBaselineTarget !== true) throw new Error("Gold target gate missing");
+          if (goldStoryboard.gates?.publicationAllowed !== false) throw new Error("publication boundary must remain closed");
 
           const evidence = {
             schemaVersion: "toolradar.active-ai-design-gold-binding.v1",
@@ -81,14 +77,12 @@ jobs:
             captureTaskCount: storyboard.assetManifest.captureTasks.length,
             humanCaptureRequired: storyboard.gates.humanCaptureRequired,
             screenRecordingRequired: storyboard.policy.screenRecordingRequired,
-            goldPreviewId: renderPackage.previewId,
-            qualityProfile: renderPackage.qualityProfile,
-            qualityStage: renderPackage.qualityStage,
-            placeholderSlideIds: renderPackage.placeholderSlideIds,
-            finalRenderAllowedByAssetCompleteness: renderPackage.gates.finalRenderAllowed,
-            humanAssetReplacementRequired: renderPackage.gates.humanAssetReplacementRequired,
-            publicationAllowed: renderPackage.gates.publicationAllowed,
-            activePathBinding: "PROVED",
+            activePreviewComposition: remotionPackage.scripts["render:preview"],
+            activeFinalComposition: remotionPackage.scripts["render:final"],
+            qualityProfile: goldStoryboard.qualityProfile,
+            goldBaselineTarget: goldStoryboard.gates.goldBaselineTarget,
+            publicationAllowed: goldStoryboard.gates.publicationAllowed,
+            activePathBinding: "PROVED_AT_STORYBOARD_AND_COMPOSITION",
             realMp4RenderedByThisStep: false,
           };
           await mkdir("build", { recursive: true });
