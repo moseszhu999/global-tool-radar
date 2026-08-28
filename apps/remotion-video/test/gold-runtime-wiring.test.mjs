@@ -7,6 +7,7 @@ const caseWorker = readFileSync(new URL('../../worker/src/build-video-production
 const storyboardWorker = readFileSync(new URL('../../worker/src/build-storyboard-manifest.mjs', import.meta.url), 'utf8');
 const renderPackageWorker = readFileSync(new URL('../../worker/src/build-render-preview-package.mjs', import.meta.url), 'utf8');
 const renderPreviewWorkflow = readFileSync(new URL('../../../.github/workflows/render-preview.yml', import.meta.url), 'utf8');
+const goldComposition = readFileSync(new URL('../src/tool-radar-gold-motion-polish-v1.tsx', import.meta.url), 'utf8');
 
 test('quality worker exposes the optional creative-quality evidence input', () => {
   assert.match(qualityWorker, /--creative-quality/);
@@ -75,4 +76,18 @@ test('render-preview workflow still requires the legacy safety blockers and reje
 
 test('preview artifact includes the pending Gold creative-review evidence for operator handoff', () => {
   assert.match(renderPreviewWorkflow, /build\/gold-creative-quality-pending\.json/);
+});
+
+test('Gold active composition renders timed caption pixels from the approved storyboard source', () => {
+  assert.match(goldComposition, /ai-design-workflow-storyboard-package\.json/);
+  assert.match(goldComposition, /shot\.narrationText/);
+  assert.match(goldComposition, /currentSecond >= candidate\.startSecond/);
+  assert.match(goldComposition, /currentSecond < candidate\.endSecond/);
+  assert.match(goldComposition, /fontSize: 52/);
+  assert.match(goldComposition, /<TimedCaptionLayer \/>/);
+});
+
+test('Gold timed caption rendering remains presentation-only and does not infer human approval', () => {
+  assert.match(goldComposition, /does not introduce another caption timeline/);
+  assert.match(goldComposition, /does not.*infer mobile-readability approval/i);
 });
