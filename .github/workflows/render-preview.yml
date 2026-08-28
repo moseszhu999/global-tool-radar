@@ -34,7 +34,7 @@ permissions:
 jobs:
   render-preview:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -95,6 +95,61 @@ jobs:
           retention-days: 14
           if-no-files-found: error
           path: build/ai-design-gold-binding.json
+      - name: Install active AI Design Remotion dependencies
+        run: npm --prefix apps/remotion-video install --ignore-scripts
+      - name: Render active AI Design 9:16 MP4 preview
+        run: npm --prefix apps/remotion-video run render:preview
+      - name: Inspect active AI Design preview and bind artifact identity
+        run: |
+          set -euo pipefail
+          VIDEO="apps/remotion-video/out/toolradar-ai-design-preview.mp4"
+          test -s "$VIDEO"
+          SHA256="$(sha256sum "$VIDEO" | awk '{print $1}')"
+          BYTES="$(stat -c '%s' "$VIDEO")"
+          ffprobe -v error -show_streams -show_format -of json "$VIDEO" > build/ai-design-active-preview-ffprobe.json
+          VIDEO="$VIDEO" SHA256="$SHA256" BYTES="$BYTES" node --input-type=module <<'NODE'
+          import { readFile, writeFile } from "node:fs/promises";
+          const probe = JSON.parse(await readFile("build/ai-design-active-preview-ffprobe.json", "utf8"));
+          const video = probe.streams.find((stream) => stream.codec_type === "video");
+          const audio = probe.streams.find((stream) => stream.codec_type === "audio");
+          if (!video) throw new Error("active AI Design preview missing video stream");
+          if (video.width !== 1080 || video.height !== 1920) throw new Error(`unexpected active preview geometry ${video.width}x${video.height}`);
+          const receipt = {
+            schemaVersion: "toolradar.active-ai-design-preview-receipt.v1",
+            source: "existing-remotion-composition",
+            composition: "ToolRadarAIDesignPortrait",
+            artifactPath: process.env.VIDEO,
+            artifactSha256: process.env.SHA256,
+            artifactBytes: Number(process.env.BYTES),
+            video: {
+              codec: video.codec_name ?? null,
+              width: video.width,
+              height: video.height,
+              frameRate: video.avg_frame_rate ?? null,
+              durationSeconds: Number(video.duration ?? probe.format?.duration ?? 0),
+            },
+            audio: audio ? {
+              codec: audio.codec_name ?? null,
+              sampleRate: audio.sample_rate ? Number(audio.sample_rate) : null,
+              channels: audio.channels ?? null,
+              durationSeconds: Number(audio.duration ?? probe.format?.duration ?? 0),
+            } : null,
+            publicationAllowed: false,
+            canonicalMediaRenderV1TerminalEvidence: "NOT_CLAIMED",
+          };
+          await writeFile("build/ai-design-active-preview-receipt.json", `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
+          console.log(receipt);
+          NODE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: toolradar-active-ai-design-render-preview
+          retention-days: 14
+          if-no-files-found: error
+          path: |
+            apps/remotion-video/out/toolradar-ai-design-preview.mp4
+            build/ai-design-active-preview-receipt.json
+            build/ai-design-active-preview-ffprobe.json
+            build/ai-design-gold-binding.json
       - name: Build historical Replit fixture render package
         run: npm run production:render-package:replit
       - name: Render historical Replit 9:16 MP4 fixture
