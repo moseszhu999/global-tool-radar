@@ -190,4 +190,8 @@ Storyboard timing is authored as decimal seconds. JavaScript binary floating-poi
 
 The tolerance exists only for numeric representation noise. Real gaps, overlaps, missing assets, publication-policy violations, and other contract failures remain fail-closed.
 
-The active AI Design storyboard is covered by regression evidence proving that its exact approved 0→102.624s shot timing passes the existing Shared Media caption contract without consumer-side duration normalization. This removes the prior precision blocker but does not by itself prove active-path SRT persistence, rendered caption pixels, mobile caption readability, human Gold approval, or publication authority.
+The active AI Design storyboard is covered by regression evidence proving that its exact approved 0→102.624s shot timing passes the existing Shared Media caption contract without consumer-side duration normalization.
+
+The active `render-preview` workflow now invokes that same existing `build-render-preview-package.mjs` / `buildSrt()` path for `apps/web/data/ai-design-workflow-storyboard-package.json`, persists `build/ai-design-active-preview.srt` plus the bound render package and pending Gold review evidence, and emits `toolradar.active-ai-design-caption-binding.v1` evidence alongside the real active MP4 artifact. The binding proves exact shot timing/narration → deterministic SRT artifact persistence without creating a second caption runtime.
+
+This still does **not** prove that timed caption pixels are burned/rendered into the active MP4, that mobile caption readability has passed human review, that Gold creative review has passed, or that publication/canonical `media.render.v1` authority is open.
