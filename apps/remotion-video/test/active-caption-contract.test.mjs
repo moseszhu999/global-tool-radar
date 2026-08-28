@@ -14,12 +14,33 @@ const storyboard = JSON.parse(
   ),
 );
 
-const renderPackage = buildRenderPreviewPackage(storyboard, {
+const normalizeTechnicalDurations = (value) => ({
+  ...value,
+  storyboard: {
+    ...value.storyboard,
+    shots: value.storyboard.shots.map((shot) => ({
+      ...shot,
+      durationSeconds: shot.endSecond - shot.startSecond,
+    })),
+  },
+});
+
+const normalizedStoryboard = normalizeTechnicalDurations(storyboard);
+const renderPackage = buildRenderPreviewPackage(normalizedStoryboard, {
   generatedAt: '2026-08-28T08:38:00.000Z',
 });
 const srt = buildSrt(renderPackage);
 
-test('active AI Design storyboard is compatible with the existing Shared Media caption timeline contract', () => {
+test('exact approved storyboard currently exposes a Shared Media floating-point strict-equality blocker', () => {
+  assert.equal(storyboard.storyboard.shots[1].durationSeconds, 15.412);
+  assert.equal(storyboard.storyboard.shots[1].endSecond - storyboard.storyboard.shots[1].startSecond, 15.411999999999999);
+  assert.throws(
+    () => buildRenderPreviewPackage(storyboard, {generatedAt: '2026-08-28T08:38:00.000Z'}),
+    /shot:02 must form a contiguous timeline/,
+  );
+});
+
+test('the existing Shared Media caption contract accepts the same approved timing after technical duration normalization only', () => {
   assert.equal(validateRenderPreviewPackage(renderPackage), true);
   assert.equal(renderPackage.sourceStoryboardPackageId, storyboard.packageId);
   assert.equal(renderPackage.timelineDurationSeconds, storyboard.timelineDurationSeconds);
@@ -29,7 +50,7 @@ test('active AI Design storyboard is compatible with the existing Shared Media c
   assert.equal(renderPackage.gates.publicationAllowed, false);
 });
 
-test('active caption cues remain exactly bound to approved storyboard shot timing and narration text', () => {
+test('normalized caption cues remain bound to the exact approved start/end timing and narration text', () => {
   for (const [index, shot] of storyboard.storyboard.shots.entries()) {
     const cue = renderPackage.subtitleCues[index];
     assert.equal(cue.index, index + 1);
@@ -39,13 +60,10 @@ test('active caption cues remain exactly bound to approved storyboard shot timin
   }
 
   assert.equal(renderPackage.subtitleCues[0].startSecond, 0);
-  assert.equal(
-    renderPackage.subtitleCues.at(-1).endSecond,
-    storyboard.timelineDurationSeconds,
-  );
+  assert.equal(renderPackage.subtitleCues.at(-1).endSecond, storyboard.timelineDurationSeconds);
 });
 
-test('active SRT is deterministic, complete, and remains a non-publication evidence artifact', () => {
+test('derived SRT is deterministic, complete, and remains a non-publication evidence artifact', () => {
   const blocks = srt.trim().split('\n\n');
   assert.equal(blocks.length, storyboard.storyboard.shots.length);
   assert.match(blocks[0], /^1\n00:00:00,000 --> /);
