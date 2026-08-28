@@ -96,6 +96,58 @@ jobs:
           retention-days: 14
           if-no-files-found: error
           path: build/ai-design-gold-binding.json
+      - name: Build active AI Design caption timeline with existing Shared Media contract
+        run: |
+          set -euo pipefail
+          GENERATED_AT="$(git show -s --format=%cI "$GITHUB_SHA")"
+          node apps/worker/src/build-render-preview-package.mjs \
+            --input apps/web/data/ai-design-workflow-storyboard-package.json \
+            --output build/ai-design-active-render-preview-package.json \
+            --subtitles build/ai-design-active-preview.srt \
+            --creative-quality-template build/ai-design-active-gold-creative-quality-pending.json \
+            --generated-at "$GENERATED_AT"
+      - name: Verify active AI Design SRT artifact binding
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFile, writeFile } from "node:fs/promises";
+
+          const storyboard = JSON.parse(await readFile("apps/web/data/ai-design-workflow-storyboard-package.json", "utf8"));
+          const renderPackage = JSON.parse(await readFile("build/ai-design-active-render-preview-package.json", "utf8"));
+          const srt = await readFile("build/ai-design-active-preview.srt", "utf8");
+          const pending = JSON.parse(await readFile("build/ai-design-active-gold-creative-quality-pending.json", "utf8"));
+
+          if (renderPackage.sourceStoryboardPackageId !== storyboard.packageId) throw new Error("active caption package storyboard identity drift");
+          if (renderPackage.subtitleCues?.length !== storyboard.storyboard?.shots?.length) throw new Error("active caption cue count drift");
+          if (renderPackage.subtitleCues?.[0]?.startSecond !== storyboard.storyboard.shots[0].startSecond) throw new Error("active caption first cue timing drift");
+          if (renderPackage.subtitleCues?.at(-1)?.endSecond !== storyboard.storyboard.shots.at(-1).endSecond) throw new Error("active caption final cue timing drift");
+          if (renderPackage.gates?.publicationAllowed !== false || renderPackage.policy?.automaticPublishingAllowed !== false) throw new Error("active caption package publication boundary opened");
+          if (pending.status !== "PENDING_HUMAN_REVIEW") throw new Error("active Gold creative evidence must remain pending");
+          for (const [index, shot] of storyboard.storyboard.shots.entries()) {
+            const cue = renderPackage.subtitleCues[index];
+            if (cue.startSecond !== shot.startSecond || cue.endSecond !== shot.endSecond || cue.text !== shot.narrationText) {
+              throw new Error(`active caption cue ${index + 1} drift`);
+            }
+          }
+          const blocks = srt.trim().split("\n\n");
+          if (blocks.length !== storyboard.storyboard.shots.length) throw new Error("active SRT block count drift");
+
+          const evidence = {
+            schemaVersion: "toolradar.active-ai-design-caption-binding.v1",
+            sourceStoryboardPackageId: storyboard.packageId,
+            renderPreviewPackagePath: "build/ai-design-active-render-preview-package.json",
+            srtPath: "build/ai-design-active-preview.srt",
+            cueCount: renderPackage.subtitleCues.length,
+            timelineDurationSeconds: renderPackage.timelineDurationSeconds,
+            exactShotTimingAndNarrationBound: true,
+            srtArtifactPersistedByActiveWorkflow: true,
+            timedCaptionPixelsRenderedByThisStep: false,
+            mobileCaptionReadabilityHumanReviewInferred: false,
+            publicationAllowed: false,
+            canonicalMediaRenderV1TerminalEvidence: "NOT_CLAIMED",
+          };
+          await writeFile("build/ai-design-active-caption-binding.json", `${JSON.stringify(evidence, null, 2)}\n`, "utf8");
+          console.log(evidence);
+          NODE
       - name: Install active AI Design Remotion dependencies
         run: npm --prefix apps/remotion-video install --ignore-scripts
       - name: Stage exact approved Xiaoxiao voice for active preview
@@ -239,6 +291,10 @@ jobs:
             build/ai-design-active-preview-loudnorm.log
             build/ai-design-active-preview-silence.log
             build/ai-design-gold-binding.json
+            build/ai-design-active-render-preview-package.json
+            build/ai-design-active-preview.srt
+            build/ai-design-active-gold-creative-quality-pending.json
+            build/ai-design-active-caption-binding.json
       - name: Build historical Replit fixture render package
         run: npm run production:render-package:replit
       - name: Render historical Replit 9:16 MP4 fixture
