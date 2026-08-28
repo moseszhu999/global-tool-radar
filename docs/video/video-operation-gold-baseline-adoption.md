@@ -181,3 +181,13 @@ npm --prefix apps/remotion-video run check:gold
 ## 9. Ownership boundary
 
 Gold Baseline governs production quality. It does not own social publication, account credentials, platform posting or analytics actions. Those remain outside Shared Media rendering and continue to require their existing human/publication controls.
+
+## 10. Caption timeline precision boundary
+
+The existing Shared Media render-preview/caption contract remains the single owner of deterministic subtitle cue and SRT generation. Gold consumers must reuse `buildRenderPreviewPackage()` / `buildSrt()` rather than create a second caption engine.
+
+Storyboard timing is authored as decimal seconds. JavaScript binary floating-point arithmetic can represent an exact authored duration such as `15.412` as a computed subtraction such as `15.411999999999999`. Timeline validation therefore uses a bounded `1e-9` second tolerance for continuity/duration equality while preserving the authored `startSecond`, `endSecond`, `durationSeconds`, and narration text in the emitted render package and SRT cues.
+
+The tolerance exists only for numeric representation noise. Real gaps, overlaps, missing assets, publication-policy violations, and other contract failures remain fail-closed.
+
+The active AI Design storyboard is covered by regression evidence proving that its exact approved 0→102.624s shot timing passes the existing Shared Media caption contract without consumer-side duration normalization. This removes the prior precision blocker but does not by itself prove active-path SRT persistence, rendered caption pixels, mobile caption readability, human Gold approval, or publication authority.
