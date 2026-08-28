@@ -107,13 +107,34 @@ jobs:
           SHA256="$(sha256sum "$VIDEO" | awk '{print $1}')"
           BYTES="$(stat -c '%s' "$VIDEO")"
           ffprobe -v error -show_streams -show_format -of json "$VIDEO" > build/ai-design-active-preview-ffprobe.json
+          ffmpeg -hide_banner -nostats -i "$VIDEO" -af "loudnorm=I=-16:TP=-1.5:LRA=11:print_format=json" -f null - 2> build/ai-design-active-preview-loudnorm.log
+          ffmpeg -hide_banner -nostats -i "$VIDEO" -af "silencedetect=noise=-50dB:d=2" -f null - 2> build/ai-design-active-preview-silence.log
           VIDEO="$VIDEO" SHA256="$SHA256" BYTES="$BYTES" node --input-type=module <<'NODE'
           import { readFile, writeFile } from "node:fs/promises";
           const probe = JSON.parse(await readFile("build/ai-design-active-preview-ffprobe.json", "utf8"));
+          const loudnormLog = await readFile("build/ai-design-active-preview-loudnorm.log", "utf8");
+          const silenceLog = await readFile("build/ai-design-active-preview-silence.log", "utf8");
           const video = probe.streams.find((stream) => stream.codec_type === "video");
           const audio = probe.streams.find((stream) => stream.codec_type === "audio");
           if (!video) throw new Error("active AI Design preview missing video stream");
+          if (!audio) throw new Error("active AI Design preview missing audio stream");
           if (video.width !== 1080 || video.height !== 1920) throw new Error(`unexpected active preview geometry ${video.width}x${video.height}`);
+
+          const loudnormJsonMatch = loudnormLog.match(/\{[\s\S]*?"target_offset"\s*:\s*"[^"]+"\s*\}/);
+          if (!loudnormJsonMatch) throw new Error("loudnorm JSON summary missing");
+          const loudnorm = JSON.parse(loudnormJsonMatch[0]);
+          const silenceStarts = [...silenceLog.matchAll(/silence_start:\s*([0-9.]+)/g)].map((match) => Number(match[1]));
+          const silenceEnds = [...silenceLog.matchAll(/silence_end:\s*([0-9.]+)\s*\|\s*silence_duration:\s*([0-9.]+)/g)].map((match) => ({
+            endSeconds: Number(match[1]),
+            durationSeconds: Number(match[2]),
+          }));
+          const silenceWindows = silenceEnds.map((entry, index) => ({
+            startSeconds: Number.isFinite(silenceStarts[index]) ? silenceStarts[index] : null,
+            endSeconds: entry.endSeconds,
+            durationSeconds: entry.durationSeconds,
+          }));
+          const longestDetectedSilenceSeconds = silenceWindows.reduce((max, entry) => Math.max(max, entry.durationSeconds), 0);
+
           const receipt = {
             schemaVersion: "toolradar.active-ai-design-preview-receipt.v1",
             source: "existing-remotion-composition",
@@ -128,12 +149,36 @@ jobs:
               frameRate: video.avg_frame_rate ?? null,
               durationSeconds: Number(video.duration ?? probe.format?.duration ?? 0),
             },
-            audio: audio ? {
+            audio: {
               codec: audio.codec_name ?? null,
               sampleRate: audio.sample_rate ? Number(audio.sample_rate) : null,
               channels: audio.channels ?? null,
               durationSeconds: Number(audio.duration ?? probe.format?.duration ?? 0),
-            } : null,
+              technicalLoudnessEvidence: {
+                analyzer: "ffmpeg-loudnorm-single-pass",
+                targetIntegratedLufsForMeasurement: -16,
+                targetTruePeakDbtpForMeasurement: -1.5,
+                targetLoudnessRangeLuForMeasurement: 11,
+                measuredIntegratedLufs: Number(loudnorm.input_i),
+                measuredTruePeakDbtp: Number(loudnorm.input_tp),
+                measuredLoudnessRangeLu: Number(loudnorm.input_lra),
+                measuredThresholdLufs: Number(loudnorm.input_thresh),
+                targetOffsetLu: Number(loudnorm.target_offset),
+                evidencePresent: true,
+                humanQualityDecisionInferred: false,
+              },
+              silenceAnalysis: {
+                analyzer: "ffmpeg-silencedetect",
+                detectionNoiseFloorDb: -50,
+                minimumReportedSilenceSeconds: 2,
+                detectedWindowCount: silenceWindows.length,
+                longestDetectedSilenceSeconds,
+                windows: silenceWindows,
+                evidencePresent: true,
+                productRejectionThresholdDefinedByThisWorkflow: false,
+                humanQualityDecisionInferred: false,
+              },
+            },
             publicationAllowed: false,
             canonicalMediaRenderV1TerminalEvidence: "NOT_CLAIMED",
           };
@@ -149,6 +194,8 @@ jobs:
             apps/remotion-video/out/toolradar-ai-design-preview.mp4
             build/ai-design-active-preview-receipt.json
             build/ai-design-active-preview-ffprobe.json
+            build/ai-design-active-preview-loudnorm.log
+            build/ai-design-active-preview-silence.log
             build/ai-design-gold-binding.json
       - name: Build historical Replit fixture render package
         run: npm run production:render-package:replit
