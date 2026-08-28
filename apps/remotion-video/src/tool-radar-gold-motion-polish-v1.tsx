@@ -1,5 +1,6 @@
 import React from 'react';
 import {AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig} from 'remotion';
+import aiDesignStoryboardPackage from '../../web/data/ai-design-workflow-storyboard-package.json';
 import {ToolRadarVideo} from './tool-radar-video';
 
 export type ToolRadarGoldMotionPolishProps = {
@@ -9,6 +10,60 @@ export type ToolRadarGoldMotionPolishProps = {
   voiceoverReady: boolean;
 };
 
+const activeCaptionCues = aiDesignStoryboardPackage.storyboard.shots.map((shot) => ({
+  shotId: shot.shotId,
+  startSecond: shot.startSecond,
+  endSecond: shot.endSecond,
+  text: shot.narrationText,
+}));
+
+const TimedCaptionLayer: React.FC = () => {
+  const frame = useCurrentFrame();
+  const {fps} = useVideoConfig();
+  const currentSecond = frame / fps;
+  const cue = activeCaptionCues.find(
+    (candidate) => currentSecond >= candidate.startSecond && currentSecond < candidate.endSecond,
+  );
+
+  if (!cue) return null;
+
+  return (
+    <div
+      data-caption-shot-id={cue.shotId}
+      style={{
+        position: 'absolute',
+        left: 72,
+        right: 72,
+        bottom: 116,
+        display: 'flex',
+        justifyContent: 'center',
+        pointerEvents: 'none',
+      }}
+    >
+      <div
+        style={{
+          maxWidth: 936,
+          padding: '18px 28px 20px',
+          borderRadius: 28,
+          backgroundColor: 'rgba(3, 10, 18, 0.82)',
+          border: '1px solid rgba(238, 246, 255, 0.16)',
+          boxShadow: '0 18px 50px rgba(0,0,0,.28)',
+          color: '#f7fbff',
+          fontFamily: 'Arial, Microsoft YaHei, sans-serif',
+          fontSize: 52,
+          lineHeight: 1.35,
+          fontWeight: 800,
+          letterSpacing: 0.4,
+          textAlign: 'center',
+          textShadow: '0 2px 8px rgba(0,0,0,.72)',
+        }}
+      >
+        {cue.text}
+      </div>
+    </div>
+  );
+};
+
 /**
  * Gold-only motion layer for the existing self-owned AI Design composition.
  *
@@ -16,6 +71,11 @@ export type ToolRadarGoldMotionPolishProps = {
  * signals and a continuous progress rail, matching the Gold rule that finished motion
  * must not come from random/sinusoidal camera wobble. ToolRadarVideo remains the content
  * source and the existing Remotion/Shared Media render path remains authoritative.
+ *
+ * Timed caption pixels consume the same human-approved storyboard timing/narration source
+ * that the existing Shared Media buildRenderPreviewPackage()/buildSrt() workflow validates
+ * and persists. This is presentation-only; it does not introduce another caption timeline
+ * owner or infer mobile-readability approval.
  */
 export const ToolRadarGoldMotionPolishV1: React.FC<ToolRadarGoldMotionPolishProps> = (props) => {
   const frame = useCurrentFrame();
@@ -128,6 +188,8 @@ export const ToolRadarGoldMotionPolishV1: React.FC<ToolRadarGoldMotionPolishProp
           }}
         />
       </AbsoluteFill>
+
+      <TimedCaptionLayer />
     </AbsoluteFill>
   );
 };
