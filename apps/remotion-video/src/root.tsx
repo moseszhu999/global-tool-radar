@@ -1,7 +1,7 @@
 import React from 'react';
 import {Composition} from 'remotion';
 import {z} from 'zod';
-import {ToolRadarVideo} from './tool-radar-video';
+import {ToolRadarGoldMotionPolishV1} from './tool-radar-gold-motion-polish-v1';
 
 export const toolRadarVideoSchema = z.object({
   title: z.string(),
@@ -23,7 +23,7 @@ export const ToolRadarRoot: React.FC = () => {
   return (
     <Composition
       id="ToolRadarAIDesignPortrait"
-      component={ToolRadarVideo}
+      component={ToolRadarGoldMotionPolishV1}
       durationInFrames={3079}
       fps={30}
       width={1080}
