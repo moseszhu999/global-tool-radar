@@ -180,7 +180,20 @@ Each serious review build should provide:
 
 The review page is a first-class deliverable, not an optional convenience.
 
-## 12. Benchmark escalation path
+## 12. Evidence durability
+
+Gold technical proof must remain retrievable long enough to support later exact-head review and canonical evidence binding.
+
+- GitHub Actions artifact retention is transport/storage policy, not canonical evidence persistence.
+- A short-lived artifact may prove current retrievability but does not prove durable byte retrieval beyond its configured retention window.
+- Active Gold MP4/evidence bundles and Gold binding artifacts must either use an explicitly adequate retention window or be bridged into the existing Shared Media canonical persistence path.
+- Do not create a second artifact registry, receipt database, render engine, or job store to solve retention.
+- Canonical terminal truth remains owned by the existing `media.render.v1` / Shared Media receipt path; Gold may reference and cross-bind that truth but must not fork it.
+- Exact MP4 SHA-256, ffprobe/render-log identities, SRT/render-package identities, input-manifest digest, artifact-manifest ref, and canonical terminal result/evidence refs should converge into one reviewable evidence chain before a Gold candidate is treated as durable.
+
+Current known owner boundary: persistent canonical `media.render.v1` terminal receipt rollout remains owned by issue #115.
+
+## 13. Benchmark escalation path
 
 Use three quality bands:
 
