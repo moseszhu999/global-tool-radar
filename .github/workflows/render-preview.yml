@@ -4,33 +4,38 @@ on:
   pull_request:
     paths:
       - ".github/workflows/render-preview.yml"
+      - "apps/web/data/ai-design-workflow-storyboard-package.json"
       - "apps/web/data/replit-design-storyboard-package.json"
       - "apps/worker/src/build-render-preview-package.mjs"
       - "apps/worker/src/render-preview-video.mjs"
       - "apps/worker/src/run-video-quality-gate.mjs"
       - "packages/render-preview/**"
+      - "packages/video-gold-profile/**"
       - "packages/video-quality-gate/**"
       - "package.json"
   push:
     branches: [main]
     paths:
       - ".github/workflows/render-preview.yml"
+      - "apps/web/data/ai-design-workflow-storyboard-package.json"
       - "apps/web/data/replit-design-storyboard-package.json"
       - "apps/worker/src/build-render-preview-package.mjs"
       - "apps/worker/src/render-preview-video.mjs"
       - "apps/worker/src/run-video-quality-gate.mjs"
       - "packages/render-preview/**"
+      - "packages/video-gold-profile/**"
       - "packages/video-quality-gate/**"
       - "package.json"
   workflow_dispatch:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   render-preview:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -41,13 +46,262 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg espeak-ng librsvg2-bin fonts-noto-cjk
       - run: npm install --ignore-scripts
-      - name: Build source-bound render package
+      - name: Verify active AI Design Gold binding
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFile, writeFile, mkdir } from "node:fs/promises";
+          import { applyGoldDefaultsToStoryboardPackage, validateGoldTarget } from "./packages/video-gold-profile/src/index.mjs";
+
+          const sourcePath = "apps/web/data/ai-design-workflow-storyboard-package.json";
+          const storyboard = JSON.parse(await readFile(sourcePath, "utf8"));
+          const remotionPackage = JSON.parse(await readFile("apps/remotion-video/package.json", "utf8"));
+          if (storyboard.assetManifest?.captureTasks?.length !== 0) throw new Error("active AI Design storyboard must not require capture tasks");
+          if (storyboard.gates?.humanCaptureRequired !== false) throw new Error("active AI Design storyboard must not require human capture");
+          if (storyboard.policy?.screenRecordingRequired !== false) throw new Error("active AI Design storyboard must not require screen recording");
+          if (storyboard.selectedVoice?.humanAudioApproved !== true) throw new Error("active AI Design storyboard must retain human-approved voice identity");
+          if (!remotionPackage.scripts?.["render:preview"]?.includes("ToolRadarAIDesignPortrait")) throw new Error("active Remotion preview composition drift");
+          if (!remotionPackage.scripts?.["render:final"]?.includes("ToolRadarAIDesignPortrait")) throw new Error("active Remotion final composition drift");
+
+          const goldStoryboard = applyGoldDefaultsToStoryboardPackage(storyboard);
+          validateGoldTarget(goldStoryboard);
+          if (goldStoryboard.packageId !== storyboard.packageId) throw new Error("Gold storyboard identity drift");
+          if (goldStoryboard.qualityProfile !== "video.production.gold-baseline.v1") throw new Error("Gold quality profile missing");
+          if (goldStoryboard.gates?.goldBaselineTarget !== true) throw new Error("Gold target gate missing");
+          if (goldStoryboard.gates?.publicationAllowed !== false) throw new Error("publication boundary must remain closed");
+
+          const evidence = {
+            schemaVersion: "toolradar.active-ai-design-gold-binding.v1",
+            sourcePath,
+            sourcePackageId: storyboard.packageId,
+            selectedVoiceSha256: storyboard.selectedVoice?.wavSha256 ?? null,
+            selectedVoiceHumanApproved: storyboard.selectedVoice?.humanAudioApproved === true,
+            captureTaskCount: storyboard.assetManifest.captureTasks.length,
+            humanCaptureRequired: storyboard.gates.humanCaptureRequired,
+            screenRecordingRequired: storyboard.policy.screenRecordingRequired,
+            activePreviewComposition: remotionPackage.scripts["render:preview"],
+            activeFinalComposition: remotionPackage.scripts["render:final"],
+            qualityProfile: goldStoryboard.qualityProfile,
+            goldBaselineTarget: goldStoryboard.gates.goldBaselineTarget,
+            publicationAllowed: goldStoryboard.gates.publicationAllowed,
+            activePathBinding: "PROVED_AT_STORYBOARD_AND_COMPOSITION",
+            realMp4RenderedByThisStep: false,
+          };
+          await mkdir("build", { recursive: true });
+          await writeFile("build/ai-design-gold-binding.json", `${JSON.stringify(evidence, null, 2)}\n`, "utf8");
+          console.log(evidence);
+          NODE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: toolradar-active-ai-design-gold-binding
+          retention-days: 14
+          if-no-files-found: error
+          path: build/ai-design-gold-binding.json
+      - name: Build active AI Design caption timeline with existing Shared Media contract
+        run: |
+          set -euo pipefail
+          GENERATED_AT="$(git show -s --format=%cI "$GITHUB_SHA")"
+          node apps/worker/src/build-render-preview-package.mjs \
+            --input apps/web/data/ai-design-workflow-storyboard-package.json \
+            --output build/ai-design-active-render-preview-package.json \
+            --subtitles build/ai-design-active-preview.srt \
+            --creative-quality-template build/ai-design-active-gold-creative-quality-pending.json \
+            --generated-at "$GENERATED_AT"
+      - name: Verify active AI Design SRT artifact binding
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFile, writeFile } from "node:fs/promises";
+
+          const storyboard = JSON.parse(await readFile("apps/web/data/ai-design-workflow-storyboard-package.json", "utf8"));
+          const renderPackage = JSON.parse(await readFile("build/ai-design-active-render-preview-package.json", "utf8"));
+          const srt = await readFile("build/ai-design-active-preview.srt", "utf8");
+          const pending = JSON.parse(await readFile("build/ai-design-active-gold-creative-quality-pending.json", "utf8"));
+
+          if (renderPackage.sourceStoryboardPackageId !== storyboard.packageId) throw new Error("active caption package storyboard identity drift");
+          if (renderPackage.subtitleCues?.length !== storyboard.storyboard?.shots?.length) throw new Error("active caption cue count drift");
+          if (renderPackage.subtitleCues?.[0]?.startSecond !== storyboard.storyboard.shots[0].startSecond) throw new Error("active caption first cue timing drift");
+          if (renderPackage.subtitleCues?.at(-1)?.endSecond !== storyboard.storyboard.shots.at(-1).endSecond) throw new Error("active caption final cue timing drift");
+          if (renderPackage.gates?.publicationAllowed !== false || renderPackage.policy?.automaticPublishingAllowed !== false) throw new Error("active caption package publication boundary opened");
+          if (pending.status !== "PENDING_HUMAN_REVIEW") throw new Error("active Gold creative evidence must remain pending");
+          for (const [index, shot] of storyboard.storyboard.shots.entries()) {
+            const cue = renderPackage.subtitleCues[index];
+            if (cue.startSecond !== shot.startSecond || cue.endSecond !== shot.endSecond || cue.text !== shot.narrationText) {
+              throw new Error(`active caption cue ${index + 1} drift`);
+            }
+          }
+          const blocks = srt.trim().split("\n\n");
+          if (blocks.length !== storyboard.storyboard.shots.length) throw new Error("active SRT block count drift");
+
+          const evidence = {
+            schemaVersion: "toolradar.active-ai-design-caption-binding.v1",
+            sourceStoryboardPackageId: storyboard.packageId,
+            renderPreviewPackagePath: "build/ai-design-active-render-preview-package.json",
+            srtPath: "build/ai-design-active-preview.srt",
+            cueCount: renderPackage.subtitleCues.length,
+            timelineDurationSeconds: renderPackage.timelineDurationSeconds,
+            exactShotTimingAndNarrationBound: true,
+            srtArtifactPersistedByActiveWorkflow: true,
+            timedCaptionPixelsRenderedByThisStep: false,
+            mobileCaptionReadabilityHumanReviewInferred: false,
+            publicationAllowed: false,
+            canonicalMediaRenderV1TerminalEvidence: "NOT_CLAIMED",
+          };
+          await writeFile("build/ai-design-active-caption-binding.json", `${JSON.stringify(evidence, null, 2)}\n`, "utf8");
+          console.log(evidence);
+          NODE
+      - name: Install active AI Design Remotion dependencies
+        run: npm --prefix apps/remotion-video install --ignore-scripts
+      - name: Stage exact approved Xiaoxiao voice for active preview
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VOICE_ARTIFACT_ID: "8983585168"
+          EXPECTED_VOICE_SHA256: "816d9ce2f2ea8090f1eb1940f30b7ad19e9d53ae388fbaa0346b063f2c45ac9e"
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/toolradar-approved-voice apps/remotion-video/public/assets
+          curl --fail --location --silent --show-error \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
+            --header "Accept: application/vnd.github+json" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts/${VOICE_ARTIFACT_ID}/zip" \
+            --output /tmp/toolradar-approved-voice.zip
+          unzip -q /tmp/toolradar-approved-voice.zip -d /tmp/toolradar-approved-voice
+          SOURCE="/tmp/toolradar-approved-voice/toolradar-xiaoxiao-v1.wav"
+          test -s "$SOURCE"
+          ACTUAL_SHA256="$(sha256sum "$SOURCE" | awk '{print $1}')"
+          test "$ACTUAL_SHA256" = "$EXPECTED_VOICE_SHA256"
+          cp "$SOURCE" apps/remotion-video/public/assets/toolradar-ai-design-xiaoxiao-approved.wav
+          test "$(sha256sum apps/remotion-video/public/assets/toolradar-ai-design-xiaoxiao-approved.wav | awk '{print $1}')" = "$EXPECTED_VOICE_SHA256"
+      - name: Render active AI Design 9:16 MP4 preview with approved voice
+        run: |
+          set -euo pipefail
+          cd apps/remotion-video
+          npx remotion render src/index.ts ToolRadarAIDesignPortrait out/toolradar-ai-design-preview.mp4 --props=props/final.json
+      - name: Inspect active AI Design preview and bind artifact identity
+        run: |
+          set -euo pipefail
+          VIDEO="apps/remotion-video/out/toolradar-ai-design-preview.mp4"
+          test -s "$VIDEO"
+          SHA256="$(sha256sum "$VIDEO" | awk '{print $1}')"
+          BYTES="$(stat -c '%s' "$VIDEO")"
+          ffprobe -v error -show_streams -show_format -of json "$VIDEO" > build/ai-design-active-preview-ffprobe.json
+          ffmpeg -hide_banner -nostats -i "$VIDEO" -af "loudnorm=I=-16:TP=-1.5:LRA=11:print_format=json" -f null - 2> build/ai-design-active-preview-loudnorm.log
+          ffmpeg -hide_banner -nostats -i "$VIDEO" -af "silencedetect=noise=-50dB:d=2" -f null - 2> build/ai-design-active-preview-silence.log
+          VIDEO="$VIDEO" SHA256="$SHA256" BYTES="$BYTES" node --input-type=module <<'NODE'
+          import { readFile, writeFile } from "node:fs/promises";
+          const probe = JSON.parse(await readFile("build/ai-design-active-preview-ffprobe.json", "utf8"));
+          const loudnormLog = await readFile("build/ai-design-active-preview-loudnorm.log", "utf8");
+          const silenceLog = await readFile("build/ai-design-active-preview-silence.log", "utf8");
+          const storyboard = JSON.parse(await readFile("apps/web/data/ai-design-workflow-storyboard-package.json", "utf8"));
+          const video = probe.streams.find((stream) => stream.codec_type === "video");
+          const audio = probe.streams.find((stream) => stream.codec_type === "audio");
+          if (!video) throw new Error("active AI Design preview missing video stream");
+          if (!audio) throw new Error("active AI Design preview missing audio stream");
+          if (video.width !== 1080 || video.height !== 1920) throw new Error(`unexpected active preview geometry ${video.width}x${video.height}`);
+
+          const loudnormJsonMatch = loudnormLog.match(/\{[\s\S]*?"target_offset"\s*:\s*"[^"]+"\s*\}/);
+          if (!loudnormJsonMatch) throw new Error("loudnorm JSON summary missing");
+          const loudnorm = JSON.parse(loudnormJsonMatch[0]);
+          const silenceStarts = [...silenceLog.matchAll(/silence_start:\s*([0-9.]+)/g)].map((match) => Number(match[1]));
+          const silenceEnds = [...silenceLog.matchAll(/silence_end:\s*([0-9.]+)\s*\|\s*silence_duration:\s*([0-9.]+)/g)].map((match) => ({
+            endSeconds: Number(match[1]),
+            durationSeconds: Number(match[2]),
+          }));
+          const silenceWindows = silenceEnds.map((entry, index) => ({
+            startSeconds: Number.isFinite(silenceStarts[index]) ? silenceStarts[index] : null,
+            endSeconds: entry.endSeconds,
+            durationSeconds: entry.durationSeconds,
+          }));
+          const longestDetectedSilenceSeconds = silenceWindows.reduce((max, entry) => Math.max(max, entry.durationSeconds), 0);
+          const measuredIntegratedLufs = Number(loudnorm.input_i);
+          const measuredTruePeakDbtp = Number(loudnorm.input_tp);
+          if (!Number.isFinite(measuredIntegratedLufs) || !Number.isFinite(measuredTruePeakDbtp)) {
+            throw new Error("active approved-voice preview produced non-finite loudness evidence");
+          }
+          const selectedVoiceSha256 = storyboard.selectedVoice?.wavSha256 ?? null;
+          if (selectedVoiceSha256 !== "816d9ce2f2ea8090f1eb1940f30b7ad19e9d53ae388fbaa0346b063f2c45ac9e") {
+            throw new Error("selected approved voice identity drift");
+          }
+
+          const receipt = {
+            schemaVersion: "toolradar.active-ai-design-preview-receipt.v1",
+            source: "existing-remotion-composition",
+            composition: "ToolRadarAIDesignPortrait",
+            artifactPath: process.env.VIDEO,
+            artifactSha256: process.env.SHA256,
+            artifactBytes: Number(process.env.BYTES),
+            selectedVoice: {
+              sourceArtifactId: 8983585168,
+              wavSha256: selectedVoiceSha256,
+              humanAudioApproved: storyboard.selectedVoice?.humanAudioApproved === true,
+              renderPropsVoiceoverReady: true,
+              identityBindingStatus: "PROVED_EXACT_APPROVED_ARTIFACT",
+            },
+            video: {
+              codec: video.codec_name ?? null,
+              width: video.width,
+              height: video.height,
+              frameRate: video.avg_frame_rate ?? null,
+              durationSeconds: Number(video.duration ?? probe.format?.duration ?? 0),
+            },
+            audio: {
+              codec: audio.codec_name ?? null,
+              sampleRate: audio.sample_rate ? Number(audio.sample_rate) : null,
+              channels: audio.channels ?? null,
+              durationSeconds: Number(audio.duration ?? probe.format?.duration ?? 0),
+              technicalLoudnessEvidence: {
+                analyzer: "ffmpeg-loudnorm-single-pass",
+                targetIntegratedLufsForMeasurement: -16,
+                targetTruePeakDbtpForMeasurement: -1.5,
+                targetLoudnessRangeLuForMeasurement: 11,
+                measuredIntegratedLufs,
+                measuredTruePeakDbtp,
+                measuredLoudnessRangeLu: Number(loudnorm.input_lra),
+                measuredThresholdLufs: Number(loudnorm.input_thresh),
+                targetOffsetLu: Number(loudnorm.target_offset),
+                evidencePresent: true,
+                humanQualityDecisionInferred: false,
+              },
+              silenceAnalysis: {
+                analyzer: "ffmpeg-silencedetect",
+                detectionNoiseFloorDb: -50,
+                minimumReportedSilenceSeconds: 2,
+                detectedWindowCount: silenceWindows.length,
+                longestDetectedSilenceSeconds,
+                windows: silenceWindows,
+                evidencePresent: true,
+                productRejectionThresholdDefinedByThisWorkflow: false,
+                humanQualityDecisionInferred: false,
+              },
+            },
+            publicationAllowed: false,
+            canonicalMediaRenderV1TerminalEvidence: "NOT_CLAIMED",
+          };
+          await writeFile("build/ai-design-active-preview-receipt.json", `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
+          console.log(receipt);
+          NODE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: toolradar-active-ai-design-render-preview
+          retention-days: 14
+          if-no-files-found: error
+          path: |
+            apps/remotion-video/out/toolradar-ai-design-preview.mp4
+            build/ai-design-active-preview-receipt.json
+            build/ai-design-active-preview-ffprobe.json
+            build/ai-design-active-preview-loudnorm.log
+            build/ai-design-active-preview-silence.log
+            build/ai-design-gold-binding.json
+            build/ai-design-active-render-preview-package.json
+            build/ai-design-active-preview.srt
+            build/ai-design-active-gold-creative-quality-pending.json
+            build/ai-design-active-caption-binding.json
+      - name: Build historical Replit fixture render package
         run: npm run production:render-package:replit
-      - name: Render 9:16 MP4 preview
+      - name: Render historical Replit 9:16 MP4 fixture
         run: npm run production:render-preview:replit
-      - name: Run M10 automated video quality gate
+      - name: Run historical Replit M10 automated video quality gate
         run: npm run production:quality-gate:replit
-      - name: Verify release remains blocked
+      - name: Verify historical Replit fixture remains blocked
         run: |
           node --input-type=module <<'NODE'
           import { readFile } from "node:fs/promises";
@@ -56,15 +310,26 @@ jobs:
           if (report.releaseDecision !== "BLOCKED" || report.publicationAllowed !== false) {
             throw new Error("preview must remain blocked from release");
           }
-          const expected = ["OWNED_SCREEN_RECORDINGS_REQUIRED", "FINAL_VOICE_APPROVAL_REQUIRED", "HUMAN_QUALITY_REVIEW_REQUIRED"];
-          if (JSON.stringify(report.releaseBlockers) !== JSON.stringify(expected)) {
-            throw new Error(`unexpected release blockers: ${report.releaseBlockers.join(", ")}`);
+          const required = [
+            "OWNED_SCREEN_RECORDINGS_REQUIRED",
+            "FINAL_VOICE_APPROVAL_REQUIRED",
+            "HUMAN_QUALITY_REVIEW_REQUIRED",
+          ];
+          for (const blocker of required) {
+            if (!report.releaseBlockers.includes(blocker)) throw new Error(`missing required release blocker: ${blocker}`);
           }
+          const goldPending = report.qualityProfile === "video.production.gold-baseline.v1" && report.qualityStage === "TARGET_PENDING";
+          if (goldPending && !report.releaseBlockers.includes("GOLD_CREATIVE_REVIEW_REQUIRED")) {
+            throw new Error("Gold target preview must remain blocked for creative review");
+          }
+          const allowed = new Set([...required, "GOLD_CREATIVE_REVIEW_REQUIRED"]);
+          const unexpected = report.releaseBlockers.filter((blocker) => !allowed.has(blocker));
+          if (unexpected.length) throw new Error(`unexpected release blockers: ${unexpected.join(", ")}`);
           console.log(report);
           NODE
       - uses: actions/upload-artifact@v4
         with:
-          name: toolradar-replit-design-render-preview
+          name: toolradar-replit-design-render-preview-historical-fixture
           retention-days: 14
           if-no-files-found: error
           path: |
@@ -73,3 +338,4 @@ jobs:
             build/replit-design-render-preview-package.json
             build/replit-design-render-receipt.json
             build/replit-design-video-quality-report.json
+            build/gold-creative-quality-pending.json

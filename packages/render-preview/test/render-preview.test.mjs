@@ -13,6 +13,12 @@ const storyboardPath = new URL(
 );
 const storyboardPackage = JSON.parse(await readFile(storyboardPath, "utf8"));
 
+const activeStoryboardPath = new URL(
+  "../../../apps/web/data/ai-design-workflow-storyboard-package.json",
+  import.meta.url,
+);
+const activeStoryboardPackage = JSON.parse(await readFile(activeStoryboardPath, "utf8"));
+
 test("builds a contiguous 9:16 render preview from the real storyboard", () => {
   const preview = buildRenderPreviewPackage(storyboardPackage, {
     generatedAt: "2026-08-04T10:00:00.000Z",
@@ -23,6 +29,21 @@ test("builds a contiguous 9:16 render preview from the real storyboard", () => {
   assert.equal(preview.format.aspectRatio, "9:16");
   assert.equal(preview.renderSlides.at(-1).endSecond, 89);
   assert.equal(preview.gates.previewRenderAllowed, true);
+});
+
+test("accepts the exact approved active timeline across harmless binary floating-point representation", () => {
+  assert.equal(activeStoryboardPackage.storyboard.shots[1].durationSeconds, 15.412);
+  assert.equal(
+    activeStoryboardPackage.storyboard.shots[1].endSecond
+      - activeStoryboardPackage.storyboard.shots[1].startSecond,
+    15.411999999999999,
+  );
+  const preview = buildRenderPreviewPackage(activeStoryboardPackage, {
+    generatedAt: "2026-08-28T09:38:00.000Z",
+  });
+  assert.equal(validateRenderPreviewPackage(preview), true);
+  assert.equal(preview.subtitleCues.length, activeStoryboardPackage.storyboard.shots.length);
+  assert.equal(preview.timelineDurationSeconds, activeStoryboardPackage.timelineDurationSeconds);
 });
 
 test("keeps unresolved owned recordings visible as non-publishable placeholders", () => {

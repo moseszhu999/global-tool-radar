@@ -1,4 +1,5 @@
 const freeze = (value) => Object.freeze(value);
+const TIMELINE_EPSILON_SECONDS = 1e-9;
 
 function requiredString(value, field) {
   if (typeof value !== "string" || value.trim() === "") {
@@ -10,6 +11,10 @@ function requiredString(value, field) {
 function requiredNumber(value, field) {
   if (!Number.isFinite(value)) throw new TypeError(`${field} must be a finite number`);
   return value;
+}
+
+function timelineEqual(left, right) {
+  return Math.abs(left - right) <= TIMELINE_EPSILON_SECONDS;
 }
 
 function formatSrtTime(totalSeconds) {
@@ -44,7 +49,10 @@ export function buildRenderPreviewPackage(
     const startSecond = requiredNumber(shot.startSecond, `${shotId}.startSecond`);
     const endSecond = requiredNumber(shot.endSecond, `${shotId}.endSecond`);
     const durationSeconds = requiredNumber(shot.durationSeconds, `${shotId}.durationSeconds`);
-    if (startSecond !== expectedStart || endSecond - startSecond !== durationSeconds) {
+    if (
+      !timelineEqual(startSecond, expectedStart)
+      || !timelineEqual(endSecond - startSecond, durationSeconds)
+    ) {
       throw new TypeError(`${shotId} must form a contiguous timeline`);
     }
     expectedStart = endSecond;
@@ -85,7 +93,7 @@ export function buildRenderPreviewPackage(
     storyboardPackage.timelineDurationSeconds,
     "timelineDurationSeconds",
   );
-  if (expectedStart !== timelineDurationSeconds) {
+  if (!timelineEqual(expectedStart, timelineDurationSeconds)) {
     throw new TypeError("render slides must cover the full storyboard duration");
   }
 
