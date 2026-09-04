@@ -1,18 +1,19 @@
-# AI_START_HERE — Video Operation 当前第一读
+# AI_START_HERE — Video Operation 会话交接入口
 
-> 这是 `global-tool-radar` 的跨会话执行入口。新 AI / 新窗口继续项目之前，先读本文件，再实时刷新 GitHub `main`、开放 PR、changed files、CI、artifact 和 owner。本文中的 SHA/PR 只记录最近交接点，不能替代当前 tick 的实时状态。
+> `AGENTS.md` 是仓库级 AI operating context 的 canonical entrypoint；本文件只保存 Video Operation / ToolRadar 的跨会话执行交接，不得覆盖 `AGENTS.md` 的 owner、Shared Media、权限或真实性边界。新 AI / 新窗口继续项目时：若当前 ref 已存在 `AGENTS.md`，先读 `AGENTS.md`，再读本文件；若当前 main 尚未包含 `AGENTS.md`，则本文件继续承担临时第一读职责，直到 #128 的 canonical entrypoint 落地。无论哪种情况，都必须实时刷新 GitHub `main`、开放 PR、changed files、CI、artifact 和 owner；本文中的 SHA/PR 只记录历史交接点，不能替代当前 tick 的实时状态。
 
 ## 1. 固定启动顺序
 
-1. 读本文件。
-2. 读 `.agents/skills/toolradar-video-creative-director/SKILL.md`；涉及产品/UI 设计帧时再读 `toolradar-video-ui-director`。
+1. 若当前 ref 存在 `AGENTS.md`，先读 `AGENTS.md`；否则读本文件作为尚未落地 #128 前的临时入口。
+2. 读本文件中的 Video Operation 会话交接；再读 `.agents/skills/toolradar-video-creative-director/SKILL.md`；涉及产品/UI 设计帧时再读 `toolradar-video-ui-director`。
 3. 刷新 latest main exact SHA、open PR exact heads、changed paths、owner、mergeability、CI 和真实媒体 artifact。
 4. 当前业务顺序保持：**M9 真成片 → M10 成片质量/业务适配真人审核 → M11 抖音/Bilibili 真发布 → M12 真数据反馈**。
 5. 每轮必须产生可验证实际进展；禁止为了“有进展”制造第二 owner、cosmetic commit 或无关基础设施。
+6. 如本文件与 `AGENTS.md` 冲突，以 `AGENTS.md` 为准；本文件只允许补充当前 Video Operation 会话交接事实。
 
-## 2. 当前最新交接（2026-08-09）
+## 2. 历史交接快照（2026-08-09，仅供定位，不是当前真相）
 
-最近观察到的 main：
+当时观察到的 main：
 
 ```text
 7f86239d6e56522d2cec2138defae32116380dc9
@@ -26,13 +27,13 @@ video: import verified rendered candidates into canonical M10 lifecycle (#108)
 - PR #106 已合并：M10 bounded social-native review profile 可被 canonical quality approval 正确处理。
 - PR #107 已合并：canonical evidence 绑定 exact render provenance snapshot。
 - PR #108 已 squash merge：允许已验证的 GitHub Actions render 以 `render_execution_evidence` 进入 canonical M10 lifecycle，同时明确 `originalRenderGateProven=false`、`historicalStagesProven=false`、`publicationAllowed=false`；公开 event API 绕过已 fail-closed 修复。
-- 最近刷新时 open PR = 0；每个新窗口仍必须重新读取，不能仅凭此交接判断 owner 空闲。
+- 该快照当时记录 open PR = 0；**这个数量现在已经过时，任何新窗口都必须重新读取当前 open owner topology。**
 
-## 3. 当前 M10 exact candidate
+## 3. 历史 M10 exact candidate 快照
 
-当前主干中的方向是 **flat-geometric explainer + deterministic real Workspace proof + four bounded Radar Scout cameos + true-alpha production typography/micro-motion polish v2**。
+该历史方向是 **flat-geometric explainer + deterministic real Workspace proof + four bounded Radar Scout cameos + true-alpha production typography/micro-motion polish v2**。
 
-Exact render evidence：
+历史 exact render evidence：
 
 ```text
 source exact head: a5ac58e0ea05c5d8d8ca6861e1001b044bde44e0
@@ -59,15 +60,15 @@ black >=0.35s: 0
 silence >=0.75s @ -45dB: 0
 ```
 
-Fresh controller re-verification receipt:
+Fresh controller re-verification receipt at that handoff:
 
 ```text
 docs/video/evidence/m10-explainer-v2-controller-reverification-2026-08-09.md
 ```
 
-That receipt records a fresh GitHub Actions artifact retrieval, recomputed MP4 SHA-256, fresh ffprobe, artifact receipt inspection, and ten-point controller frame sampling. It remains controller-level evidence only.
+That receipt records a GitHub Actions artifact retrieval, recomputed MP4 SHA-256, ffprobe, artifact receipt inspection, and ten-point controller frame sampling. It remains controller-level evidence only and does not supersede newer Gold/SourceReset/current-owner truth.
 
-## 4. Canonical M10 lifecycle state
+## 4. Canonical M10 lifecycle state at that handoff
 
 PR #108 committed project-bound evidence:
 
@@ -76,9 +77,9 @@ docs/video/evidence/m10-explainer-v2-render-completed-import-ledger.json
 docs/video/evidence/m10-explainer-v2-quality-review-pack.json
 ```
 
-The exact candidate is now truthfully lifecycle-bound at `RENDER_COMPLETED` without pretending the historical render authorization path ran through MacRunner.
+The exact candidate was truthfully lifecycle-bound at `RENDER_COMPLETED` without pretending the historical render authorization path ran through MacRunner.
 
-The current quality-review pack is derived from the canonical render-completed ledger and keeps all ten human-review verdicts unset until real review.
+The quality-review pack was derived from the canonical render-completed ledger and kept all ten human-review verdicts unset until real review.
 
 Do not confuse any of the following layers:
 
@@ -92,9 +93,9 @@ publication authorization / publication action
 observed analytics
 ```
 
-## 5. 现在唯一最早业务阻塞：M10 人工完整审片
+## 5. 人工审片边界
 
-Current truth must remain:
+Historical M10 truth was:
 
 ```text
 humanWatchedFullCandidate=false
@@ -104,13 +105,12 @@ publicationPerformed=false
 analyticsObserved=false
 ```
 
-下一真实业务动作：由真人从头到尾完整观看 exact MP4 `1de5e8...`，对 committed 10-item M10 review pack 给出明确 `ACCEPT` 或 `REJECT`。
+Current human-review truth must be re-fetched from the active Gold / SourceReset / authored-asset owners; never infer approval from this historical block.
 
-### 若 ACCEPT
+### 若某个当前 exact candidate 获得真人 ACCEPT
 
 - 记录 exact artifact / MP4 SHA 与人工接受结论；
-- 才允许 canonical lifecycle 进入 `QUALITY_APPROVED`；
-- 随后可进入 M11 发布准备；
+- 只推进该 candidate 对应的 canonical lifecycle；
 - 真正登录、上传、发布仍是独立 consequential action，不能从 CI/render/merge 自动推断授权。
 
 ### 若 REJECT
@@ -120,9 +120,9 @@ analyticsObserved=false
 - 从最便宜验证阶段开始，尽量单变量 A/B；
 - 不新增另一套候选 owner，不盲目堆 glow、particles、camera movement 或更多 Remotion code。
 
-## 6. Shared Media 当前可复用主干能力
+## 6. Shared Media 当前可复用能力边界
 
-已合并主线覆盖：
+Shared Media 主线覆盖的方向包括：
 
 ```text
 media.render.v1 canonical contract
@@ -131,13 +131,13 @@ media.render.v1 canonical contract
 → preparation manifest
 → authorized preparation executor
 → prepared media qualification
-→ Remotion materializer v2
-→ Mac staging bridge v1
+→ Remotion materializer
+→ Mac staging bridge
 → fail-closed Mac compatibility
-→ canonical Evidence Collector
+→ canonical Evidence Collector / terminal evidence contracts
 ```
 
-这些是共享技术能力，不拥有 ToolRadar creative / human approval / publication / analytics 真相。不要再造第二套 render schema、TTS、caption timing、Mac transport 或 evidence collector。
+这些是共享技术能力，不拥有 ToolRadar creative / human approval / publication / analytics 真相。不要再造第二套 render schema、TTS、caption timing、Mac transport、artifact registry、terminal receipt store 或 evidence collector。具体当前版本与 rollout 状态必须从 latest main/open owner 实时刷新。
 
 ## 7. 防跑偏硬规则
 
@@ -147,7 +147,7 @@ media.render.v1 canonical contract
 - 第二套 Shared Media/render/Mac 实现；
 - 与当前候选、人审、发布或反馈闭环无关的“以后可能有用”抽象；
 - 把 mock、Preview、CI、render success、controller review 当真人批准；
-- 在 M10 人工门未通过时假装完成 M11/M12；
+- 在人工门未通过时假装完成后续发布/反馈闭环；
 - 把平台登录、上传、发布、账号、验证码、付款等 consequential action 当作普通代码步骤。
 
 ## 8. 永久真实性边界
