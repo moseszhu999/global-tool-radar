@@ -28,7 +28,8 @@ Before writing:
 5. Keep parallel windows independent; do not reset/rebase/cherry-pick/force-push/take over another active owner.
 6. Preserve rights, privacy, source provenance, human-review, publication and authority boundaries.
 7. Distinguish source/contract/test/render/browser/publication evidence levels; do not turn a render success into a publishing claim.
-8. Do not merge, deploy, publish externally, mutate production services, or perform paid/external actions without explicit authorization.
+8. Treat short-lived CI artifacts as retention-bounded evidence, not durable canonical persistence. If a final MP4/evidence artifact matters beyond the workflow retention window, converge it through the already-owned Shared Media canonical persistence path (for example `media.render.v1` terminal receipt/evidence refs) rather than creating a second artifact registry, receipt database, render engine, or job store.
+9. Do not merge, deploy, publish externally, mutate production services, or perform paid/external actions without explicit authorization.
 
 ## Product vs shared-infrastructure boundary
 
