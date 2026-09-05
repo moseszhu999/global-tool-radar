@@ -15,17 +15,19 @@ pixel_patch=NO
 second_renderer=NO
 ```
 
-## Fresh repository truth used
+## Fresh repository truth used — 2026-09-05 refresh
 
 ```text
 repository=moseszhu999/global-tool-radar
 main=23d92ffc4674f1581c4191e595d279a20008be53
-PR127 head=153f9fa0f1c15a551dffab6a286a4655bf7e2aed
-PR125 head=674a6b80525a2412b364f1b5b0f7609d73b26856
-PR126 head=f9f15b0f52d1b477add091e2eac8b1b8979e9b6e
+PR127 head before this refresh=cb8ca89a582ce818ab6919e2893830c1ec57f259
+PR125 current Gold head=1a83beabc21a504e37dd6175324d1f278faa7b10
+PR126 current Premium head=f9f15b0f52d1b477add091e2eac8b1b8979e9b6e
 ```
 
 The repository-level AI entrypoint remains the open governance owner PR #128 (`AGENTS.md` / `CLAUDE.md`), which requires one owner for render/TTS/timeline/evidence truth and forbids fabricating provenance.
+
+This refresh corrects stale owner SHAs that remained in the audit text. It does not claim that a newer repository/source search has recovered the editable Cold Brew source; the provenance conclusion below remains bounded and fail-closed.
 
 ## Search evidence
 
@@ -46,41 +48,31 @@ This is evidence about the current committed source surface only; it is not a cl
 
 ### 2. Gold owner #125
 
-Fresh PR #125 changed-path inventory is limited to Gold quality/profile/runtime adoption files such as:
+The current Gold owner is PR #125 at exact head `1a83beabc21a504e37dd6175324d1f278faa7b10`. Its changed-path inventory remains Gold quality/profile/runtime adoption and active Gold composition/evidence work; no Cold Brew / SourceReset editable footer source is claimed by that owner.
 
-- `.github/workflows/render-preview.yml`
-- Gold baseline props/tests
-- worker storyboard/render-package builders
-- Gold profile adapter
-- video quality gate files
-
-No Cold Brew / SourceReset composition or editable footer source appears in that changed-path inventory.
+The Gold owner also remains the current product-quality/render composition lane and must not be replaced by a SourceReset-side parallel renderer.
 
 ### 3. Premium owner #126
 
-Fresh PR #126 changed-path inventory is limited to Premium quality/profile/runtime escalation files such as:
-
-- `.github/workflows/premium-quality-contract.yml`
-- Premium baseline/audit/evidence props
-- Premium profile adapter
-- video quality gate files
-
-No Cold Brew / SourceReset composition or editable footer source appears in that changed-path inventory.
+The current Premium owner is PR #126 at exact head `f9f15b0f52d1b477add091e2eac8b1b8979e9b6e`. Its changed-path inventory remains Premium quality/profile/runtime escalation files; no Cold Brew / SourceReset composition or editable footer source is claimed by that owner.
 
 ### 4. Current continuation owner #127
 
-Fresh PR #127 changed paths are only:
+Immediately before this refresh, PR #127 was at exact head `cb8ca89a582ce818ab6919e2893830c1ec57f259` with five changed paths:
 
 - `docs/video/NEXT-WINDOW-PROMPT-VIDEO-OP-20260813.md`
 - `docs/video/coldbrew-premium-v44-handoff-20260813.md`
 - `docs/video/coldbrew-v44-artifact-manifest.json`
+- `docs/video/sourcereset1-editable-source-search-audit-20260819.md`
 - `skills/video-operation-premium-cinematic/SKILL.md`
 
-Before this audit file, #127 therefore carried continuation/evidence truth but no editable Cold Brew composition or footer source.
+This refresh changes only this existing provenance-audit file inside the same #127 owner. It does not add a renderer/runtime/source owner.
 
-### 5. Repository PR search
+### 5. Repository PR search / existing recovery evidence
 
-A fresh repository PR search for `SourceReset0` / `SourceReset1` resolves the current continuation PR #127 and does not surface a separate open/closed PR that claims ownership of the exact editable Cold Brew footer source.
+Repository owner review history continues to identify #127 as the SourceReset continuation/evidence owner and does not establish a separate exact editable Cold Brew footer-source owner.
+
+Existing bounded recovery evidence, including repository/source search and the previously executed read-only MacRunner editable-source scan, has not proved an exact editable source owner. A negative bounded search does not prove that the source never existed.
 
 ## Bounded conclusion
 
@@ -88,7 +80,6 @@ A fresh repository PR search for `SourceReset0` / `SourceReset1` resolves the cu
 CURRENT_REPOSITORY_EDITABLE_SOURCERESET_SOURCE_SEARCH=NEGATIVE_BOUNDED
 CURRENT_MAIN_REMOTION_COLD_BREW_SOURCE=NOT_LOCATED
 GOLD_PREMIUM_OWNER_COLD_BREW_EDITABLE_SOURCE=NOT_LOCATED
-PR127_EDITABLE_COLD_BREW_SOURCE=NOT_PRESENT_BEFORE_THIS_AUDIT
 EXACT_EDITABLE_FOOTER_SOURCE_OWNER=NOT_PROVED
 ```
 
@@ -98,7 +89,7 @@ The current evidence therefore supports a stronger, narrower blocker:
 FOOTER_CORRECTION=BLOCKED_CHAT_ONLY_CURRENT_REPOSITORY_SOURCE_NOT_LOCATED
 ```
 
-This does **not** prove that the editable source never existed. It may have been local-only, in an unreferenced historical branch/commit, or in another durable asset store. No such source identity is currently proved by the connected GitHub evidence.
+This does **not** prove that the editable source never existed. It may have been local-only, in an unreferenced historical branch/commit, or in another durable asset store. No such source identity is currently proved by the connected evidence.
 
 ## Required next evidence before correction
 
